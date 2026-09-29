@@ -7,6 +7,8 @@ const FRENZY_RADIUS := 12.0
 const FRENZY_NOTES := 12
 const FRENZY_NOTES_MASTER := 16
 const ENCORE_COOLDOWN := 120.0
+## Rayon des soins de groupe (Ballade réparatrice) : tous les alliés proches sont soignés.
+const GROUP_HEAL_RADIUS := 10.0
 
 var hero: Hero
 var in_frenzy := false # Solo endiablé en cours
@@ -45,22 +47,20 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_encore_cd = maxf(0.0, _encore_cd - delta)
-	var max_hp := GameState.max_hp()
 	# Ballade réparatrice : soin continu.
 	if _hot_time > 0.0:
 		_hot_time -= delta
 		_hot_tick -= delta
 		if _hot_tick <= 0.0:
 			_hot_tick = 1.0
-			_heal(roundi(max_hp * 0.05))
+			_heal_group(hero.global_position, GROUP_HEAL_RADIUS, 0.05)
 	# Hymne du Phénix : zone de soin.
 	if _zone_time > 0.0:
 		_zone_time -= delta
 		_zone_tick -= delta
 		if _zone_tick <= 0.0:
 			_zone_tick = 1.0
-			if _flat(hero.global_position, _zone_pos) <= 4.0:
-				_heal(roundi(max_hp * 0.06))
+			_heal_group(_zone_pos, 4.0, 0.06)
 		if _zone_time <= 0.0 and is_instance_valid(_zone_node):
 			_zone_node.queue_free()
 	# Mur de Larsen.
@@ -118,7 +118,11 @@ func blocks_actions() -> bool:
 
 func _cast_ballade_reparatrice() -> bool:
 	hero.model.strum()
-	_heal(roundi(Dice.roll(2, 8, GameState.mod("CHA")) * GameState.spell_power()))
+	var amount := roundi(Dice.roll(2, 8, GameState.mod("CHA")) * GameState.spell_power())
+	_heal(amount)
+	for ally in _allies_near(hero.global_position, GROUP_HEAL_RADIUS):
+		ally.call("receive_heal", amount)
+		_burst(ally.global_position, Color(0.45, 1.0, 0.5), 10)
 	_hot_time = 4.0
 	_hot_tick = 1.0
 	_burst(hero.global_position, Color(0.45, 1.0, 0.5), 18)
@@ -488,3 +492,22 @@ func _burst(pos: Vector3, color: Color, amount: int) -> void:
 	hero.get_parent().add_child(p)
 	p.emitting = true
 	get_tree().create_timer(2.0).timeout.connect(p.queue_free)
+
+
+## Autres membres du groupe à portée (hors héros) : cible amicale, et plus tard les
+## joueurs en coopération. Tout nœud du groupe « allies » ayant receive_heal().
+func _allies_near(center: Vector3, radius: float) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	for n in get_tree().get_nodes_in_group("allies"):
+		var ally := n as Node3D
+		if ally != null and ally.has_method("receive_heal") and _flat(ally.global_position, center) <= radius:
+			out.append(ally)
+	return out
+
+
+## Soin de groupe en pourcentage des PV max de chacun (héros compris s'il est dans la zone).
+func _heal_group(center: Vector3, radius: float, ratio: float) -> void:
+	if _flat(hero.global_position, center) <= radius:
+		_heal(roundi(GameState.max_hp() * ratio))
+	for ally in _allies_near(center, radius):
+		ally.call("receive_heal", maxi(1, roundi(float(ally.get("max_hp")) * ratio)))

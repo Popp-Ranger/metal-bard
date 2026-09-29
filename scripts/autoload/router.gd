@@ -21,6 +21,24 @@ func _ready() -> void:
 	add_child(_fade)
 
 
+## Fondu au noir sans changer de scène (escaliers entre les étages de la taverne).
+func fade(callback: Callable) -> void:
+	if _busy:
+		return
+	_busy = true
+	_fade.mouse_filter = Control.MOUSE_FILTER_STOP
+	var tw := create_tween()
+	tw.tween_property(_fade, "modulate:a", 1.0, 0.3)
+	await tw.finished
+	callback.call()
+	await get_tree().process_frame
+	var tw2 := create_tween()
+	tw2.tween_property(_fade, "modulate:a", 0.0, 0.4)
+	await tw2.finished
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_busy = false
+
+
 func go_to(path: String) -> void:
 	if _busy:
 		return

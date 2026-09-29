@@ -23,11 +23,11 @@ const BRANCHES := [
 const TALENTS := {
 	# --- Ballade (soins) ---
 	"ballade_reparatrice": {"name": "Ballade réparatrice", "active": true, "cost": 25.0, "cooldown": 12.0,
-		"desc": "Soigne 2d8 + CHA immédiatement, puis 5 % des PV max chaque seconde pendant 4 s."},
+		"desc": "Soin de groupe : vous et vos alliés à 10 m récupérez 2d8 + CHA, puis 5 % des PV max chaque seconde pendant 4 s."},
 	"rappel": {"name": "Rappel", "active": false,
 		"desc": "Le public en redemande : chaque ennemi vaincu rend 3 PV et 4 dB."},
 	"hymne_phenix": {"name": "Hymne du Phénix", "active": true, "cost": 35.0, "cooldown": 30.0,
-		"desc": "Cercle de flammes dorées (4 m) pendant 8 s : rend 6 % des PV max par seconde tant qu'on s'y tient."},
+		"desc": "Cercle de flammes dorées (4 m) pendant 8 s : tous les alliés qui s'y tiennent récupèrent 6 % de leurs PV max par seconde."},
 	"encore": {"name": "Encore !", "active": false,
 		"desc": "Un coup mortel vous laisse à 1 PV et vous soigne de 50 % (une fois toutes les 2 minutes)."},
 	# --- Mur du Son (protection) ---

@@ -19,6 +19,8 @@ var width := 100
 var height := 100
 var grid := PackedByteArray()
 var rooms: Array[Rect2i] = []
+## Salles cul-de-sac (une seule entrée) gardées par une douzaine d'ennemis.
+var ambush_rooms: Array[int] = []
 var boss_room := 0
 var start_room := 0
 var rng := RandomNumberGenerator.new()
@@ -33,6 +35,7 @@ func generate(seed_value: int, room_count: int = 10) -> void:
 	for r in rooms:
 		_carve_rect(r)
 	_connect_rooms()
+	_add_ambush_rooms(2)
 	start_room = _farthest_room_from_boss()
 
 
@@ -123,6 +126,8 @@ func _farthest_room_from_boss() -> int:
 	var best := 1
 	var best_d := -1
 	for i in range(1, rooms.size()):
+		if ambush_rooms.has(i):
+			continue
 		var c := center(i)
 		var d := dist[c.y * width + c.x]
 		if d > best_d:
@@ -195,3 +200,45 @@ func random_cell_in_room(room_index: int, margin: int = 1) -> Vector2i:
 	var r := rooms[room_index]
 	return Vector2i(rng.randi_range(r.position.x + margin, r.end.x - 1 - margin),
 		rng.randi_range(r.position.y + margin, r.end.y - 1 - margin))
+
+
+## Ajoute des salles cul-de-sac dans l'espace libre, reliées par UN seul couloir
+## à la salle normale la plus proche.
+func _add_ambush_rooms(count: int) -> void:
+	ambush_rooms.clear()
+	var attempts := 0
+	while ambush_rooms.size() < count and attempts < 3000:
+		attempts += 1
+		var w := rng.randi_range(8, 10)
+		var h := rng.randi_range(8, 10)
+		var r := Rect2i(rng.randi_range(2, width - w - 3), rng.randi_range(2, height - h - 3), w, h)
+		var ok := true
+		for other in rooms:
+			if other.grow(3).intersects(r):
+				ok = false
+				break
+		if ok:
+			var g := r.grow(2)
+			for y in range(g.position.y, g.end.y):
+				for x in range(g.position.x, g.end.x):
+					if is_floor(x, y):
+						ok = false
+						break
+				if not ok:
+					break
+		if not ok:
+			continue
+		rooms.append(r)
+		var idx := rooms.size() - 1
+		_carve_rect(r)
+		var nearest := -1
+		var nd := INF
+		for i in range(1, idx):
+			if ambush_rooms.has(i):
+				continue
+			var d := Vector2(center(i)).distance_to(Vector2(center(idx)))
+			if d < nd:
+				nd = d
+				nearest = i
+		_carve_corridor(center(nearest), center(idx))
+		ambush_rooms.append(idx)

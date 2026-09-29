@@ -90,3 +90,20 @@ static func title(appearance: Dictionary) -> String:
 		"demon":
 			return "Barde démone" if female else "Barde démon"
 	return "Barde humaine" if female else "Barde humain"
+
+
+const MALE_NAMES := ["Hrothgar", "Ulrich", "Dagmar", "Grimm", "Lemmy", "Bjorn", "Vargus", "Otto", "Snorri", "Kael", "Mordak", "Tobias"]
+const FEMALE_NAMES := ["Ysolde", "Morgane", "Brenna", "Nyx", "Helga", "Lilith", "Sigrun", "Rhiannon", "Yrsa", "Doro", "Tarja", "Maude"]
+
+
+## Apparence aléatoire, tirée avec les mêmes options que la création de personnage.
+static func random_appearance(sex: String = "") -> Dictionary:
+	return {
+		"sex": sex if not sex.is_empty() else ["m", "f"].pick_random(),
+		"race": RACE_ORDER.pick_random(),
+		"horns": randi_range(0, HORNS.size() - 1),
+		"tusks": randi_range(0, TUSKS.size() - 1),
+		"beard": randi_range(0, BEARDS.size() - 1),
+		"hair": randi_range(0, HAIRSTYLES.size() - 1),
+		"hair_color": randi_range(0, HAIR_COLORS.size() - 1),
+	}

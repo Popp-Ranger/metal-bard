@@ -7,8 +7,14 @@ extends Enemy
 ##   • Bond écrasant (toutes les ~10 s) : zone rouge au sol, puis impact de zone.
 ##   • Coup de langue au corps-à-corps (attaque de base, 1 toutes les 2,5 s).
 ##   • Phase 2 (sous 50 % PV) : rage, vagues plus fréquentes, invoque 2 squelettes.
+## Avant le combat : dès que le héros arrive à portée, Gloubah l'interpelle (dialogue
+## « gloubah ») ; selon les réponses, elle combat, capture le héros ou devient amicale.
 
 var spawn_minion: Callable # Callable(pos: Vector3) fourni par le donjon
+## Passive tant que le dialogue n'a pas tranché ; amicale si le héros l'a amadouée.
+var passive := true
+var friendly := false
+var _talked := false
 
 var _wave_timer := 4.0
 var _leap_timer := 8.0
@@ -110,7 +116,7 @@ func _aggro() -> void:
 	super._aggro()
 	if was_wandering:
 		Sfx.play("croak", 0.0)
-		Events.notify("Gloubah : « CROOOÂÂÂ ! Qui ose troubler ma mare ? »", Color(0.6, 0.95, 0.5))
+		Events.notify("Gloubah : « CROOOÂÂÂ ! Tu vas finir en têtard ! »", Color(0.6, 0.95, 0.5))
 		Events.boss_health.emit(display_name, hp, max_hp)
 
 
@@ -207,3 +213,55 @@ func _death_anim() -> void:
 	tw.tween_interval(2.0)
 	tw.tween_property(model, "scale", Vector3(1.4, 0.02, 1.4), 1.0)
 	tw.tween_callback(queue_free)
+
+
+func _physics_process(delta: float) -> void:
+	if state == State.DEAD:
+		return
+	if passive or friendly:
+		if hero == null or not is_instance_valid(hero):
+			hero = get_tree().get_first_node_in_group("hero") as Hero
+		if hero != null:
+			var to := hero.global_position - global_position
+			to.y = 0.0
+			if to.length() < 14.0:
+				model.rotation.y = lerp_angle(model.rotation.y, atan2(to.x, to.z), 1.0 - exp(-4.0 * delta))
+			# Le héros entre à portée : Gloubah l'interpelle.
+			if passive and not _talked and to.length() <= detect_radius and not hero.dead:
+				_talked = true
+				Sfx.play("croak", 0.0)
+				Events.dialogue_requested.emit("gloubah")
+		_anim_t += delta
+		_animate(delta, false)
+		return
+	super._physics_process(delta)
+
+
+## Le combat s'engage (dialogue ou attaque surprise du héros).
+func start_fight() -> void:
+	if not passive:
+		return
+	passive = false
+	_talked = true
+	_aggro()
+
+
+func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool = false, kind: String = "phys") -> void:
+	if friendly:
+		return
+	if passive:
+		start_fight() # frappée avant la fin des palabres : elle se met en colère
+	super.take_damage(amount, from, knockback, crit, kind)
+
+
+## Choix « il est kiki » : Gloubah devient amicale (plus une ennemie).
+func befriend() -> void:
+	passive = false
+	friendly = true
+	remove_from_group("enemies")
+	set_deferred("collision_layer", 1)
+	Events.boss_health.emit(display_name, 0, max_hp)
+	for m in _eye_mats:
+		m.emission = Color(1.0, 0.6, 0.8)
+	var heart := Visuals.label(self, "♥", Vector3(0, height + 1.0, 0), Color(1.0, 0.45, 0.65), 120)
+	heart.create_tween().set_loops().tween_property(heart, "position:y", height + 1.3, 0.8).from(height + 1.0)

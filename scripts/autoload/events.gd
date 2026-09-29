@@ -35,6 +35,9 @@ signal solo_note_hit(mode: String, hits: int)
 signal talents_changed
 signal shield_changed(amount: int)
 signal portal_opened
+## Choix de dialogue qui fait avancer l'histoire (ex. « gloubah_fight »), traité par le niveau.
+signal story_action(action: String)
+signal run_stats_changed
 
 # --- Effets d'écran --------------------------------------------------------
 signal screen_flash(color: Color, duration: float)

@@ -173,8 +173,9 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	global_position.y = 0.0
 
+	# Une fois le héros repéré, l'ennemi garde toujours le regard braqué sur lui (même en reculant).
 	var look := desired
-	if state == State.ATTACK and dist < INF:
+	if state in [State.CHASE, State.ATTACK, State.STAGGER, State.FEAR] and dist < INF:
 		look = to_hero
 	if look.length() > 0.05:
 		model.rotation.y = lerp_angle(model.rotation.y, atan2(look.x, look.z), 1.0 - exp(-10.0 * delta))
@@ -304,12 +305,15 @@ func _begin_attack() -> void:
 		return
 	var to := hero.global_position - global_position
 	to.y = 0.0
+	var dmg := Dice.roll(damage_dice.x, damage_dice.y, damage_dice.z)
 	if to.length() > attack_range + radius + hero.radius + 0.6:
-		return # le héros a esquivé en reculant
+		GameState.run_add("avoided", dmg) # le héros a esquivé en reculant
+		return
 	Sfx.play("clack", -10.0)
 	if Dice.attack_roll(attack_bonus, GameState.armor_class()) > 0:
-		hero.take_hit(Dice.roll(damage_dice.x, damage_dice.y, damage_dice.z), global_position, self)
+		hero.take_hit(dmg, global_position, self)
 	else:
+		GameState.run_add("avoided", dmg)
 		DamageNumber.spawn(get_parent(), hero.global_position + Vector3(0, 2.2, 0), "Esquive", Color(0.7, 0.8, 1.0))
 
 
@@ -325,6 +329,7 @@ func show_miss() -> void:
 func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool = false, kind: String = "phys") -> void:
 	if state == State.DEAD:
 		return
+	GameState.run_add("dealt", mini(amount, maxi(hp, 0)))
 	hp -= amount
 	var color := Color(1.0, 0.95, 0.85)
 	match kind:

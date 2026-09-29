@@ -4,12 +4,17 @@ extends Node3D
 ## une fois libéré, il suit le héros en sautillant.
 
 var following := false
-var _hero: Node3D
+var _target: Node3D
+var _speed := 6.0
+var _repath := 0.0
+var _walker: NavWalker
 var _t := randf() * 10.0
 var _visual: Node3D
 
 
 func _ready() -> void:
+	_walker = NavWalker.new()
+	add_child(_walker)
 	_visual = Node3D.new()
 	add_child(_visual)
 	var fur := Visuals.mat(Color(0.45, 0.3, 0.18), 0.95)
@@ -47,19 +52,32 @@ func celebrate() -> void:
 	hearts.emitting = true
 
 
+## Suit une cible (le héros par défaut, ou Gérald à la taverne) en contournant les obstacles.
+func follow(target: Node3D = null, speed: float = 6.0) -> void:
+	following = true
+	_target = target
+	_speed = speed
+
+
 func _process(delta: float) -> void:
 	_t += delta
-	var hop := absf(sin(_t * (7.0 if following else 3.0))) * (0.2 if following else 0.06)
+	var moving := _walker != null and _walker.walking
+	var hop := absf(sin(_t * (7.0 if moving else 3.0))) * (0.2 if moving else 0.06)
 	_visual.position.y = hop
 	if not following:
 		return
-	if _hero == null or not is_instance_valid(_hero):
-		_hero = get_tree().get_first_node_in_group("hero") as Node3D
+	if _target == null or not is_instance_valid(_target):
+		_target = get_tree().get_first_node_in_group("hero") as Node3D
 		return
-	var to := _hero.global_position - global_position
+	var to := _target.global_position - global_position
 	to.y = 0.0
 	var d := to.length()
-	if d > 1.6:
-		global_position += to.normalized() * minf(d - 1.6, delta * 6.0)
-	if d > 0.1:
-		rotation.y = lerp_angle(rotation.y, atan2(to.x, to.z), delta * 8.0)
+	_repath -= delta
+	if d > 1.6 and _repath <= 0.0:
+		_repath = 0.4
+		_walker.walk_to(_target.global_position - to.normalized() * 1.2, _speed)
+	elif d <= 1.4 and _walker.walking:
+		_walker.stop()
+	var look := _walker.direction if moving else to
+	if look.length() > 0.1:
+		rotation.y = lerp_angle(rotation.y, atan2(look.x, look.z), delta * 8.0)

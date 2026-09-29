@@ -11,6 +11,12 @@ var enemy_level := 1
 var boss: FrogBoss
 var cub: OwlbearCub
 var _cage_bars: Array[Node3D] = []
+var _prison_bars: Array[Node3D] = []
+var _cage_pos := Vector3.ZERO
+var _prison_pos := Vector3.ZERO
+var _cage_interact: Interactable
+var _has_key := false
+var _cage_open := false
 var _wall_material: ShaderMaterial
 var _rng := RandomNumberGenerator.new()
 
@@ -23,8 +29,10 @@ func _ready() -> void:
 	_rng.seed = seed_value
 	gen.generate(seed_value, int(cfg.get("rooms", 10)))
 
+	GameState.reset_run()
 	GameState.flags["in_dungeon"] = true
 	setup_level("dungeon", str(cfg.get("name", "Donjon")))
+	hud.show_kill_counter()
 	_build_floor()
 	_build_walls()
 	_decorate()
@@ -34,6 +42,7 @@ func _ready() -> void:
 	_spawn_flee_portal(start + Vector3(-3.0, 0.0, -3.0))
 	spawn_hero(start)
 	Events.boss_defeated.connect(_on_boss_defeated)
+	Events.story_action.connect(_on_story_action)
 	Sfx.play_music("res://audio/music/dungeon_theme.mp3", -8.0) # musique du donjon
 	if GameState.quest_state(quest_id) == QuestDB.State.ACTIVE:
 		Events.notify("Trouvez Plumeau au fond des catacombes...", Events.COLOR_DEFAULT)
@@ -245,7 +254,7 @@ func _spawn_enemies() -> void:
 	var captain_room := -1
 	var best := INF
 	for i in gen.rooms.size():
-		if i == gen.boss_room or i == gen.start_room:
+		if i == gen.boss_room or i == gen.start_room or gen.ambush_rooms.has(i):
 			continue
 		var d := Vector2(gen.center(i)).distance_to(Vector2(gen.center(gen.boss_room)))
 		if d < best:
@@ -254,11 +263,55 @@ func _spawn_enemies() -> void:
 	for i in gen.rooms.size():
 		if i == gen.boss_room or i == gen.start_room:
 			continue
+		if gen.ambush_rooms.has(i):
+			_spawn_ambush(i)
+			continue
 		var count := _rng.randi_range(2, 4)
 		for k in count:
 			_spawn_skeleton(cell_to_world(gen.random_cell_in_room(i, 2)), false)
 		if i == captain_room:
 			_spawn_skeleton(cell_to_world(gen.center(i)), true)
+
+
+## Salle cul-de-sac : une douzaine de squelettes (dont 2 capitaines) gardent un coffre.
+func _spawn_ambush(room: int) -> void:
+	for k in 12:
+		_spawn_skeleton(cell_to_world(gen.random_cell_in_room(room, 1)), k < 2)
+	var c := cell_to_world(gen.center(room))
+	var chest := Node3D.new()
+	chest.position = c
+	add_child(chest)
+	var wood := Visuals.mat(Color(0.35, 0.2, 0.1), 0.7)
+	var gold := Visuals.mat(Color(0.85, 0.65, 0.2), 0.3, 0.9)
+	Visuals.box(chest, Vector3(1.1, 0.6, 0.7), Vector3(0, 0.3, 0), wood)
+	var lid := Visuals.box(chest, Vector3(1.15, 0.2, 0.75), Vector3(0, 0.7, 0), wood)
+	for x: float in [-0.4, 0.4]:
+		Visuals.box(chest, Vector3(0.08, 0.82, 0.78), Vector3(x, 0.41, 0), gold)
+	var shine := OmniLight3D.new()
+	shine.position = Vector3(0, 1.0, 0)
+	shine.light_color = Color(1.0, 0.8, 0.4)
+	shine.light_energy = 1.2
+	shine.omni_range = 3.0
+	chest.add_child(shine)
+	var opened := [false]
+	var open_chest := func() -> void:
+		if opened[0]:
+			return
+		opened[0] = true
+		lid.create_tween().tween_property(lid, "rotation_degrees:x", -100.0, 0.4)
+		lid.position += Vector3(0, 0.1, -0.35)
+		Sfx.play("coin", -2.0)
+		Pickup.spawn(self, c + Vector3(0, 0, 1.2), "gold", _rng.randi_range(40, 90))
+		Pickup.spawn(self, c + Vector3(0.8, 0, 1.0), "potion")
+		if _rng.randf() < 0.6:
+			var pool: Array[String] = []
+			for id: String in ItemDB.COMMON_DROPS:
+				if not GameState.inventory.has(id):
+					pool.append(id)
+			if not pool.is_empty():
+				Pickup.spawn(self, c + Vector3(-0.8, 0, 1.0), "item", 0, pool.pick_random())
+		Events.notify("Coffre ouvert !", Events.COLOR_GOLD)
+	Interactable.create(self, c + Vector3(0, 0, 0.9), "Ouvrir le coffre", open_chest, 2.0)
 
 
 func _spawn_skeleton(pos: Vector3, captain: bool) -> Skeleton:
@@ -275,14 +328,13 @@ func _spawn_skeleton(pos: Vector3, captain: bool) -> Skeleton:
 func _spawn_boss_room() -> void:
 	var r := gen.rooms[gen.boss_room]
 	var c := cell_to_world(gen.center(gen.boss_room))
-	# Mare croupie autour du trône de Gloubah.
+	# Mare croupie autour du trône de Gloubah (son « antre luxueuse »).
 	var pond := Visuals.mat(Color(0.14, 0.26, 0.18), 0.15, 0.1)
 	Visuals.cylinder(self, 4.5, 4.5, 0.03, c + Vector3(0, 0.02, 0), pond, Vector3.ZERO, 40)
 	for k in 6:
 		var a := TAU * k / 6.0
 		Visuals.cylinder(self, 0.45, 0.45, 0.04, c + Vector3(cos(a) * 3.2, 0.05, sin(a) * 3.2),
 			Visuals.mat(Color(0.12, 0.3, 0.12)), Vector3.ZERO, 12)
-	# Lueur verdâtre de la mare + braseros autour.
 	var glow := Visuals.flicker_light(self, c + Vector3(0, 3.5, 0), Color(0.45, 0.9, 0.6), 2.0, 11.0)
 	glow.flicker_amount = 0.1
 	for k in 4:
@@ -292,26 +344,23 @@ func _spawn_boss_room() -> void:
 		Visuals.sphere(self, 0.25, p + Vector3(0, 1.0, 0), Visuals.glow_mat(Color(1.0, 0.5, 0.15), 5.0), Vector3(1, 0.6, 1))
 		Visuals.flicker_light(self, p + Vector3(0, 1.6, 0), Color(1.0, 0.55, 0.25), 2.0, 8.0, k == 0)
 		Visuals.solid_cylinder(self, 0.35, 2.0, p + Vector3(0, 1.0, 0))
-	# Piliers aux quatre coins (matériau des murs : ils s'effacent devant le héros).
 	var corner := Vector3((r.size.x * 0.5 - 2.0) * CELL, 0, (r.size.y * 0.5 - 2.0) * CELL)
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
 			var p := c + Vector3(corner.x * sx, 0, corner.z * sz)
 			Visuals.cylinder(self, 0.5, 0.6, 3.0, p + Vector3(0, 1.5, 0), _wall_material, Vector3.ZERO, 8)
 			Visuals.solid_cylinder(self, 0.6, 3.0, p + Vector3(0, 1.5, 0))
-	# Cage de Plumeau, au fond de la salle.
-	var cage_pos := c + Vector3(-corner.x + 2.5, 0, -corner.z + 2.5)
+	# Cage de Plumeau (fermée à clé) et cage vide juste à côté.
+	_cage_pos = c + Vector3(-corner.x + 2.5, 0, -corner.z + 2.5)
+	_prison_pos = _cage_pos + Vector3(2.6, 0, 0)
 	cub = OwlbearCub.new()
-	cub.position = cage_pos
+	cub.position = _cage_pos
 	cub.rotation.y = PI * 0.25
 	add_child(cub)
-	var iron := Visuals.mat(Color(0.25, 0.22, 0.2), 0.5, 0.8)
-	Visuals.cylinder(self, 1.0, 1.0, 0.1, cage_pos + Vector3(0, 1.7, 0), iron, Vector3.ZERO, 12)
-	for k in 10:
-		var a := TAU * k / 10.0
-		var bar := Visuals.cylinder(self, 0.03, 0.03, 1.7, cage_pos + Vector3(cos(a) * 0.95, 0.85, sin(a) * 0.95), iron, Vector3.ZERO, 6)
-		_cage_bars.append(bar)
-	Visuals.label(self, "Plumeau", cage_pos + Vector3(0, 2.2, 0), Color(0.95, 0.8, 0.5), 32)
+	_cage_bars = _build_cage(_cage_pos, true)
+	Visuals.label(self, "Plumeau", _cage_pos + Vector3(0, 2.2, 0), Color(0.95, 0.8, 0.5), 32)
+	_prison_bars = _build_cage(_prison_pos, false) # porte ouverte : barreaux baissés
+	_cage_interact = Interactable.create(self, _cage_pos + Vector3(0.9, 0, 0.9), "Ouvrir la cage de Plumeau", _try_open_cage, 1.8)
 	# Le boss.
 	boss = FrogBoss.new()
 	boss.level = enemy_level
@@ -324,33 +373,134 @@ func _spawn_boss_room() -> void:
 	add_child(boss)
 
 
-func _spawn_flee_portal(pos: Vector3) -> void:
-	var portal := Portal.new()
-	portal.position = pos
-	portal.prompt = "Fuir vers la taverne (la quête reste en cours)"
-	portal.target_scene = Router.TAVERN
-	add_child(portal)
+## Cage ronde en fer. `closed` = barreaux levés ; sinon ils sont rentrés dans le sol.
+func _build_cage(pos: Vector3, closed: bool) -> Array[Node3D]:
+	var iron := Visuals.mat(Color(0.25, 0.22, 0.2), 0.5, 0.8)
+	Visuals.cylinder(self, 1.0, 1.0, 0.1, pos + Vector3(0, 1.7, 0), iron, Vector3.ZERO, 12)
+	Visuals.cylinder(self, 1.0, 1.0, 0.06, pos + Vector3(0, 0.03, 0), iron, Vector3.ZERO, 12)
+	var bars: Array[Node3D] = []
+	for k in 10:
+		var a := TAU * k / 10.0
+		var bar := Visuals.cylinder(self, 0.03, 0.03, 1.7, pos + Vector3(cos(a) * 0.95, 0.85 if closed else -1.0, sin(a) * 0.95), iron, Vector3.ZERO, 6)
+		bars.append(bar)
+	return bars
+
+
+func _set_bars(bars: Array[Node3D], closed: bool) -> void:
+	for bar in bars:
+		var tw := bar.create_tween()
+		tw.tween_property(bar, "position:y", 0.85 if closed else -1.0, 0.6).set_delay(randf() * 0.25)
+
+
+# --- Fin du donjon : dialogue de Gloubah, clé, cage, récapitulatif ------------------
+
+func _on_story_action(action: String) -> void:
+	match action:
+		"gloubah_fight":
+			boss.start_fight()
+		"gloubah_surrender":
+			_surrender()
+		"gloubah_friend":
+			_befriend_gloubah()
 
 
 func _on_boss_defeated(_boss_id: String) -> void:
+	# Gloubah laisse tomber la clé de la cage : il faut la ramasser ([E] ou clic).
+	var key_pos := boss.global_position + Vector3(0.8, 0, 0.8)
+	_spawn_key(key_pos)
+	Events.notify("Gloubah a laissé tomber une clé rouillée...", Events.COLOR_GOLD)
+
+
+func _spawn_key(pos: Vector3) -> void:
+	var key := Interactable.create(self, pos, "Ramasser la clé de la cage", Callable(), 1.8)
+	var gold := Visuals.glow_mat(Color(1.0, 0.8, 0.3), 2.5)
+	var visual := Node3D.new()
+	key.add_child(visual)
+	Visuals.torus(visual, 0.08, 0.12, Vector3(0, 0.5, 0), gold, Vector3(90, 0, 0))
+	Visuals.box(visual, Vector3(0.04, 0.04, 0.35), Vector3(0, 0.5, 0.25), gold)
+	Visuals.box(visual, Vector3(0.04, 0.1, 0.04), Vector3(0, 0.45, 0.38), gold)
+	var shine := OmniLight3D.new()
+	shine.position.y = 0.8
+	shine.light_color = Color(1.0, 0.8, 0.4)
+	shine.omni_range = 2.5
+	key.add_child(shine)
+	visual.create_tween().set_loops().tween_property(visual, "rotation:y", TAU, 2.0).from(0.0)
+	key.on_interact = func() -> void:
+		_take_key()
+		key.queue_free()
+
+
+func _take_key() -> void:
+	_has_key = true
+	Sfx.play("coin", 0.0)
+	Events.notify("Clé de la cage obtenue ! Allez libérer Plumeau.", Events.COLOR_GOLD)
+	_cage_interact.prompt = "Ouvrir la cage de Plumeau (clé)"
+
+
+func _try_open_cage() -> void:
+	if _cage_open:
+		return
+	if not _has_key:
+		Events.notify("La cage est fermée à clé. Gloubah doit l'avoir sur elle...", Events.COLOR_BAD)
+		Sfx.play("dud", -8.0)
+		return
+	_cage_open = true
+	_cage_interact.queue_free()
+	_set_bars(_cage_bars, false)
 	GameState.complete_objective(quest_id)
 	GameState.flags["plumeau_rescued"] = true
-	# La cage s'ouvre.
-	for bar in _cage_bars:
-		var tw := bar.create_tween()
-		tw.tween_property(bar, "position:y", -1.0, 0.8).set_delay(randf() * 0.3)
-	await get_tree().create_timer(1.2, false).timeout
+	await get_tree().create_timer(0.9, false).timeout
 	if cub != null:
-		cub.following = true
+		cub.follow()
 		cub.celebrate()
 	Sfx.play("levelup", -4.0)
 	Events.notify("Plumeau est libre ! Hou-hou !", Color(0.95, 0.8, 0.5))
-	await get_tree().create_timer(1.5, false).timeout
+	await get_tree().create_timer(1.2, false).timeout
 	var c := cell_to_world(gen.center(gen.boss_room))
 	var portal := Portal.new()
 	portal.position = c + Vector3(2.0, 0, 2.0)
 	portal.prompt = "Retourner à la taverne (portail de Zarathos)"
-	portal.target_scene = Router.TAVERN
-	portal.on_enter = GameState.save_game
+	portal.on_enter = _end_dungeon.bind("Catacombes nettoyées !", true)
 	add_child(portal)
 	Events.notify("Zarathos : « Beau vacarme, barde ! Je t'ouvre un passage. »", Events.COLOR_MAGIC)
+
+
+## Choix « Bah oui, il est kiki... » : Gloubah devient amicale et donne la clé.
+## Récompense : le double de l'XP qu'aurait rapporté sa mort.
+func _befriend_gloubah() -> void:
+	boss.befriend()
+	var xp := boss.xp_reward * 2
+	GameState.add_xp(xp)
+	DamageNumber.spawn(self, boss.global_position + Vector3(0, 3.0, 0), "+%d XP" % xp, Events.COLOR_GOLD, true)
+	Events.notify("Gloubah vous confie la clé de la cage, les yeux humides. (+%d XP — victoire sans combat !)" % xp, Events.COLOR_GOLD)
+	_take_key()
+
+
+## Choix « Je me rends » : Gloubah enferme le héros dans la cage vide.
+func _surrender() -> void:
+	hero.captive = true
+	hero.global_position = _prison_pos
+	camera.snap_to_target()
+	_set_bars(_prison_bars, true)
+	Sfx.play("croak", 0.0, 0.0)
+	Events.notify("Gloubah : « CROÂ-HA-HA ! Un nouveau bibelot pour ma collection ! »", Color(0.6, 0.95, 0.5))
+	await get_tree().create_timer(4.0, false).timeout
+	Events.notify("Zarathos : « Tss... je te sors de là. Reviens quand tu auras plus de cran. »", Events.COLOR_MAGIC)
+	await get_tree().create_timer(2.0, false).timeout
+	_end_dungeon("Capturé par Gloubah...", false)
+
+
+func _spawn_flee_portal(pos: Vector3) -> void:
+	var portal := Portal.new()
+	portal.position = pos
+	portal.prompt = "Fuir vers la taverne (la quête reste en cours)"
+	portal.on_enter = _end_dungeon.bind("Retraite stratégique", false)
+	add_child(portal)
+
+
+## Fin du passage au donjon : récapitulatif (victimes, dégâts) puis retour à la taverne.
+func _end_dungeon(title: String, victory: bool) -> void:
+	GameState.flags["in_dungeon"] = true
+	if victory:
+		GameState.save_game()
+	hud.show_recap(title, func() -> void: Router.go_to(Router.TAVERN))

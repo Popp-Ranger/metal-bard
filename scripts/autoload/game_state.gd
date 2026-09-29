@@ -25,10 +25,13 @@ var talent_points := 1
 var spell_slots: Array[String] = ["", "", "", ""] # talents actifs sur les touches 4 à 7
 ## Bouclier temporaire (Mur de Larsen), non sauvegardé.
 var shield := 0
+## Statistiques du passage en cours au donjon (compteur de victimes, récapitulatif).
+var run := {"kills": 0, "dealt": 0, "taken": 0, "avoided": 0, "start": 0}
 
 
 func _ready() -> void:
 	new_game()
+	Events.enemy_killed.connect(func(_e: Node3D) -> void: run_add("kills", 1))
 
 
 func new_game() -> void:
@@ -362,6 +365,8 @@ func run_dialogue_action(action: String) -> void:
 				Events.notify("Pas assez d'or pour une chambre.", Events.COLOR_BAD)
 		"flag":
 			flags[arg] = true
+		"story":
+			Events.story_action.emit(arg)
 
 
 # --- Sauvegarde ------------------------------------------------------------
@@ -431,3 +436,20 @@ func load_game() -> bool:
 	hp = clampi(int(data.get("hp", max_hp())), 1, max_hp())
 	mana = clampf(float(data.get("mana", max_mana())), 0.0, max_mana())
 	return true
+
+
+# --- Statistiques du donjon ---------------------------------------------------------
+
+func reset_run() -> void:
+	run = {"kills": 0, "dealt": 0, "taken": 0, "avoided": 0, "start": Time.get_ticks_msec()}
+
+
+func run_add(key: String, amount: int) -> void:
+	if amount <= 0:
+		return
+	run[key] = int(run.get(key, 0)) + amount
+	Events.run_stats_changed.emit()
+
+
+func run_seconds() -> int:
+	return floori((Time.get_ticks_msec() - int(run.get("start", 0))) / 1000.0)

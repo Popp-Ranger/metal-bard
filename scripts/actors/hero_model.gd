@@ -48,6 +48,11 @@ var _strum := 0.0 # animation du grattage (0..1)
 var _smash := 0.0 # 1 = les deux mains sur le manche (coup de guitare)
 var _twitch := 0.0
 var _twitch_timer := 2.0
+## Assis (PNJ attablés, fauteuil roulant).
+var seated := false
+var _seat_height := 0.49
+## Rotation additionnelle de la tête (un PNJ qui regarde le héros).
+var head_turn := 0.0
 
 
 func _ready() -> void:
@@ -80,7 +85,7 @@ func _build() -> void:
 	var skeleton := race_id == "squelette"
 	# Taille et carrure : le modèle de base mesure 1,8 m.
 	var h := float(race.get("height", 1.8)) / 1.8
-	var w := float(race.get("width", 1.0)) * (0.9 if female else 1.0)
+	var w := float(race.get("width", 1.0)) * (0.9 if female else 1.0) * float(appearance.get("width_mult", 1.0))
 	scale = Vector3(w * sqrt(h), h, w * sqrt(h))
 
 	var leather := _own_mat(Color(0.09, 0.07, 0.07), 0.6)
@@ -120,18 +125,22 @@ func _build() -> void:
 		Visuals.sphere(_torso, 0.13, Vector3(shoulder * side, 0.62, 0.02), coat, Vector3(1.2, 0.85, 1.1))
 		Visuals.cylinder(_torso, 0.0, 0.035, 0.14, Vector3((shoulder + 0.06) * side, 0.72, 0.0), metal, Vector3(0, 0, -30 * side))
 	# Sangle de guitare en travers du torse.
-	Visuals.box(_torso, Vector3(0.05, 0.72, 0.02), Vector3(-0.01, 0.32, 0.15), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, 33))
+	if appearance.get("guitar", true):
+		Visuals.box(_torso, Vector3(0.05, 0.72, 0.02), Vector3(-0.01, 0.32, 0.15), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, 33))
 
 	# --- Tête projetée en avant (cou tendu).
 	_head = _pivot(_torso, Vector3(0, 0.64, 0.1))
 	_head.rotation.x = -0.2
 	_build_head(race_id, race, female, skin, hair)
 
-	# --- Guitare Flying V.
-	_guitar = _pivot(_torso, GUITAR_REST_POS)
-	_guitar.rotation = GUITAR_REST
-	_guitar.scale = Vector3.ONE * 1.15 # légèrement surdimensionnée pour rester lisible en vue iso
-	_build_flying_v(_guitar, metal)
+	# --- Guitare Flying V (seulement pour le héros ; les PNJ n'en ont pas).
+	_guitar = null
+	_strings_mat = null
+	if appearance.get("guitar", true):
+		_guitar = _pivot(_torso, GUITAR_REST_POS)
+		_guitar.rotation = GUITAR_REST
+		_guitar.scale = Vector3.ONE * 1.15 # légèrement surdimensionnée pour rester lisible en vue iso
+		_build_flying_v(_guitar, metal)
 
 	# --- Bras (IK à deux os).
 	_upper_l = _pivot(_torso, Vector3(-shoulder - 0.01, 0.58, 0.03))
@@ -365,40 +374,67 @@ func set_moving(moving: bool) -> void:
 	_moving = moving
 
 
+## Pose assise (chaise, tabouret, fauteuil roulant). `seat_height` = hauteur de l'assise en mètres.
+func set_seated(value: bool, seat_height: float = 0.49) -> void:
+	seated = value
+	_seat_height = seat_height
+
+
 func _process(delta: float) -> void:
 	_t += delta
-	_walk = move_toward(_walk, 1.0 if _moving else 0.0, delta * 5.0)
-	_strings_mat.emission_energy_multiplier = (3.0 if _soloing else 0.8) + sin(_t * 6.0) * 0.3
+	_walk = move_toward(_walk, 1.0 if _moving and not seated else 0.0, delta * 5.0)
+	var hunched: bool = appearance.get("hunched", true)
+	if _strings_mat != null:
+		_strings_mat.emission_energy_multiplier = (3.0 if _soloing else 0.8) + sin(_t * 6.0) * 0.3
 
-	# Démarche de Réprouvé : pas traînants et irréguliers, balancement, genoux fléchis.
 	var phase := _t * 7.0
-	var step := sin(phase) + 0.3 * sin(phase * 2.0) # boiterie
-	var knee_base := 0.55
-	_hip_l.rotation.x = -0.3 + step * 0.45 * _walk
-	_hip_r.rotation.x = -0.3 - step * 0.45 * _walk
-	_knee_l.rotation.x = knee_base + maxf(0.0, -cos(phase)) * 0.5 * _walk
-	_knee_r.rotation.x = knee_base + maxf(0.0, cos(phase)) * 0.5 * _walk
-	var bob := absf(sin(phase)) * 0.05 * _walk + sin(_t * 1.7) * 0.01 * (1.0 - _walk)
-	_torso.position.y = 0.8 + bob
-	_hip_l.position.y = 0.8 + bob
-	_hip_r.position.y = 0.8 + bob
-	_torso.rotation.z = sin(phase) * 0.09 * _walk + sin(_t * 0.9) * 0.02
-	var lean := TORSO_LEAN + 0.06 * _walk
+	var bob := 0.0
+	if seated:
+		# Assis : cuisses à l'horizontale, tibias vers le sol, bassin à hauteur de l'assise.
+		var hip_y := _seat_height / maxf(scale.y, 0.01) + 0.04
+		_hip_l.rotation.x = -1.45
+		_hip_r.rotation.x = -1.45
+		_knee_l.rotation.x = 1.45
+		_knee_r.rotation.x = 1.45
+		_torso.position.y = hip_y
+		_hip_l.position.y = hip_y
+		_hip_r.position.y = hip_y
+		_torso.rotation.z = sin(_t * 0.9) * 0.02
+	else:
+		# Démarche : pas traînants et boiteux façon Réprouvé (héros), ou pas normal (PNJ).
+		var step := sin(phase) + (0.3 * sin(phase * 2.0) if hunched else 0.0)
+		var knee_base := 0.55 if hunched else 0.15
+		var thigh_base := -0.3 if hunched else -0.08
+		_hip_l.rotation.x = thigh_base + step * 0.45 * _walk
+		_hip_r.rotation.x = thigh_base - step * 0.45 * _walk
+		_knee_l.rotation.x = knee_base + maxf(0.0, -cos(phase)) * 0.5 * _walk
+		_knee_r.rotation.x = knee_base + maxf(0.0, cos(phase)) * 0.5 * _walk
+		bob = absf(sin(phase)) * 0.05 * _walk + sin(_t * 1.7) * 0.01 * (1.0 - _walk)
+		var base_y := 0.8 if hunched else 0.85
+		_torso.position.y = base_y + bob
+		_hip_l.position.y = base_y + bob
+		_hip_r.position.y = base_y + bob
+		_torso.rotation.z = sin(phase) * (0.09 if hunched else 0.03) * _walk + sin(_t * 0.9) * 0.02
+	var lean := (TORSO_LEAN + 0.06 * _walk) if hunched else 0.05
+	if seated:
+		lean = 0.08
 	if _soloing:
 		lean = -0.12 # cambré en arrière pour le solo
 	_torso.rotation.x = lerpf(_torso.rotation.x, lean, delta * 8.0)
 
-	# Tête : saccades nerveuses, headbang pendant le solo.
-	_twitch_timer -= delta
-	if _twitch_timer <= 0.0:
-		_twitch_timer = randf_range(1.5, 4.0)
-		_twitch = randf_range(-0.35, 0.35)
+	# Tête : saccades nerveuses (héros), headbang pendant le solo.
+	if hunched:
+		_twitch_timer -= delta
+		if _twitch_timer <= 0.0:
+			_twitch_timer = randf_range(1.5, 4.0)
+			_twitch = randf_range(-0.35, 0.35)
 	_twitch = move_toward(_twitch, 0.0, delta * 1.5)
-	_head.rotation.y = _twitch
+	_head.rotation.y = _twitch + head_turn
 	if _soloing:
 		_head.rotation.x = -0.1 + absf(sin(_t * 9.0)) * 0.55
 	else:
-		_head.rotation.x = lerpf(_head.rotation.x, -0.2 + sin(phase) * 0.05 * _walk, delta * 8.0)
+		var rest := -0.2 if hunched else -0.05
+		_head.rotation.x = lerpf(_head.rotation.x, rest + sin(phase) * 0.05 * _walk, delta * 8.0)
 	_hair_back.rotation.x = -0.1 - _walk * 0.15 - (absf(sin(_t * 9.0)) * 0.3 if _soloing else 0.0)
 
 	# Grattage permanent pendant le solo.
@@ -416,6 +452,17 @@ func _process(delta: float) -> void:
 # --- IK des bras ---------------------------------------------------------------
 
 func _update_arms() -> void:
+	if _guitar == null:
+		# Sans guitare (PNJ) : bras le long du corps en marchant, mains sur la table assis.
+		var swing := sin(_t * 7.0) * 0.12 * _walk
+		var l := Vector3(-0.32, 0.05, 0.08 + swing)
+		var r := Vector3(0.32, 0.05, 0.08 - swing)
+		if seated:
+			l = Vector3(-0.2, 0.3, 0.42)
+			r = Vector3(0.2, 0.3 + sin(_t * 1.3) * 0.03, 0.42)
+		_solve_arm(_upper_l, _fore_l, l, Vector3(-1.0, -0.2, -0.6))
+		_solve_arm(_upper_r, _fore_r, r, Vector3(1.0, -0.2, -0.6))
+		return
 	var gt := _guitar.transform
 	var fret := 0.42
 	if _soloing:
@@ -455,7 +502,7 @@ func _basis_pointing(v: Vector3) -> Basis:
 
 ## Coup de guitare : empoignée par le manche, levée au-dessus de l'épaule puis abattue.
 func swing() -> void:
-	if _busy or _soloing:
+	if _busy or _soloing or _guitar == null:
 		return
 	_busy = true
 	var tw := create_tween()
@@ -473,7 +520,7 @@ func swing() -> void:
 
 ## Accord rageur (lancement de sort) : la guitare se relève, grattage appuyé.
 func strum() -> void:
-	if _soloing:
+	if _soloing or _guitar == null:
 		return
 	var tw := create_tween()
 	tw.tween_property(_guitar, "rotation", GUITAR_SOLO, 0.06)
@@ -484,6 +531,8 @@ func strum() -> void:
 
 ## Posture de solo (pendant le mini-jeu) : cambré, manche levé, headbang, aura dorée.
 func solo_pose(active: bool) -> void:
+	if _guitar == null:
+		return
 	_soloing = active
 	var tw := create_tween()
 	tw.tween_property(_guitar, "rotation", GUITAR_SOLO if active else GUITAR_REST, 0.15)

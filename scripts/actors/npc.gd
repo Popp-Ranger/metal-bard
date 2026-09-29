@@ -1,15 +1,35 @@
 class_name Npc
 extends Node3D
-## Personnage non joueur de la taverne. [E] pour lui parler (voir DialogueDB).
+## Personnage non joueur. [E] (ou clic) pour lui parler (voir DialogueDB).
+## Apparence : modèle dédié (Gérald, Zarathos, l'Inconnue) ou, si `look` est rempli,
+## un modèle généré avec l'outil de création de personnage (clients, tavernière...).
+## Peut marcher sur le maillage de navigation, s'asseoir, et afficher un point
+## d'exclamation / d'interrogation vert s'il donne une quête.
+
+signal arrived
 
 var npc_id := ""
+## Nom affiché (sinon celui de DialogueDB) et identifiant du dialogue (sinon npc_id).
+var display_name := ""
+var title_override := ""
+var dialogue_id := ""
 var interact_radius := 2.3
 var seated := false
+## Apparence façon création de personnage (RaceDB) ; vide = modèle dédié.
+var look := {}
+var walk_speed := 1.4
 
+var model: HeroModel
+var walker: NavWalker
 var _body: Node3D
 var _head: Node3D
 var _t := randf() * 10.0
 var _hero: Node3D
+var _labels: Node3D
+var _marker: Label3D
+var _quest_ids: Array[String] = []
+var _bubble: Label3D
+var _bubble_time := 0.0
 
 
 static func create(id: String, pos: Vector3, facing_deg: float = 0.0, is_seated: bool = false) -> Npc:
@@ -23,40 +43,139 @@ static func create(id: String, pos: Vector3, facing_deg: float = 0.0, is_seated:
 
 func _ready() -> void:
 	add_to_group("interactable")
+	add_to_group("npcs")
 	_body = Node3D.new()
 	add_child(_body)
-	_build()
-	var name_label := Visuals.label(self, DialogueDB.npc_name(npc_id), Vector3(0, 2.45 if not seated else 2.0, 0),
-		DialogueDB.npc_color(npc_id), 34)
+	if look.is_empty():
+		_build()
+	else:
+		var full_look := look.duplicate()
+		full_look["guitar"] = false
+		full_look["hunched"] = false
+		model = HeroModel.new()
+		model.appearance = full_look
+		_body.add_child(model)
+	walker = NavWalker.new()
+	add_child(walker)
+	walker.arrived.connect(func() -> void: arrived.emit())
+	_labels = Node3D.new()
+	add_child(_labels)
+	var top := _top_height()
+	var name_label := Visuals.label(_labels, get_display_name(), Vector3(0, top + 0.25, 0), DialogueDB.npc_color(npc_id), 34)
 	name_label.modulate.a = 0.85
-	var title: String = DialogueDB.NPCS.get(npc_id, {}).get("title", "")
+	var title := title_override
+	if title.is_empty():
+		title = str(DialogueDB.NPCS.get(npc_id, {}).get("title", ""))
 	if not title.is_empty():
-		Visuals.label(self, title, Vector3(0, 2.25 if not seated else 1.8, 0), Color(0.7, 0.65, 0.6), 24)
+		Visuals.label(_labels, title, Vector3(0, top + 0.05, 0), Color(0.7, 0.65, 0.6), 24)
+	# Donneur de quête : « ! » vert (quête disponible), « ? » vert (quête à rendre).
+	for qid: String in QuestDB.QUESTS:
+		if str(QuestDB.get_quest(qid).get("giver", "")) == npc_id:
+			_quest_ids.append(qid)
+	if not _quest_ids.is_empty():
+		_marker = Visuals.label(_labels, "!", Vector3(0, top + 0.75, 0), Color(0.3, 1.0, 0.35), 120)
+		_marker.outline_size = 16
+		Events.quest_updated.connect(func(_q: String) -> void: _refresh_marker())
+		_refresh_marker()
+	if seated and model != null:
+		model.set_seated(true)
+
+
+## Hauteur du sommet de la tête (pour placer les étiquettes).
+func _top_height() -> float:
+	if model != null:
+		return model.height() * (0.72 if seated else 1.0) + 0.15
+	return 2.0 if seated else 2.2
+
+
+func get_display_name() -> String:
+	return display_name if not display_name.is_empty() else DialogueDB.npc_name(npc_id)
+
+
+func _refresh_marker() -> void:
+	if _marker == null:
+		return
+	_marker.visible = false
+	for qid in _quest_ids:
+		match GameState.quest_state(qid):
+			QuestDB.State.AVAILABLE:
+				_marker.text = "!"
+				_marker.visible = true
+			QuestDB.State.OBJECTIVE_DONE:
+				_marker.text = "?"
+				_marker.visible = true
 
 
 func get_prompt() -> String:
-	return "Parler à %s" % DialogueDB.npc_name(npc_id)
+	return "Parler à %s" % get_display_name()
 
 
 func interact(_by: Node3D) -> void:
-	Events.dialogue_requested.emit(npc_id)
+	Events.dialogue_requested.emit(dialogue_id if not dialogue_id.is_empty() else npc_id)
+
+
+# --- Déplacements -----------------------------------------------------------------
+
+func walk_to(pos: Vector3, speed: float = -1.0) -> void:
+	sit(false)
+	walker.walk_to(pos, walk_speed if speed < 0.0 else speed)
+
+
+func is_walking() -> bool:
+	return walker.walking
+
+
+## Assis (sur une chaise orientée selon `yaw`) ou debout.
+func sit(value: bool, seat_height: float = 0.49) -> void:
+	seated = value
+	if model != null:
+		model.set_seated(value, seat_height)
+	if _labels != null:
+		for i in _labels.get_child_count():
+			var l := _labels.get_child(i) as Label3D
+			if l != null:
+				l.position.y = _top_height() + [0.25, 0.05, 0.75][mini(i, 2)]
+
+
+## Petite bulle de texte au-dessus de la tête (vie de la taverne).
+func say(text: String, duration: float = 3.5) -> void:
+	if _bubble == null:
+		_bubble = Visuals.label(self, "", Vector3(0, _top_height() + 1.1, 0), Color(1.0, 0.95, 0.8), 30)
+	_bubble.text = "« %s »" % text
+	_bubble.position.y = _top_height() + 1.1
+	_bubble.visible = true
+	_bubble_time = duration
 
 
 func _process(delta: float) -> void:
 	_t += delta
-	_body.position.y = sin(_t * 1.8) * 0.015
+	if _bubble != null and _bubble.visible:
+		_bubble_time -= delta
+		if _bubble_time <= 0.0:
+			_bubble.visible = false
+	if _marker != null:
+		_marker.position.y = _top_height() + 0.75 + sin(_t * 2.5) * 0.08
+	var moving := walker != null and walker.walking and walker.direction.length() > 0.1
+	if moving:
+		rotation.y = lerp_angle(rotation.y, atan2(walker.direction.x, walker.direction.z), 1.0 - exp(-10.0 * delta))
+	if model != null:
+		model.set_moving(moving)
+	else:
+		_body.position.y = absf(sin(_t * 8.0)) * 0.05 if moving else sin(_t * 1.8) * 0.015
 	if _hero == null or not is_instance_valid(_hero):
 		_hero = get_tree().get_first_node_in_group("hero") as Node3D
 		return
 	# Tourne la tête vers le héros quand il est proche.
 	var to := _hero.global_position - global_position
 	to.y = 0.0
-	if to.length() < 5.0 and _head != null:
+	var yaw := 0.0
+	if to.length() < 5.0 and not moving:
 		var local := global_transform.basis.inverse() * to
-		var yaw := clampf(atan2(local.x, local.z), -1.1, 1.1)
-		_head.rotation.y = lerp_angle(_head.rotation.y, yaw, delta * 5.0)
+		yaw = clampf(atan2(local.x, local.z), -1.1, 1.1)
+	if model != null:
+		model.head_turn = lerp_angle(model.head_turn, yaw, delta * 5.0)
 	elif _head != null:
-		_head.rotation.y = lerp_angle(_head.rotation.y, 0.0, delta * 3.0)
+		_head.rotation.y = lerp_angle(_head.rotation.y, yaw, delta * 5.0)
 
 
 # --- Apparences ------------------------------------------------------------
