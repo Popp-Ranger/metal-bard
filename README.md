@@ -1,25 +1,26 @@
 # 🤘 METAL BARD — La Ballade de l'Ours-Hibou
 
 **Hack'n'slash isométrique dark fantasy sous Godot 4.7.**
-Un barde metal, son luth électrique, trois sorts de foudre et de son… et une armée de squelettes qui chantent faux.
+Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et une armée de squelettes qui chantent faux.
 
 ![Taverne du Crâne Hurlant](docs/screenshots/01_taverne.png)
 
-| Combat — Riff électrique en chaîne | Solo de la Foudre (mini-jeu) | Boss — Gloubah |
-|---|---|---|
-| ![Combat](docs/screenshots/04_riff_electrique.png) | ![Solo](docs/screenshots/05_solo.png) | ![Boss](docs/screenshots/06_boss_gloubah.png) |
+| Riffald et sa Flying V | Accordage de cordes (5 cibles) | Solo de la Foudre (sans pause, invincible) | Boss — Gloubah |
+|---|---|---|---|
+| ![Flying V](docs/screenshots/07_flying_v.png) | ![Combat](docs/screenshots/04_accordage_de_cordes.png) | ![Solo](docs/screenshots/05_solo.png) | ![Boss](docs/screenshots/06_boss_gloubah.png) |
 
 ## Le jeu en bref
 
 - **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon** (contours encrés, vignette, torches vacillantes).
-- **Héros** : Riffald, barde à crinière rousse, inspiré de Dave Mustaine et Ronnie James Dio.
+- **Héros** : Riffald, barde à crinière rousse inspiré de Dave Mustaine et Ronnie James Dio, armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
 - **Taverne-hub** « Le Crâne Hurlant » : 6 PNJ, dialogues à choix, boutique, repos, tableau des quêtes.
-- **Première quête complète** : retrouver Plumeau, le bébé ours-hibou de Gérald, dans des **catacombes générées procéduralement**, jusqu'au **boss Gloubah**, grenouille géante aux vagues déferlantes.
+- **Première quête complète** : retrouver Plumeau, le bébé ours-hibou de Gérald, dans de vastes **catacombes générées procéduralement** (salles de 16 à 26 m, couloirs de 6 m, torches espacées), jusqu'au **boss Gloubah**, grenouille géante aux vagues déferlantes.
 - **Arsenal** :
-  - **Coup de luth** au corps-à-corps (tenu par le manche) ;
-  - **Riff électrique** : arc qui rebondit sur jusqu'à 5 ennemis ;
-  - **Onde de choc** sonore : tous les ennemis dans un rayon ;
-  - **Solo de la Foudre** : mini-jeu façon *Guitar Hero* (5 notes), puis pluie d'éclairs sur tout l'écran.
+  - **Coup de guitare** au corps-à-corps (empoignée par le manche) ;
+  - **Accordage de cordes** (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis ;
+  - **Riff électrique** (1) : une seule cible ; en appuyant **en rythme**, les dégâts montent en 4 paliers jusqu'à **×3**, et restent au maximum tant qu'on garde le tempo (métronome dans le HUD) ;
+  - **Onde de choc** sonore (2) : tous les ennemis dans un rayon ;
+  - **Solo de la Foudre** (3) : mini-jeu façon *Guitar Hero* (5 notes, touches **1 2 3 4**) **sans pause** — le héros est **invincible** pendant le solo — puis pluie d'éclairs sur tout l'écran.
 - **Règles Donjons & Dragons 5e** : FOR / DEX / CON / INT / SAG / CHA, jets d'attaque d20 contre la CA, sauvegardes, table d'XP officielle, points à répartir à chaque niveau.
 - **IA des squelettes** : errance aléatoire, détection à 4 m, vitesse = 25 % du héros, 1 attaque toutes les 2,5 s (avec élan visible pour esquiver).
 - Sons **synthétisés par code** (aucun fichier audio requis), sauvegarde automatique.
@@ -39,9 +40,10 @@ Un barde metal, son luth électrique, trois sorts de foudre et de son… et une 
 |---|---|
 | Se déplacer | **ZQSD** (AZERTY) / **WASD** (QWERTY) / flèches |
 | Viser | Souris |
-| Coup de luth | **Espace** ou clic gauche |
-| Riff électrique / Onde de choc / Solo | **1** / **2** / **3** |
-| Mini-jeu du solo | **← ↓ ↑ →** ou **D F J K** |
+| Coup de guitare | **Espace** ou clic gauche |
+| Accordage de cordes | **Clic droit** |
+| Riff électrique (en rythme !) / Onde de choc / Solo | **1** / **2** / **3** |
+| Mini-jeu du solo | **1 2 3 4** |
 | Potion | **R** |
 | Parler / interagir | **E** |
 | Fiche de personnage | **C** |

@@ -1,7 +1,7 @@
 class_name Hero
 extends CharacterBody3D
 ## Riffald, le barde métal. Déplacement ZQSD/WASD relatif à la caméra iso,
-## visée à la souris, coup de luth + 3 sorts + potion + interaction.
+## visée à la souris, coup de guitare + 4 sorts + potion + interaction.
 
 var camera: IsoCamera
 var model: HeroModel
@@ -9,7 +9,10 @@ var dead := false
 var casting_solo := false
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
-var cooldowns := {"attack": 0.0, "arc": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
+var cooldowns := {"attack": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
+## Combo du Riff électrique : nombre d'appuis consécutifs en rythme (1..RIFF_MAX_STACKS).
+var riff_stack := 0
+var _riff_last := -100.0
 var radius := 0.35
 
 var _invuln := 0.0
@@ -35,8 +38,8 @@ func _ready() -> void:
 	var halo := OmniLight3D.new()
 	halo.position = Vector3(1.3, 3.0, 1.3) # décalée vers la caméra pour éclairer le héros de face
 	halo.light_color = Color(1.0, 0.78, 0.55)
-	halo.light_energy = 1.8
-	halo.omni_range = 10.0
+	halo.light_energy = 2.0
+	halo.omni_range = 11.0
 	halo.omni_attenuation = 1.2
 	halo.shadow_enabled = true
 	add_child(halo)
@@ -54,6 +57,8 @@ func _physics_process(delta: float) -> void:
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var move := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
+	if casting_solo:
+		move = Vector3.ZERO # il est planté sur place, en plein solo
 	velocity = move * Balance.HERO_SPEED
 	move_and_slide()
 	global_position.y = 0.0
@@ -77,8 +82,10 @@ func _physics_process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if dead or get_tree().paused:
 		return
-	if event.is_action_pressed("spell_arc"):
-		cast_arc()
+	if event.is_action_pressed("spell_tuning"):
+		cast_tuning()
+	elif event.is_action_pressed("spell_riff"):
+		cast_riff()
 	elif event.is_action_pressed("spell_wave"):
 		cast_wave()
 	elif event.is_action_pressed("spell_solo"):
@@ -145,30 +152,83 @@ func melee() -> void:
 	Sfx.play("thud" if hit_any else "swoosh", -4.0 if hit_any else -10.0)
 
 
-## Sort 1 — Riff électrique : arc qui rebondit sur jusqu'à 5 ennemis.
-func cast_arc() -> void:
-	if not _ready_skill("arc"):
+## Accordage de cordes (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis.
+func cast_tuning() -> void:
+	if not _ready_skill("tuning"):
 		return
 	var targets := _arc_targets()
 	if targets.is_empty():
-		Events.notify("Aucune cible à portée pour le Riff électrique", Events.COLOR_BAD)
+		Events.notify("Aucune cible à portée pour l'Accordage de cordes", Events.COLOR_BAD)
 		return
-	if not GameState.spend_mana(Balance.ARC_COST):
+	if not GameState.spend_mana(Balance.TUNING_COST):
 		_no_mana()
 		return
-	_cooldown("arc", Balance.ARC_COOLDOWN)
+	_cooldown("tuning", Balance.TUNING_COOLDOWN)
 	model.strum()
-	Sfx.play("zap", Balance.ARC_VOLUME_DB)
+	Sfx.play("zap", Balance.ZAP_VOLUME_DB)
 	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
 	var cha := GameState.mod("CHA")
 	for i in targets.size():
 		var e := targets[i]
 		var to := e.global_position + Vector3(0, 0.9, 0)
 		ArcBolt.spawn(get_parent(), from, to)
-		var dmg := roundi(Dice.roll(2, 6, cha) * (1.0 - Balance.ARC_FALLOFF * i))
+		var dmg := roundi(Dice.roll(2, 6, cha) * (1.0 - Balance.TUNING_FALLOFF * i))
 		e.take_damage(maxi(1, dmg), global_position, 0.8, false, "shock")
 		from = to
 
+
+## Riff électrique (touche 1) : éclair sur UNE cible. Chaque appui en rythme
+## (tous les RIFF_BEAT s, ± tolérance) fait monter le combo : ×1 → ×1,67 → ×2,33 → ×3.
+## Au maximum, le riff reste à ×3 tant qu'on garde le rythme ; un contretemps remet à ×1.
+func cast_riff() -> void:
+	if not _ready_skill("riff"):
+		return
+	var target := _riff_target()
+	if target == null:
+		Events.notify("Aucune cible à portée pour le Riff électrique", Events.COLOR_BAD)
+		return
+	if not GameState.spend_mana(Balance.RIFF_COST):
+		_no_mana()
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	var on_beat := absf((now - _riff_last) - Balance.RIFF_BEAT) <= Balance.RIFF_BEAT_TOLERANCE
+	riff_stack = mini(riff_stack + 1, Balance.RIFF_MAX_STACKS) if on_beat else 1
+	_riff_last = now
+	var mult := riff_multiplier(riff_stack)
+	# Délai fixe (non réduit par l'INT) : le tempo doit rester stable.
+	cooldowns["riff"] = Balance.RIFF_MIN_INTERVAL
+	Events.cooldown_started.emit("riff", Balance.RIFF_MIN_INTERVAL)
+	Events.riff_combo.emit(riff_stack, mult)
+	model.strum()
+	var k := float(riff_stack - 1) / float(Balance.RIFF_MAX_STACKS - 1)
+	var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
+	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
+	ArcBolt.spawn(get_parent(), from, target.global_position + Vector3(0, 0.9, 0), 0.1 + 0.06 * riff_stack, 0.25, color)
+	Sfx.play("note_%d" % (riff_stack - 1), -5.0, 0.0)
+	Sfx.play("zap", Balance.ZAP_VOLUME_DB - 3.0)
+	var dmg := roundi(Dice.roll(1, 10, GameState.mod("CHA")) * mult)
+	target.take_damage(maxi(1, dmg), global_position, 0.4, riff_stack >= Balance.RIFF_MAX_STACKS, "shock")
+	if riff_stack > 1:
+		var label := "RYTHME ×%.1f" % mult if riff_stack < Balance.RIFF_MAX_STACKS else "EN RYTHME ×3 !"
+		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), label, color)
+
+
+static func riff_multiplier(stack: int) -> float:
+	var steps := float(Balance.RIFF_MAX_STACKS - 1)
+	return 1.0 + (Balance.RIFF_MAX_MULT - 1.0) * float(clampi(stack, 1, Balance.RIFF_MAX_STACKS) - 1) / steps
+
+
+func _riff_target() -> Enemy:
+	var best: Enemy = null
+	var best_score := INF
+	for e in enemies():
+		if _flat_dist(e.global_position, global_position) > Balance.RIFF_RANGE:
+			continue
+		var score := _flat_dist(e.global_position, aim_point)
+		if score < best_score:
+			best_score = score
+			best = e
+	return best
 
 func _arc_targets() -> Array[Enemy]:
 	var all := enemies()
@@ -177,7 +237,7 @@ func _arc_targets() -> Array[Enemy]:
 	var first: Enemy = null
 	var best := INF
 	for e in all:
-		if _flat_dist(e.global_position, global_position) > Balance.ARC_FIRST_RANGE:
+		if _flat_dist(e.global_position, global_position) > Balance.TUNING_FIRST_RANGE:
 			continue
 		var score := _flat_dist(e.global_position, aim_point)
 		if score < best:
@@ -186,10 +246,10 @@ func _arc_targets() -> Array[Enemy]:
 	if first == null:
 		return result
 	result.append(first)
-	while result.size() < Balance.ARC_MAX_TARGETS:
+	while result.size() < Balance.TUNING_MAX_TARGETS:
 		var last := result[-1]
 		var next: Enemy = null
-		var nd := Balance.ARC_JUMP_RANGE
+		var nd := Balance.TUNING_JUMP_RANGE
 		for e in all:
 			if result.has(e):
 				continue
@@ -234,6 +294,7 @@ func cast_solo() -> void:
 		return
 	casting_solo = true
 	model.solo_pose(true)
+	Events.notify("SOLO ! Invincible le temps du solo — touches 1 2 3 4", Events.COLOR_GOLD)
 	Events.solo_requested.emit()
 
 
@@ -292,6 +353,11 @@ func _no_mana() -> void:
 
 func take_hit(amount: int, _from: Vector3) -> void:
 	if dead or _invuln > 0.0:
+		return
+	if casting_solo:
+		# Invincible pendant le solo : les coups ricochent sur l'aura dorée.
+		_invuln = 0.35
+		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), "Invincible", Color(1.0, 0.85, 0.4))
 		return
 	_invuln = 0.2
 	GameState.damage_hero(amount)

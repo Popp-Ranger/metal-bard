@@ -2,7 +2,8 @@ class_name SoloMinigame
 extends Control
 ## Mini-jeu du « Solo de la Foudre », façon Guitar Hero.
 ## 5 notes descendent sur 4 cordes ; il faut appuyer au bon moment
-## (flèches ← ↓ ↑ → ou D F J K). Le monde est figé pendant le solo.
+## (touches 1 2 3 4). Le jeu continue pendant le solo : le héros reste sur place,
+## invincible, et les ennemis continuent d'avancer.
 ## Résultat : 5/5 = pluie d'éclairs à 100 %, 4/5 = 70 %, 3/5 = 45 %, moins = fausse note.
 
 const LANES := 4
@@ -11,8 +12,7 @@ const LEAD_TIME := 1.5 # temps de chute de la première note
 const WINDOW_PERFECT := 0.08
 const WINDOW_GOOD := 0.17
 const LANE_COLORS := [Color(0.3, 0.9, 0.35), Color(0.95, 0.25, 0.2), Color(1.0, 0.85, 0.2), Color(0.3, 0.55, 1.0)]
-const LANE_ARROWS := ["←", "↓", "↑", "→"]
-const PANEL_SIZE := Vector2(460, 560)
+const PANEL_SIZE := Vector2(400, 520)
 
 var _notes: Array[Dictionary] = []
 var _t := 0.0
@@ -28,7 +28,7 @@ var _end_t := 0.0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	Events.solo_requested.connect(start)
 
@@ -52,7 +52,6 @@ func start() -> void:
 	_feedback_t = 1.2
 	_active = true
 	visible = true
-	get_tree().paused = true
 	Sfx.play("solo_start", -4.0, 0.0)
 
 
@@ -88,8 +87,6 @@ func _input(event: InputEvent) -> void:
 			_press(lane)
 			get_viewport().set_input_as_handled()
 			return
-	if event is InputEventKey:
-		get_viewport().set_input_as_handled() # aucune autre touche pendant le solo
 
 
 func _press(lane: int) -> void:
@@ -125,7 +122,6 @@ func _set_feedback(text: String, color: Color) -> void:
 func _finish() -> void:
 	_active = false
 	visible = false
-	get_tree().paused = false
 	Events.solo_finished.emit(_hits, _notes.size())
 
 
@@ -134,15 +130,15 @@ func _draw() -> void:
 		return
 	var font := UiStyle.serif()
 	var vp := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, vp), Color(0, 0, 0, 0.45))
-	var origin := (vp - PANEL_SIZE) * 0.5
+	# Panneau sur la droite de l'écran : l'action reste visible (le jeu n'est pas en pause).
+	var origin := Vector2(vp.x - PANEL_SIZE.x - 40.0, (vp.y - PANEL_SIZE.y) * 0.5)
 	var panel := Rect2(origin, PANEL_SIZE)
-	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.95))
+	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
 	draw_string(font, origin + Vector2(0, 42), "SOLO DE LA FOUDRE", HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 30, Color(1.0, 0.8, 0.4))
-	draw_string(font, origin + Vector2(0, 70), "%d / %d notes" % [_hits, _notes.size()], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, UiStyle.DIM)
+	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  INVINCIBLE" % [_hits, _notes.size()], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, Color(1.0, 0.85, 0.45))
 
-	var lane_w := 80.0
+	var lane_w := 76.0
 	var lanes_x := origin.x + (PANEL_SIZE.x - lane_w * LANES) * 0.5
 	var top := origin.y + 90.0
 	var hit_y := origin.y + PANEL_SIZE.y - 90.0
@@ -154,8 +150,7 @@ func _draw() -> void:
 		draw_line(Vector2(x + lane_w * 0.5, top), Vector2(x + lane_w * 0.5, hit_y + 30), Color(0.8, 0.8, 0.8, 0.25), 2.0)
 		# Cible.
 		draw_arc(Vector2(x + lane_w * 0.5, hit_y), 26, 0, TAU, 32, c.lightened(flash * 0.5), 4.0)
-		var key := "%s / %s" % [LANE_ARROWS[i], _lane_key(i)]
-		draw_string(font, Vector2(x, hit_y + 60), key, HORIZONTAL_ALIGNMENT_CENTER, lane_w, 18, UiStyle.BONE)
+		draw_string(font, Vector2(x, hit_y + 66), Controls.key_label("solo_lane_%d" % i), HORIZONTAL_ALIGNMENT_CENTER, lane_w, 30, UiStyle.BONE)
 	draw_line(Vector2(lanes_x, hit_y), Vector2(lanes_x + lane_w * LANES, hit_y), Color(1, 1, 1, 0.3), 2.0)
 	# Notes.
 	for n in _notes:
@@ -176,15 +171,3 @@ func _draw() -> void:
 		draw_string(font, Vector2(origin.x, origin.y + PANEL_SIZE.y * 0.45), _feedback, HORIZONTAL_ALIGNMENT_CENTER,
 			PANEL_SIZE.x, 40, Color(_feedback_color.r, _feedback_color.g, _feedback_color.b, a))
 
-
-func _lane_key(lane: int) -> String:
-	var action := "solo_lane_%d" % lane
-	if not InputMap.has_action(action):
-		return ""
-	for ev: InputEvent in InputMap.action_get_events(action):
-		var k := ev as InputEventKey
-		if k != null and k.physical_keycode >= KEY_A and k.physical_keycode <= KEY_Z:
-			if DisplayServer.get_name() == "headless":
-				return OS.get_keycode_string(k.physical_keycode)
-			return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(k.physical_keycode))
-	return ""

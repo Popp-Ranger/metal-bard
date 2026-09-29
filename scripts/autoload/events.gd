@@ -9,6 +9,7 @@ signal hero_hp_changed(hp: int, max_hp: int)
 signal hero_mana_changed(mana: float, max_mana: float)
 signal hero_died
 signal cooldown_started(skill_id: String, duration: float)
+signal riff_combo(stack: int, multiplier: float)
 
 # --- Progression -----------------------------------------------------------
 signal xp_changed(xp: int, next_level_xp: int, level: int)

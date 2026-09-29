@@ -26,13 +26,23 @@ const MELEE_COOLDOWN := 0.65
 const MELEE_RANGE := 1.9
 const MELEE_KNOCKBACK := 2.5
 
-const ARC_COST := 12.0
-const ARC_COOLDOWN := 1.2
-const ARC_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis »
-const ARC_FIRST_RANGE := 11.0
-const ARC_JUMP_RANGE := 6.0
-const ARC_FALLOFF := 0.12 # -12 % de dégâts à chaque rebond
-const ARC_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc électrique
+# Accordage de cordes (clic droit) : arc électrique qui rebondit.
+const TUNING_COST := 12.0
+const TUNING_COOLDOWN := 1.2
+const TUNING_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis »
+const TUNING_FIRST_RANGE := 11.0
+const TUNING_JUMP_RANGE := 6.0
+const TUNING_FALLOFF := 0.12 # -12 % de dégâts à chaque rebond
+const ZAP_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc électrique
+
+# Riff électrique (touche 1) : une seule cible, combo rythmique.
+const RIFF_COST := 6.0
+const RIFF_BEAT := 0.7 # tempo du riff : un appui toutes les 0,7 s (~86 BPM)
+const RIFF_BEAT_TOLERANCE := 0.16 # fenêtre acceptée autour du temps (± s)
+const RIFF_MIN_INTERVAL := 0.3 # anti-spam
+const RIFF_MAX_STACKS := 4 # « se multiplie jusqu'à 4 fois »...
+const RIFF_MAX_MULT := 3.0 # ... « pour atteindre au maximum 3 fois sa puissance »
+const RIFF_RANGE := 12.0
 
 const WAVE_COST := 20.0
 const WAVE_COOLDOWN := 4.0

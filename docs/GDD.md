@@ -15,7 +15,7 @@
 
 ## 1. Pitch
 
-Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec son **luth électrique** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Crâne Hurlant**, il accepte des quêtes, traverse les portails du vieux mage Zarathos et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
+Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Crâne Hurlant**, il accepte des quêtes, traverse les portails du vieux mage Zarathos et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
 
 ## 2. Piliers de conception
 
@@ -38,7 +38,7 @@ Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte ave
                          └─ mort : réveil à la taverne, -25 % d'or, quête conservée
 ```
 
-**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Riff électrique en chaîne → finir au luth → ramasser le butin.
+**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes en chaîne → Riff électrique en rythme sur le plus coriace → finir à la guitare → ramasser le butin.
 **Méso-boucle (15 min)** : un donjon complet, montée en tension vers le boss.
 **Macro-boucle (heures)** : niveaux, reliques, nouvelles quêtes, arc narratif contre Morne.
 
@@ -57,7 +57,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 | L'Opéra Englouti | Donjon final | Salle de concert noyée, orgue d'os, Morne |
 
 ### 4.3 Personnages
-- **Riffald, Barde du Tonnerre** (joueur) — mélange de Dave Mustaine (crinière rousse, attitude) et Ronnie James Dio (médaillon à cornes, charisme mystique), en version dark fantasy. Manteau de cuir, épaulières à pointes, luth électrique aux cordes lumineuses.
+- **Riffald, Barde du Tonnerre** (joueur) — mélange de Dave Mustaine (crinière rousse, attitude) et Ronnie James Dio (médaillon à cornes, charisme mystique), en version dark fantasy. Manteau de cuir, épaulières à pointes. Il joue d'une **réplique de Gibson Flying V** (finition cerise, plaque blanche, deux humbuckers, cordier en V, tête en flèche) portée bas à la sangle, manche vers le haut, comme un guitariste de metal. **Posture et démarche de Réprouvé (World of Warcraft)** : dos voûté, épaules haussées, tête projetée en avant, genoux fléchis, pas traînants et boiteux, balancement du buste et petites saccades nerveuses de la tête. Pendant le solo : cambré en arrière, manche dressé, headbang.
 - **Gérald Pissenlit** — fermier éploré, propriétaire de Plumeau. Donneur de la première quête.
 - **Plumeau** — bébé ours-hibou, mascotte ; suit le héros après le sauvetage et apparaît ensuite dans la taverne.
 - **Brunhilde Chope-de-Fer** — tenancière, boutique (potions, chambre), rumeurs.
@@ -71,8 +71,8 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 ## 5. Direction artistique
 
 - **Palette** : bruns et noirs désaturés, accents chauds (torches, feu) et froids (lune, éclairs). Seuls les sorts et les objets rares sont saturés.
-- **Lumière** : le héros porte un halo chaud (la « torche » de *Darkest Dungeon*) ; le reste du donjon est plongé dans le noir, ponctué de torches vacillantes.
-- **Post-traitement** (`shaders/post_fx.gdshader`) : contours encrés (filtre de Sobel), désaturation 30 %, teinte sépia froide, vignette lourde, grain de pellicule.
+- **Lumière** : le héros porte un halo chaud (la « torche » de *Darkest Dungeon*) ; le donjon reste sombre mais lisible (lumière ambiante froide), ponctué de torches vacillantes bien espacées.
+- **Post-traitement** (`shaders/post_fx.gdshader`) : contours encrés (filtre de Sobel), désaturation 20 %, teinte sépia froide, vignette, grain de pellicule.
 - **Caméra** : isométrique orthographique à 45°, zoom à la molette, secousses sur les impacts. Les murs entre la caméra et le héros sont tramés (*cutaway* façon Diablo, `shaders/stone_wall.gdshader`).
 - **Prototype** : tous les modèles sont construits en primitives (capsules, sphères, boîtes). Cible : modèles low-poly texturés à la main (Blender) avec contours épais, animations squelettiques.
 - **UI** : parchemin sombre, bordures de fer, police à empattements (Cinzel / Georgia).
@@ -83,11 +83,12 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 |---|---|---|
 | Se déplacer | ZQSD (AZERTY) / WASD (QWERTY) / flèches | Stick gauche |
 | Viser | Souris | Stick droit |
-| Coup de luth | Espace / clic gauche (maintenir = enchaîner) | X |
-| Riff électrique | 1 | A |
+| Coup de guitare | Espace / clic gauche (maintenir = enchaîner) | X |
+| Accordage de cordes | Clic droit | RB |
+| Riff électrique (en rythme) | 1 | A |
 | Onde de choc | 2 | B |
 | Solo de la Foudre | 3 | Y |
-| Mini-jeu du solo | ← ↓ ↑ → ou D F J K | Croix directionnelle |
+| Mini-jeu du solo | 1 2 3 4 | Croix directionnelle |
 | Potion | R | LB |
 | Interagir / parler | E | A (près d'un PNJ) |
 | Fiche de personnage | C | Select |
@@ -101,7 +102,7 @@ Les touches sont déclarées en **touches physiques** : aucune configuration à 
 ### 7.1 Caractéristiques
 | Carac. | Départ | Effet en jeu |
 |---|---|---|
-| **FOR** Force | 12 (+1) | Jet d'attaque et dégâts du coup de luth |
+| **FOR** Force | 12 (+1) | Jet d'attaque et dégâts du coup de guitare |
 | **DEX** Dextérité | 14 (+2) | Classe d'armure |
 | **CON** Constitution | 13 (+1) | Points de vie |
 | **INT** Intelligence | 10 (+0) | -4 % de temps de recharge par point de modificateur |
@@ -133,15 +134,17 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 ### 8.2 Arsenal du barde
 | Capacité | Touche | Coût | Recharge | Effet |
 |---|---|---|---|---|
-| **Coup de luth** | Espace | — | 0,65 s | On frappe en tenant le luth par le manche. 1d8 + FOR, cône frontal de 1,9 m, recul. |
-| **Riff électrique** | 1 | 12 dB | 1,2 s | Arc électrique qui rebondit sur **jusqu'à 5 ennemis** (portée 11 m, rebond 6 m). 2d6 + CHA, −12 % par rebond. Son de décharge électrique à volume moyen (−8 dB). |
+| **Coup de guitare** | Espace | — | 0,65 s | La Flying V empoignée par le manche, levée au-dessus de l'épaule puis abattue. 1d8 + FOR, cône frontal de 1,9 m, recul. |
+| **Accordage de cordes** | Clic droit | 12 dB | 1,2 s | Arc électrique qui rebondit sur **jusqu'à 5 ennemis** (portée 11 m, rebond 6 m). 2d6 + CHA, −12 % par rebond. Son de décharge électrique à volume moyen (−8 dB). |
+| **Riff électrique** | 1 | 6 dB | 0,3 s | Éclair sur **une seule cible** (la plus proche du curseur, 12 m). 1d10 + CHA. **Combo rythmique** : chaque appui au tempo (toutes les 0,7 s ± 0,16 s) augmente le multiplicateur en 4 paliers : ×1 → ×1,67 → ×2,33 → **×3 (maximum)**. Tant que le joueur reste en rythme, le riff continue à ×3 ; un contretemps remet le combo à ×1. Chaque palier joue une note plus aiguë ; un métronome dans le HUD se remplit et passe au vert dans la fenêtre d'appui. |
 | **Onde de choc** | 2 | 20 dB | 4 s | Onde sonore qui touche **tous les ennemis dans un rayon de 5 m**. 2d8 + CHA (sauvegarde : moitié), fort recul qui étourdit. |
 | **Solo de la Foudre** | 3 | 45 dB | 18 s | Lance le **mini-jeu** ; en cas de réussite, **pluie d'éclairs sur tout l'écran** : 4d10 + CHA sur chaque ennemi visible. |
 | **Potion de soin** | R | 1 potion | 1 s | Rend 40 % des PV max. |
 
 ### 8.3 Le mini-jeu du Solo (façon Guitar Hero)
-- Le monde se fige, un manche à 4 cordes apparaît. **5 notes** tombent sur des cordes aléatoires (jamais deux fois la même d'affilée), espacées de 0,38 à 0,6 s.
-- Touches : **← ↓ ↑ →** ou **D F J K**. Fenêtre « PARFAIT » ±80 ms, « BIEN » ±170 ms.
+- **Le jeu ne se met pas en pause** : un manche à 4 cordes apparaît sur la droite de l'écran pendant que les ennemis continuent d'attaquer. Le héros reste planté sur place mais est **invincible** jusqu'à la fin du solo (aura dorée, coups affichés « Invincible »).
+- **5 notes** tombent sur des cordes aléatoires (jamais deux fois la même d'affilée), espacées de 0,38 à 0,6 s.
+- Touches : **1 2 3 4** (rangée du haut ou pavé numérique) ; pendant le solo elles ne lancent pas de sort. Fenêtre « PARFAIT » ±80 ms, « BIEN » ±170 ms.
 - Chaque note réussie joue un **power chord distordu** (gamme pentatonique de mi).
 - Résultat : **5/5 → 100 %**, 4/5 → 70 %, 3/5 → 45 %, moins → **fausse note** (le sort échoue, la moitié des dB est perdue).
 - Évolutions prévues : longueur du solo qui augmente avec le niveau, notes tenues, accords (2 touches), solos écrits à la main pour les boss.
@@ -193,13 +196,14 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 
 ## 11. Génération procédurale des donjons
 Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée sur 50 graines à chaque exécution des tests) :
-1. Grille 64 × 64 cases de 2 m. Placement de la **salle du boss (11 × 11)** puis de salles aléatoires (5-9 × 5-8) sans chevauchement (marge 3 cases).
+1. Grille 100 × 100 cases de 2 m. Placement de la **salle du boss (15 × 15 cases = 30 m)** puis de salles aléatoires (8-13 × 8-12 cases, soit 16 à 26 m) sans chevauchement (marge 3 cases). Couloirs larges de **3 cases (6 m)**.
 2. **Arbre couvrant minimal (Prim)** entre les salles normales → tout est accessible.
 3. **1-2 couloirs en boucle** pour éviter un donjon linéaire.
 4. La salle du boss n'est reliée qu'à **une seule** salle : cul-de-sac final.
 5. **Salle de départ = la plus éloignée du boss** en distance de parcours (BFS).
-6. Peuplement : 1-3 squelettes par salle, un capitaine dans la salle la plus proche du boss, décor aléatoire (piles d'os, flaques de bave, piliers, tonneaux), torches sur les murs du fond.
-7. Graine stockée dans la sauvegarde (`dungeon_seed`) : un même portail donne le même donjon.
+6. Peuplement : 2-4 squelettes par salle, un capitaine dans la salle la plus proche du boss, décor aléatoire (piles d'os, flaques de bave, piliers, tonneaux).
+7. **Torches** réparties sur tout le donjon (salles et couloirs) avec **au moins 11 m entre deux torches** : elles éclairent des zones précises et laissent des passages dans la pénombre. Les murs du fond (visibles depuis la caméra) sont servis en priorité.
+8. Graine stockée dans la sauvegarde (`dungeon_seed`) : un même portail donne le même donjon.
 
 **Prévu** : salles « préfabriquées » (autel, bibliothèque, arène à pièges), coffres et pièges, salles secrètes, étages multiples, biomes par donjon, difficulté dynamique.
 

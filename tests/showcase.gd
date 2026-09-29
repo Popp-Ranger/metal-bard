@@ -32,6 +32,28 @@ func _ready() -> void:
 	add_child(_dungeon)
 	await _frames(15)
 	_hero = get_tree().get_first_node_in_group("hero") as Hero
+	# Gros plan sur le héros : posture, Flying V, démarche (frames ~135-235).
+	var cam := _hero.camera
+	cam.zoom = 5.0
+	cam.size = 5.0
+	_hero.camera = null # la visée ne suit plus la souris : le héros regarde la caméra
+	_hero.aim_point = _hero.global_position + Vector3(3, 0, 3)
+	await _frames(25) # immobile, de face
+	Input.action_press("move_down")
+	for i in 30: # démarche de Réprouvé, vers la caméra
+		_hero.aim_point = _hero.global_position
+		await get_tree().process_frame
+	Input.action_release("move_down")
+	_hero.aim_point = _hero.global_position + Vector3(3, 0, 3)
+	await _frames(10)
+	_hero.model.swing()
+	await _frames(20) # coup de guitare
+	_hero.model.solo_pose(true)
+	await _frames(20) # pose de solo
+	_hero.model.solo_pose(false)
+	_hero.camera = cam
+	cam.zoom = 16.0
+	await _frames(10)
 	var boss: FrogBoss = null
 	var skeletons: Array[Enemy] = []
 	for n in get_tree().get_nodes_in_group("enemies"):
@@ -45,13 +67,13 @@ func _ready() -> void:
 		skeletons[i].global_position = _hero.global_position + Vector3(cos(a), 0, sin(a)) * (2.5 + i * 0.6)
 	await _frames(40) # ≈ frame 55 : squelettes qui approchent
 	_hero.aim_point = skeletons[0].global_position
-	_hero.cast_arc()
+	_hero.cast_tuning()
 	await _frames(35) # ≈ frame 92
 	_hero.cast_wave()
 	await _frames(30) # ≈ frame 122
 	# 2) Mini-jeu du solo.
 	_hero.cast_solo()
-	await _frames(55) # ≈ frame 178 : notes en train de tomber
+	await _frames(50) # notes en train de tomber (le jeu continue)
 	var solo := (_dungeon as Level).hud.solo
 	solo._hits = Balance.SOLO_NOTES # on simule un solo parfait
 	solo._finish()

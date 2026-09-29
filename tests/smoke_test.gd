@@ -110,16 +110,56 @@ func _test_quest_flow() -> void:
 	var hp_before := 0
 	for e in targets:
 		hp_before += e.hp
-	hero.cast_arc()
+	hero.cast_tuning()
 	await _frames(2)
 	var hp_after := 0
 	for e in targets:
 		hp_after += maxi(e.hp, 0)
-	_check(hp_after < hp_before, "le Riff électrique inflige des dégâts en chaîne")
+	_check(hp_after < hp_before, "l'Accordage de cordes inflige des dégâts en chaîne")
 	hero.cooldowns["wave"] = 0.0
 	hero.cast_wave()
 	await _frames(2)
 	_check(GameState.mana < GameState.max_mana(), "les sorts consomment des décibels")
+	# Riff électrique : combo rythmique ×1 → ×3 (4 paliers), remis à ×1 à contretemps.
+	_check(is_equal_approx(Hero.riff_multiplier(1), 1.0) and is_equal_approx(Hero.riff_multiplier(4), 3.0)
+		and is_equal_approx(Hero.riff_multiplier(9), 3.0), "multiplicateur du Riff : ×1 → ×3 en 4 paliers")
+	GameState.mana = GameState.max_mana()
+	var dummy: Enemy = null
+	for e in hero.enemies():
+		if not e.is_boss:
+			dummy = e
+			break
+	dummy.hp = 9999 # mannequin d'entraînement
+	dummy.global_position = hero.global_position + Vector3(3, 0, 0)
+	hero.aim_point = dummy.global_position
+	for beat in 5:
+		hero.cooldowns["riff"] = 0.0
+		hero.cast_riff()
+		await get_tree().create_timer(Balance.RIFF_BEAT).timeout
+	_check(hero.riff_stack == Balance.RIFF_MAX_STACKS, "5 riffs en rythme → combo au maximum")
+	await get_tree().create_timer(Balance.RIFF_BEAT * 2.5).timeout
+	hero.cooldowns["riff"] = 0.0
+	hero.cast_riff()
+	_check(hero.riff_stack == 1, "riff à contretemps → combo remis à ×1")
+	# Solo : le jeu continue, le héros est invincible, touches 1 2 3 4.
+	GameState.mana = GameState.max_mana()
+	hero.cooldowns["solo"] = 0.0
+	hero.cast_solo()
+	await _frames(2)
+	var solo := (dungeon as Level).hud.solo
+	_check(solo._active and not get_tree().paused, "le solo se joue sans mettre le jeu en pause")
+	var hp_solo := GameState.hp
+	hero._invuln = 0.0
+	hero.take_hit(10, Vector3.ZERO)
+	_check(GameState.hp == hp_solo, "héros invincible pendant le solo")
+	var lane_keys: Array[int] = []
+	for lane in 4:
+		lane_keys.append(int((InputMap.action_get_events("solo_lane_%d" % lane)[0] as InputEventKey).physical_keycode))
+	var expected: Array[int] = [KEY_1, KEY_2, KEY_3, KEY_4]
+	_check(lane_keys == expected, "le solo se joue avec les touches 1 2 3 4")
+	solo._hits = Balance.SOLO_NOTES
+	solo._finish()
+	_check(not hero.casting_solo, "fin du solo, le héros redevient vulnérable")
 	# On élimine tout le monde, boss compris.
 	var xp_before := GameState.stats.xp
 	for n in get_tree().get_nodes_in_group("enemies"):

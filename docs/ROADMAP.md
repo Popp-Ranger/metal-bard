@@ -16,6 +16,14 @@
 - [x] Sons synthétisés (dont décharge électrique à volume moyen)
 - [x] Test automatisé de toute la boucle de jeu
 
+## ✅ v0.1.1 — Retours de jeu
+- [x] Solo : touches 1 2 3 4, sans pause, héros invincible pendant le mini-jeu
+- [x] Réplique de Gibson Flying V, tenue de guitariste metal (bras en IK)
+- [x] Posture et démarche de Réprouvé (World of Warcraft)
+- [x] Accordage de cordes au clic droit (ancien Riff électrique, 5 cibles)
+- [x] Nouveau Riff électrique : une cible, combo rythmique jusqu'à ×3 + métronome dans le HUD
+- [x] Salles et couloirs plus grands, torches espacées, rendu moins sombre
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -140,31 +140,13 @@ func _decorate() -> void:
 	var iron := Visuals.mat(Color(0.2, 0.2, 0.22), 0.4, 0.7)
 	var bone := Visuals.mat(Color(0.75, 0.72, 0.6))
 	var slime := Visuals.glow_mat(Color(0.35, 0.8, 0.25), 0.6)
+	_place_torches()
 	for i in gen.rooms.size():
-		var r := gen.rooms[i]
-		# Torches sur les murs du fond (nord et ouest, visibles depuis la caméra).
-		var torch_count := 3 if i == gen.boss_room else 2
-		var placed := 0
-		for attempt in 20:
-			if placed >= torch_count:
-				break
-			var on_north := _rng.randf() < 0.5
-			var c := Vector2i(_rng.randi_range(r.position.x + 1, r.end.x - 2), r.position.y) if on_north \
-				else Vector2i(r.position.x, _rng.randi_range(r.position.y + 1, r.end.y - 2))
-			var back := Vector2i(0, -1) if on_north else Vector2i(-1, 0)
-			if not gen.is_wall(c.x + back.x, c.y + back.y):
-				continue
-			var p := cell_to_world(c) + Vector3(back.x, 0, back.y) * (CELL * 0.5 - 0.1)
-			Visuals.box(self, Vector3(0.12, 0.5, 0.12), p + Vector3(0, 1.7, 0), wood)
-			Visuals.sphere(self, 0.12, p + Vector3(0, 2.05, 0), Visuals.glow_mat(Color(1.0, 0.55, 0.15), 6.0))
-			Visuals.flicker_light(self, p + Vector3(0, 2.2, 0) - Vector3(back.x, 0, back.y) * 0.5,
-				Color(1.0, 0.55, 0.25), 2.2, 8.0, placed == 0)
-			placed += 1
 		if i == gen.boss_room or i == gen.start_room:
 			continue
 		# Piles d'os, flaques de bave verte, piliers brisés, tonneaux.
-		for k in _rng.randi_range(2, 4):
-			var p := cell_to_world(gen.random_cell_in_room(i, 1)) + Vector3(_rng.randf_range(-0.6, 0.6), 0, _rng.randf_range(-0.6, 0.6))
+		for k in _rng.randi_range(4, 7):
+			var p := cell_to_world(gen.random_cell_in_room(i, 2)) + Vector3(_rng.randf_range(-0.6, 0.6), 0, _rng.randf_range(-0.6, 0.6))
 			match _rng.randi_range(0, 3):
 				0:
 					for b in 5:
@@ -182,6 +164,80 @@ func _decorate() -> void:
 					Visuals.solid_cylinder(self, 0.32, 1.0, p + Vector3(0, 0.5, 0))
 
 
+# --- Torches -------------------------------------------------------------------
+
+const TORCH_SPACING := 11.0 # distance minimale entre deux torches (m)
+
+## Torches murales réparties sur tout le donjon (salles ET couloirs), bien espacées :
+## elles éclairent des zones précises et laissent des passages dans la pénombre.
+## Priorité aux murs du fond (nord / ouest), visibles depuis la caméra.
+func _place_torches() -> void:
+	var candidates: Array[Array] = []
+	var dirs: Array[Vector2i] = [Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(1, 0)]
+	for y in gen.height:
+		for x in gen.width:
+			if not gen.is_floor(x, y):
+				continue
+			for d in dirs:
+				if gen.is_wall(x + d.x, y + d.y):
+					candidates.append([Vector2i(x, y), d])
+	# Mélange déterministe (même graine = mêmes torches).
+	for i in range(candidates.size() - 1, 0, -1):
+		var j := _rng.randi_range(0, i)
+		var tmp: Array = candidates[i]
+		candidates[i] = candidates[j]
+		candidates[j] = tmp
+	var placed: Array[Vector3] = []
+	for pass_index in 2:
+		for cand in candidates:
+			var cell: Vector2i = cand[0]
+			var d: Vector2i = cand[1]
+			var on_back_wall := d.y < 0 or d.x < 0
+			if on_back_wall != (pass_index == 0):
+				continue
+			var p := cell_to_world(cell) + Vector3(d.x, 0, d.y) * (CELL * 0.5 - 0.08)
+			var too_close := false
+			for q in placed:
+				if q.distance_to(p) < TORCH_SPACING:
+					too_close = true
+					break
+			if too_close:
+				continue
+			placed.append(p)
+			_torch(p, Vector3(d.x, 0, d.y), placed.size() <= 4)
+
+
+func _torch(wall_pos: Vector3, wall_dir: Vector3, shadows: bool) -> void:
+	var iron := Visuals.mat(Color(0.18, 0.17, 0.17), 0.4, 0.8)
+	var torch := Node3D.new()
+	torch.position = wall_pos
+	torch.rotation.y = atan2(-wall_dir.x, -wall_dir.z) # +Z local = vers l'intérieur de la pièce
+	add_child(torch)
+	Visuals.box(torch, Vector3(0.22, 0.08, 0.06), Vector3(0, 1.75, 0.02), iron) # applique
+	Visuals.box(torch, Vector3(0.05, 0.3, 0.05), Vector3(0, 1.85, 0.14), iron, Vector3(30, 0, 0))
+	Visuals.cylinder(torch, 0.05, 0.035, 0.45, Vector3(0, 2.0, 0.22), Visuals.mat(Color(0.25, 0.14, 0.07)), Vector3(25, 0, 0), 8)
+	Visuals.sphere(torch, 0.1, Vector3(0, 2.27, 0.33), Visuals.glow_mat(Color(1.0, 0.5, 0.12), 6.0), Vector3(1.0, 1.6, 1.0))
+	Visuals.sphere(torch, 0.06, Vector3(0, 2.35, 0.33), Visuals.glow_mat(Color(1.0, 0.85, 0.4), 8.0), Vector3(1.0, 1.5, 1.0))
+	var flame := CPUParticles3D.new()
+	flame.position = Vector3(0, 2.35, 0.33)
+	flame.amount = 10
+	flame.lifetime = 0.5
+	flame.gravity = Vector3(0, 1.5, 0)
+	flame.initial_velocity_min = 0.1
+	flame.initial_velocity_max = 0.3
+	flame.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	flame.emission_sphere_radius = 0.05
+	flame.scale_amount_min = 0.5
+	flame.scale_amount_max = 1.0
+	var spark := SphereMesh.new()
+	spark.radius = 0.035
+	spark.height = 0.07
+	spark.material = Visuals.glow_mat(Color(1.0, 0.6, 0.2), 5.0)
+	flame.mesh = spark
+	torch.add_child(flame)
+	var light := Visuals.flicker_light(torch, Vector3(0, 2.4, 0.8), Color(1.0, 0.6, 0.3), 3.2, 11.0, shadows)
+	light.flicker_amount = 0.2
+
 # --- Population ----------------------------------------------------------------
 
 func _spawn_enemies() -> void:
@@ -198,9 +254,9 @@ func _spawn_enemies() -> void:
 	for i in gen.rooms.size():
 		if i == gen.boss_room or i == gen.start_room:
 			continue
-		var count := _rng.randi_range(1, 3)
+		var count := _rng.randi_range(2, 4)
 		for k in count:
-			_spawn_skeleton(cell_to_world(gen.random_cell_in_room(i, 1)), false)
+			_spawn_skeleton(cell_to_world(gen.random_cell_in_room(i, 2)), false)
 		if i == captain_room:
 			_spawn_skeleton(cell_to_world(gen.center(i)), true)
 
@@ -220,7 +276,7 @@ func _spawn_boss_room() -> void:
 	var r := gen.rooms[gen.boss_room]
 	var c := cell_to_world(gen.center(gen.boss_room))
 	# Mare croupie autour du trône de Gloubah.
-	var pond := Visuals.mat(Color(0.05, 0.12, 0.1), 0.1, 0.3)
+	var pond := Visuals.mat(Color(0.14, 0.26, 0.18), 0.15, 0.1)
 	Visuals.cylinder(self, 4.5, 4.5, 0.03, c + Vector3(0, 0.02, 0), pond, Vector3.ZERO, 40)
 	for k in 6:
 		var a := TAU * k / 6.0

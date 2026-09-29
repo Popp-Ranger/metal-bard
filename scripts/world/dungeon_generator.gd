@@ -1,9 +1,10 @@
 class_name DungeonGenerator
 extends RefCounted
 ## Génération procédurale d'un donjon sur une grille (logique pure, sans nœuds : testable).
+## Case de 2 m : salles de 16 à 26 m de côté, couloirs larges de 6 m.
 ##
 ## Algorithme :
-##  1. Place la salle du boss (grande, 11×11) puis des salles aléatoires sans chevauchement.
+##  1. Place la salle du boss (grande, 15×15) puis des salles aléatoires sans chevauchement.
 ##  2. Relie les salles normales par un arbre couvrant minimal (Prim) → tout est accessible.
 ##  3. Ajoute 1 ou 2 couloirs en boucle pour éviter un donjon trop linéaire.
 ##  4. Raccorde la salle du boss à UNE seule salle voisine (cul-de-sac final).
@@ -12,8 +13,10 @@ extends RefCounted
 const EMPTY := 0
 const FLOOR := 1
 
-var width := 64
-var height := 64
+const CORRIDOR_WIDTH := 3 # en cases (3 × 2 m = 6 m)
+
+var width := 100
+var height := 100
 var grid := PackedByteArray()
 var rooms: Array[Rect2i] = []
 var boss_room := 0
@@ -38,8 +41,8 @@ func _place_rooms(room_count: int) -> void:
 	while rooms.size() < room_count and attempts < 2000:
 		attempts += 1
 		var is_boss := rooms.is_empty()
-		var w := 11 if is_boss else rng.randi_range(5, 9)
-		var h := 11 if is_boss else rng.randi_range(5, 8)
+		var w := 15 if is_boss else rng.randi_range(8, 13)
+		var h := 15 if is_boss else rng.randi_range(8, 12)
 		var r := Rect2i(rng.randi_range(2, width - w - 3), rng.randi_range(2, height - h - 3), w, h)
 		var ok := true
 		for other in rooms:
@@ -95,7 +98,7 @@ func _carve_rect(r: Rect2i) -> void:
 			set_cell(x, y, FLOOR)
 
 
-## Couloir en L, large de 2 cases.
+## Couloir en L, large de CORRIDOR_WIDTH cases.
 func _carve_corridor(a: Vector2i, b: Vector2i) -> void:
 	var horizontal_first := rng.randf() < 0.5
 	var corner := Vector2i(b.x, a.y) if horizontal_first else Vector2i(a.x, b.y)
@@ -107,8 +110,8 @@ func _carve_line(a: Vector2i, b: Vector2i) -> void:
 	var p := a
 	var step := Vector2i(signi(b.x - a.x), signi(b.y - a.y))
 	while true:
-		for oy in 2:
-			for ox in 2:
+		for oy in CORRIDOR_WIDTH:
+			for ox in CORRIDOR_WIDTH:
 				set_cell(p.x + ox, p.y + oy, FLOOR)
 		if p == b:
 			break

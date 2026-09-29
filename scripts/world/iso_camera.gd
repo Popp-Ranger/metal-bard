@@ -9,7 +9,7 @@ const SCREEN_UP := Vector3(-0.70710678, 0.0, -0.70710678)
 const SCREEN_RIGHT := Vector3(0.70710678, 0.0, -0.70710678)
 
 var target: Node3D
-var zoom := 15.0
+var zoom := 16.0
 var _shake_time := 0.0
 var _shake_strength := 0.0
 

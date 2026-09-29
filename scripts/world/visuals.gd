@@ -188,13 +188,13 @@ static func make_environment(kind: String) -> WorldEnvironment:
 	env.background_color = Color(0.015, 0.012, 0.018)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	if kind == "dungeon":
-		env.ambient_light_color = Color(0.36, 0.4, 0.52)
-		env.ambient_light_energy = 0.4
+		env.ambient_light_color = Color(0.42, 0.44, 0.55)
+		env.ambient_light_energy = 0.65
 	else:
-		env.ambient_light_color = Color(0.55, 0.5, 0.48)
-		env.ambient_light_energy = 0.55
+		env.ambient_light_color = Color(0.6, 0.55, 0.5)
+		env.ambient_light_energy = 0.8
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.1
+	env.tonemap_exposure = 1.3
 	env.glow_enabled = true
 	env.glow_intensity = 0.7
 	env.glow_bloom = 0.08

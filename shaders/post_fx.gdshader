@@ -3,12 +3,12 @@ shader_type canvas_item;
 // teinte sépia froide, vignette lourde et grain de pellicule.
 
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
-uniform float ink_strength = 0.55;
+uniform float ink_strength = 0.45;
 uniform float ink_threshold = 0.08;
-uniform float desaturation = 0.3;
+uniform float desaturation = 0.2;
 uniform vec3 tint = vec3(1.0, 0.92, 0.84);
-uniform float vignette = 0.62;
-uniform float grain = 0.045;
+uniform float vignette = 0.4;
+uniform float grain = 0.035;
 uniform float contrast = 1.08;
 
 float luma(vec3 c) {
