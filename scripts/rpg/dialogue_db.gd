@@ -1,0 +1,224 @@
+class_name DialogueDB
+extends RefCounted
+## Dialogues des PNJ. Chaque dialogue est un dictionnaire :
+##   "lines":   [[orateur, texte], ...]
+##   "choices": [[libellé, action, garder_ouvert?], ...]
+## Actions : "close", "goto:<id>" (enchaîne un autre dialogue), ou toute action
+## gérée par GameState.run_dialogue_action (accept:, turn_in:, portal, buy_potion, rest...).
+
+const NPCS := {
+	"gerald": {"name": "Gérald Pissenlit", "title": "Fermier éploré", "color": Color(0.85, 0.75, 0.45)},
+	"brunhilde": {"name": "Brunhilde Chope-de-Fer", "title": "Tenancière", "color": Color(0.95, 0.55, 0.35)},
+	"zarathos": {"name": "Zarathos le Grisonnant", "title": "Mage des portails", "color": Color(0.7, 0.6, 1.0)},
+	"inconnue": {"name": "L'Inconnue encapuchonnée", "title": "???", "color": Color(0.75, 0.3, 0.35)},
+	"borin": {"name": "Borin Barbe-de-Bière", "title": "Nain (très) détendu", "color": Color(0.9, 0.7, 0.4)},
+	"sylvaine": {"name": "Sylvaine Luth-d'Argent", "title": "Barde elfe rivale", "color": Color(0.6, 0.9, 0.85)},
+	"tableau": {"name": "Tableau des quêtes", "title": "", "color": Color(0.8, 0.75, 0.6)},
+}
+
+const HERO := "Riffald"
+
+
+static func npc_name(id: String) -> String:
+	var n: String = NPCS.get(id, {}).get("name", id)
+	return n
+
+
+static func npc_color(id: String) -> Color:
+	var c: Color = NPCS.get(id, {}).get("color", Color.WHITE)
+	return c
+
+
+static func get_dialogue(id: String) -> Dictionary:
+	match id:
+		"gerald":
+			return _gerald()
+		"zarathos":
+			return _zarathos()
+		"brunhilde":
+			return _brunhilde()
+		"brunhilde_rumeurs":
+			return _brunhilde_rumeurs()
+		"inconnue":
+			return _inconnue()
+		"borin":
+			return _borin()
+		"sylvaine":
+			return _sylvaine()
+		"tableau":
+			return _tableau()
+	return {"lines": [["???", "..."]], "choices": []}
+
+
+static func _gerald() -> Dictionary:
+	var g := npc_name("gerald")
+	match GameState.quest_state("plumeau"):
+		QuestDB.State.AVAILABLE:
+			return {
+				"lines": [
+					[g, "Par les Neuf Enfers... Vous êtes le barde ? Celui dont le luth crache la foudre ?"],
+					[g, "C'est Plumeau, mon petit ours-hibou. Une bande de squelettes l'a enlevé cette nuit, en plein poulailler !"],
+					[g, "Ils claquaient des dents en rythme et chantaient faux. Je les ai vus filer vers les Catacombes Suintantes."],
+					[HERO, "Des squelettes qui chantent faux ? Ça, c'est une offense personnelle."],
+					[g, "Je n'ai que 100 pièces d'or et le pendentif de sa mère... mais ramenez-le-moi, je vous en supplie !"],
+				],
+				"choices": [
+					["« Aucun os ne résiste à un bon riff. J'y vais. »", "accept:plumeau"],
+					["« Laisse-moi finir ma bière d'abord. »", "close"],
+				],
+			}
+		QuestDB.State.ACTIVE:
+			return {
+				"lines": [
+					[g, "Zarathos, le vieux mage près du cercle de runes, peut vous ouvrir un portail vers les catacombes."],
+					[g, "Faites vite... Plumeau a peur du noir. Et des squelettes. Et des grenouilles."],
+				],
+				"choices": [["« J'y cours. »", "close"]],
+			}
+		QuestDB.State.OBJECTIVE_DONE:
+			return {
+				"lines": [
+					[g, "PLUMEAU ! Mon tout petit ! Tu es sain et sauf !"],
+					["Plumeau", "Hou-grrrr ! Hou-hou !"],
+					[g, "Une grenouille géante ? Couronnée ?! Barde, vous êtes un héros. Voici tout ce que je possède."],
+				],
+				"choices": [["Rendre Plumeau à Gérald", "turn_in:plumeau"]],
+			}
+		QuestDB.State.TURNED_IN:
+			return {
+				"lines": [
+					[g, "Plumeau ne vous quitte plus des yeux. Je crois qu'il veut apprendre la guitare."],
+					["Plumeau", "Hou-hou ! (il mime un headbang)"],
+				],
+				"choices": [["« Rock on, petit. »", "close"]],
+			}
+	return {"lines": [[g, "Bonjour, étranger."]], "choices": []}
+
+
+static func _zarathos() -> Dictionary:
+	var z := npc_name("zarathos")
+	var state := GameState.quest_state("plumeau")
+	if state == QuestDB.State.ACTIVE:
+		if GameState.flags.get("portal_open", false):
+			return {
+				"lines": [[z, "Le portail est ouvert, il ne tiendra pas éternellement. Enfin si, mais ma patience non."]],
+				"choices": [["« J'y vais. »", "close"]],
+			}
+		return {
+			"lines": [
+				[z, "Hmm ? Les Catacombes Suintantes ? Un endroit humide, mal éclairé, rempli de squelettes. Charmant."],
+				[z, "On dit qu'une grenouille gigantesque y règne. Gloubah, reine des Marées Mortes. Elle adore collectionner les bestioles."],
+				[z, "Je peux t'y envoyer. Et quand tu auras terminé, je sentirai ta foudre et je t'ouvrirai un chemin de retour."],
+			],
+			"choices": [
+				["« Ouvre le portail, vieil homme. »", "portal"],
+				["« Pas encore. »", "close"],
+			],
+		}
+	if state == QuestDB.State.OBJECTIVE_DONE or state == QuestDB.State.TURNED_IN:
+		return {
+			"lines": [
+				[z, "J'ai senti ton solo jusqu'ici. Les murs de la taverne ont tremblé, et Brunhilde a perdu trois chopes."],
+				[z, "Il y a d'autres donjons, d'autres portails... Mais l'univers n'est pas encore prêt. Reviens plus tard. (Prochaines quêtes à venir !)"],
+			],
+			"choices": [["« À bientôt. »", "close"]],
+		}
+	return {
+		"lines": [
+			[z, "Je suis Zarathos. J'ouvre des portails. Je ferme aussi les portails, mais c'est moins spectaculaire."],
+			[z, "Reviens me voir quand quelqu'un aura besoin de tes... talents bruyants."],
+		],
+		"choices": [["« Entendu. »", "close"]],
+	}
+
+
+static func _brunhilde() -> Dictionary:
+	var b := npc_name("brunhilde")
+	return {
+		"lines": [
+			[b, "Bienvenue au Crâne Hurlant, barde. Ici on paie d'avance et on ne joue pas de ballades elfiques."],
+			[b, "Potion de soin à %d po, chambre à %d po la nuit. Tu as %d po." % [
+				Balance.POTION_PRICE, Balance.REST_PRICE, GameState.gold]],
+		],
+		"choices": [
+			["Acheter une potion de soin (%d po)" % Balance.POTION_PRICE, "buy_potion", true],
+			["Louer une chambre et se reposer (%d po)" % Balance.REST_PRICE, "rest", true],
+			["« Des rumeurs ? »", "goto:brunhilde_rumeurs"],
+			["« À plus tard. »", "close"],
+		],
+	}
+
+
+static func _brunhilde_rumeurs() -> Dictionary:
+	var b := npc_name("brunhilde")
+	return {
+		"lines": [
+			[b, "Des rumeurs ? Depuis un mois, les morts ne restent plus couchés. Ils volent tout ce qui fait du bruit : cloches, tambours, poulets..."],
+			[b, "Les anciens parlent de Morne, la Liche du Silence. Il paraît qu'elle veut faire taire le monde entier."],
+			[b, "Moi, tant qu'ils ne volent pas mes fûts, je m'en fiche. Mais un barde comme toi... tu devrais t'en soucier."],
+		],
+		"choices": [["« Intéressant... »", "goto:brunhilde"]],
+	}
+
+
+static func _inconnue() -> Dictionary:
+	var i := npc_name("inconnue")
+	if GameState.quest_state("plumeau") == QuestDB.State.TURNED_IN:
+		return {
+			"lines": [
+				[i, "Tu as vaincu Gloubah. Elle n'était qu'une servante. Sa couronne portait le sceau de Morne."],
+				[i, "Quand le Silence viendra, barde, joue plus fort que lui. Nous nous reverrons."],
+			],
+			"choices": [["(Elle disparaît dans l'ombre...)", "close"]],
+		}
+	return {
+		"lines": [
+			[i, "...Ton luth. Il est accordé en ré bémol, n'est-ce pas ? L'accordage des anciens rois-bardes."],
+			[i, "Les squelettes ne volent pas au hasard. Quelqu'un leur donne des ordres. Quelqu'un qui déteste la musique."],
+		],
+		"choices": [["« Qui es-tu ? »", "close"]],
+	}
+
+
+static func _borin() -> Dictionary:
+	var lines := [
+		"Hic ! Tu joues du luth ? Moi je joue de la chope. Regarde. *glou glou* Magnifique, non ?",
+		"Un jour j'ai frappé un squelette avec ma barbe. Il s'est effondré. De rire, mais quand même.",
+		"Les grenouilles, c'est des crapauds qui ont réussi. Retiens bien ça, gamin.",
+		"Tu sais pourquoi les squelettes ne se battent jamais entre eux ? Ils n'ont pas les tripes. HAHAHA ! Hic.",
+	]
+	return {"lines": [[npc_name("borin"), str(lines.pick_random())]], "choices": [["« Santé, Borin. »", "close"]]}
+
+
+static func _sylvaine() -> Dictionary:
+	var s := npc_name("sylvaine")
+	return {
+		"lines": [
+			[s, "Tiens, le hurleur. Tu appelles ça de la musique ? Moi, j'appelle ça un orage dans une casserole."],
+			[HERO, "Au moins, mon orage à moi foudroie les morts-vivants."],
+			[s, "...Touché. Un jour, on fera un duel de solos. Et je gagnerai."],
+		],
+		"choices": [["« Quand tu veux. »", "close"]],
+	}
+
+
+static func _tableau() -> Dictionary:
+	var lines := []
+	for id: String in QuestDB.QUESTS:
+		var q := QuestDB.get_quest(id)
+		var state := GameState.quest_state(id)
+		var status := ""
+		match state:
+			QuestDB.State.AVAILABLE:
+				status = "Disponible — voir %s" % npc_name(str(q.get("giver", "")))
+			QuestDB.State.ACTIVE:
+				status = "En cours"
+			QuestDB.State.OBJECTIVE_DONE:
+				status = "À rendre"
+			QuestDB.State.TURNED_IN:
+				status = "Terminée"
+			_:
+				status = "Verrouillée"
+		lines.append(["Tableau", "« %s » — %s" % [q.get("title", id), status]])
+	lines.append(["Tableau", "Une affiche déchirée : « RECHERCHÉE — MORNE, LA LICHE DU SILENCE. Récompense : la paix. »"])
+	return {"lines": lines, "choices": [["Fermer", "close"]]}
