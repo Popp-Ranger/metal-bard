@@ -38,7 +38,7 @@ func _ready() -> void:
 	if GameState.flags.get("portal_open", false) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE:
 		_open_portal()
 	Events.portal_opened.connect(_open_portal)
-	Sfx.play_ambience("amb_tavern", -16.0)
+	Sfx.play_music("res://audio/music/tavern_theme.mp3", -8.0) # musique « metal-band-tavern »
 	GameState.save_game()
 
 

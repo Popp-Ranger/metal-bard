@@ -23,7 +23,7 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
   - **Solo de la Foudre** (3) : mini-jeu façon *Guitar Hero* (5 notes, touches **1 2 3 4**) **sans pause** — le héros est **invincible** pendant le solo — puis pluie d'éclairs sur tout l'écran.
 - **Règles Donjons & Dragons 5e** : FOR / DEX / CON / INT / SAG / CHA, jets d'attaque d20 contre la CA, sauvegardes, table d'XP officielle, points à répartir à chaque niveau.
 - **IA des squelettes** : errance aléatoire, détection à 4 m, vitesse = 25 % du héros, 1 attaque toutes les 2,5 s (avec élan visible pour esquiver).
-- Sons **synthétisés par code** (aucun fichier audio requis), sauvegarde automatique.
+- **Musique de taverne** (metal, `audio/music/tavern_theme.mp3`, en boucle) ; bruitages **synthétisés par code** ; sauvegarde automatique.
 
 ## Lancer le jeu
 

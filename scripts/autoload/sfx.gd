@@ -45,6 +45,24 @@ func play_ambience(id: String, volume_db: float = -12.0) -> void:
 	_ambience.play()
 
 
+## Musique de fond lue depuis un fichier (MP3 / OGG), jouée en boucle
+## sur la même piste que les ambiances : elle s'arrête aux changements de scène.
+func play_music(path: String, volume_db: float = -8.0) -> void:
+	var stream := load(path) as AudioStream
+	if stream == null:
+		push_warning("Musique introuvable : %s" % path)
+		return
+	var mp3 := stream as AudioStreamMP3
+	if mp3 != null:
+		mp3.loop = true
+	var ogg := stream as AudioStreamOggVorbis
+	if ogg != null:
+		ogg.loop = true
+	_ambience.stream = stream
+	_ambience.volume_db = volume_db
+	_ambience.play()
+
+
 func stop_ambience() -> void:
 	_ambience.stop()
 
@@ -72,7 +90,6 @@ func _build_all() -> void:
 		var f: float = NOTE_FREQS[i]
 		_streams["note_%d" % i] = _to_wav(_power_chord(f, 0.5))
 	_streams["amb_dungeon"] = _to_wav(_amb_dungeon(), true)
-	_streams["amb_tavern"] = _to_wav(_amb_tavern(), true)
 
 
 func _to_wav(buf: PackedFloat32Array, loop: bool = false) -> AudioStreamWAV:
@@ -321,16 +338,4 @@ func _amb_dungeon() -> PackedFloat32Array:
 			if dt >= 0.0 and dt < 0.15:
 				drip += sin(TAU * lerpf(1800.0, 900.0, dt / 0.15) * dt) * exp(-dt * 40.0) * 0.35
 		b[i] = drone + lp * 6.0 + drip
-	return b
-
-
-## Ambiance de la taverne : feu de cheminée qui crépite (boucle de 6 s).
-func _amb_tavern() -> PackedFloat32Array:
-	var b := _buffer(6.0)
-	var lp := 0.0
-	for i in b.size():
-		var t := float(i) / RATE
-		lp += 0.01 * (randf_range(-1.0, 1.0) - lp)
-		var pop := randf_range(-1.0, 1.0) * 0.8 if randf() < 0.0009 else 0.0
-		b[i] = lp * 5.0 * (0.8 + 0.2 * sin(TAU * 0.5 * t)) + pop
 	return b

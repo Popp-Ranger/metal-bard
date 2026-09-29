@@ -73,6 +73,9 @@ func _test_quest_flow() -> void:
 	add_child(tavern)
 	await _frames(20)
 	_check(get_tree().get_nodes_in_group("interactable").size() >= 6, "PNJ interactifs présents dans la taverne")
+	var music := Sfx._ambience.stream as AudioStreamMP3
+	_check(music != null and music.loop and music.get_length() > 30.0,
+		"musique de la taverne chargée et en boucle (%.0f s)" % (music.get_length() if music else 0.0))
 	GameState.run_dialogue_action("accept:plumeau")
 	_check(GameState.quest_state("plumeau") == QuestDB.State.ACTIVE, "quête acceptée")
 	GameState.run_dialogue_action("portal")
