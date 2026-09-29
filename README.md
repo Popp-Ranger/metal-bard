@@ -12,7 +12,7 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 ## Le jeu en bref
 
 - **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon** (contours encrés, vignette, torches vacillantes).
-- **Héros** : Riffald, barde à crinière rousse inspiré de Dave Mustaine et Ronnie James Dio, armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
+- **Héros** : un barde que vous créez (6 races, homme ou femme ; par défaut Riffald, inspiré de Dave Mustaine et Ronnie James Dio), armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
 - **Taverne-hub** « Le Crâne Hurlant » : 6 PNJ, dialogues à choix, boutique, repos, tableau des quêtes.
 - **Première quête complète** : retrouver Plumeau, le bébé ours-hibou de Gérald, dans de vastes **catacombes générées procéduralement** (salles de 16 à 26 m, couloirs de 6 m, torches espacées), jusqu'au **boss Gloubah**, grenouille géante aux vagues déferlantes.
 - **Arsenal** :
@@ -25,6 +25,43 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 - **IA des squelettes** : errance aléatoire, détection à 4 m, vitesse = 25 % du héros, 1 attaque toutes les 2,5 s (avec élan visible pour esquiver).
 - **Musiques metal** en boucle pour la taverne et le donjon (`audio/music/`), bruitages **synthétisés par code**, « voix » babillées pendant les dialogues.
 - **Menu Options > Audio** (écran titre et menu pause) : volumes indépendants **Musique**, **Sorts et effets**, **Dialogues**, sauvegardés automatiquement. Sauvegarde de partie automatique.
+
+## Création de personnage
+
+À chaque **nouvelle partie** : nom, **sexe** (homme / femme) et **race**, avec un aperçu 3D sur scène.
+
+| Race | Taille | Bonus | Trait racial | Options |
+|---|---|---|---|---|
+| Humain | 1,8 m | +1 partout | +10 % d'XP | barbe (hommes) |
+| Squelette | 1,8 m | DEX +2, CON +1 | les squelettes ennemis ne vous repèrent qu'à 3 m | — |
+| Orc | 2 m | FOR +2, CON +1 | +2 aux dégâts du coup de guitare | 3 défenses, barbe |
+| Troll | 2,2 m | CON +2, FOR +1 | régénère 1 PV / 2 s | 3 défenses, barbe |
+| Ogre | 2,5 m | FOR +2, CON +2, DEX −1 | +15 PV max | 3 défenses, barbe |
+| Démon | 1,8 m | CHA +2, INT +1 | +10 % de dégâts des sorts | 3 cornes, barbe |
+
+Pour tous : **3 barbes** (hommes : courte, longue tressée, bouc), **4 coiffures longues** (tresses, queue de cheval, longs lâchés, glam-metal) et 5 couleurs de cheveux.
+
+| Démone glam-metal | Ogre | Orc |
+|---|---|---|
+| ![Démone](docs/screenshots/09_creation_demone.png) | ![Ogre](docs/screenshots/10_creation_ogre.png) | ![Orc](docs/screenshots/11_creation_orc.png) |
+
+## Arbre de talents (touche T)
+
+5 branches de 4 talents, **1 point par niveau** (dont 1 dès le niveau 1), paliers à débloquer dans l'ordre. Les sorts actifs se placent sur les touches **4 à 7**.
+
+| Branche | Palier 1 | Palier 2 | Palier 3 | Palier 4 |
+|---|---|---|---|---|
+| **Ballade** (soins) | Ballade réparatrice | Rappel *(passif)* | Hymne du Phénix | Encore ! *(passif)* |
+| **Mur du Son** (protection) | Mur de Larsen | Cuir clouté renforcé *(passif)* | Pile d'amplis | Sustain *(passif)* |
+| **Mosh Pit** (repoussement) | Wall of Death | Larsen persistant *(passif)* | Stage Diving | Pogo *(passif)* |
+| **Transe** (contrôle) | **Solo endiablé** | Tempo hypnotique *(passif)* | Growl de l'Abîme | Maître du tempo *(passif)* |
+| **Thrash** (destruction) | Distorsion *(passif)* | Enceinte de façade | Overdrive *(passif)* | Pyrotechnie |
+
+**Solo endiablé** : le mini-jeu du solo se lance ; tant que les notes sont réussies (jusqu'à 12, ou 16 avec *Maître du tempo*), les ennemis à 12 m se figent et **headbanguent** sans bouger. La première fausse note brise la transe. Le héros peut se déplacer pendant ce solo.
+
+| Arbre de talents | Solo endiablé |
+|---|---|
+| ![Arbre](docs/screenshots/12_arbre_talents.png) | ![Transe](docs/screenshots/13_solo_endiable.png) |
 
 ## Lancer le jeu
 
@@ -45,6 +82,8 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 | Accordage de cordes | **Clic droit** |
 | Riff électrique (en rythme !) / Onde de choc / Solo | **1** / **2** / **3** |
 | Mini-jeu du solo | **1 2 3 4** |
+| Sorts de talents | **4 5 6 7** |
+| Arbre de talents | **T** |
 | Potion | **R** |
 | Parler / interagir | **E** |
 | Fiche de personnage | **C** |

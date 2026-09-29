@@ -122,7 +122,7 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 - **XP** : table officielle D&D 5e (300 XP pour le niveau 2, 900 pour le 3, 2 700 pour le 4…), niveau max 20.
 - **Sources d'XP** : ennemis (squelette 50, capitaine 150, Gloubah 450) + quêtes (Plumeau 300).
 - **Montée de niveau** : PV et dB restaurés, **+2 points de caractéristique à répartir librement** (variante « Oblivion » plus généreuse que les ASI de D&D tous les 4 niveaux).
-- **Prévu** : arbre de talents par « Voie » (Thrash = vitesse, Doom = contrôle, Power = soutien de groupe) aux niveaux 3, 6, 10, 14, 18.
+- **Talents** : 1 point par niveau à dépenser dans l'arbre de talents (voir 14 ter).
 
 ## 8. Combat
 
@@ -225,6 +225,56 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 ## 14. Interface
 - **HUD** : PV / décibels / XP (en haut à gauche), suivi de quête (en haut à droite), barre de vie du boss (en haut au centre), barre de compétences avec recharges et coûts (en bas), invite d'interaction, messages flottants, nombres de dégâts colorés (blanc = physique, bleu = électrique, violet = son, or = critique).
 - **Fenêtres** : dialogues à choix (texte qui défile, choix au clavier 1-2-3), fiche de personnage D&D, pause, écran de mort, mini-jeu du solo.
+
+## 14 bis. Création de personnage
+
+Écran dédié après « Nouvelle partie » (`scenes/character_creation.tscn`), aperçu 3D sur une estrade éclairée par des projecteurs ; le personnage tourne et se fait pivoter à la souris. Bouton « Aléatoire ».
+
+- **Nom** libre (repris dans les dialogues) et **sexe** : les PNJ accordent leurs phrases (« le barde » / « la barde », « un héros » / « une héroïne »...), la voix babillée du héros change de timbre.
+- **Races** (taille réelle du modèle et de la collision) :
+
+| Race | Taille | Carrure | Bonus | Trait racial |
+|---|---|---|---|---|
+| Humain | 1,8 m | normale | +1 à toutes les caractéristiques | Polyvalent : +10 % d'XP |
+| Squelette | 1,8 m | fine | DEX +2, CON +1 | Un des leurs : les squelettes ennemis détectent à 3 m au lieu de 4 |
+| Orc | 2,0 m | large | FOR +2, CON +1 | Rage sanguinaire : +2 aux dégâts du coup de guitare |
+| Troll | 2,2 m | large | CON +2, FOR +1 | Régénération : 1 PV toutes les 2 s |
+| Ogre | 2,5 m | massive | FOR +2, CON +2, DEX −1 | Colosse : +15 PV max |
+| Démon | 1,8 m | normale | CHA +2, INT +1 | Sang infernal : +10 % de dégâts des sorts |
+
+- **Cornes** (démon) : bélier, taureau, infernales. **Défenses** (orc, troll, ogre) : petites, grandes, brisées.
+- **Barbes** (hommes, sauf squelette) : courte, longue tressée à anneaux de fer, bouc.
+- **Coiffures** (toutes longues) : tresses, queue de cheval, longs lâchés, glam-metal ; 5 couleurs (roux sombre, noir corbeau, blond platine, blanc d'argent, violet).
+- Détails de race : oreilles pointues (orc, démon), très longues (troll), long nez (troll), mâchoire massive (orc, troll, ogre), crâne et côtes apparentes (squelette), yeux lumineux de couleur propre à chaque race.
+
+## 14 ter. Arbre de talents
+
+5 branches × 4 paliers (`scripts/rpg/talent_db.gd`), **1 point de talent par niveau** (dont 1 au niveau 1). Dans une branche, chaque palier nécessite le précédent ; les points se répartissent librement entre les branches (spécialiste ou hybride). Les sorts actifs appris se placent automatiquement sur les touches **4 à 7** et se réassignent dans l'arbre (touche **T**, ou menu pause).
+
+| Branche | Talent | Type | Effet |
+|---|---|---|---|
+| **Ballade** (soins) | Ballade réparatrice | Actif 25 dB / 12 s | 2d8 + CHA, puis 5 % PV max/s pendant 4 s |
+| | Rappel | Passif | Chaque ennemi vaincu rend 3 PV et 4 dB |
+| | Hymne du Phénix | Actif 35 dB / 30 s | Cercle de flammes (4 m, 8 s) : 6 % PV max/s |
+| | Encore ! | Passif | Survit à un coup mortel à 1 PV + soin de 50 % (1 fois / 2 min) |
+| **Mur du Son** (protection) | Mur de Larsen | Actif 20 dB / 15 s | Bouclier 10 + 3 × CHA + 2 × niveau pendant 8 s |
+| | Cuir clouté renforcé | Passif | +2 CA |
+| | Pile d'amplis | Actif 30 dB / 25 s | 6 s : dégâts reçus ÷ 2, riposte 1d6 + CHA sur l'attaquant |
+| | Sustain | Passif | −10 % de dégâts ; le bouclier brisé explose et repousse |
+| **Mosh Pit** (repoussement) | Wall of Death | Actif 15 dB / 6 s | Cône 7 m : 1d8 + CHA, projection violente |
+| | Larsen persistant | Passif | Onde de choc : +2 m de rayon, recul +50 % |
+| | Stage Diving | Actif 25 dB / 10 s | Saut (8 m, s'arrête aux murs), impact 4 m : 2d6 + CHA + recul |
+| | Pogo | Passif | Les ennemis fortement repoussés sont assommés 1,5 s |
+| **Transe** (contrôle) | **Solo endiablé** | Actif 30 dB / 25 s | Mini-jeu : les ennemis à 12 m se figent en headbang tant que les notes sont réussies (12 max) ; 1re fausse note = fin. Le héros peut se déplacer (60 % de vitesse). En transe, les ennemis ne bougent plus du tout, même frappés. |
+| | Tempo hypnotique | Passif | Le Riff électrique ralentit sa cible de 40 % pendant 2 s |
+| | Growl de l'Abîme | Actif 20 dB / 16 s | Les ennemis à 6 m fuient 3,5 s (boss : sonnés) |
+| | Maître du tempo | Passif | Solo endiablé : 16 notes, chaque note réussie inflige 1d6 + CHA aux ennemis en transe |
+| **Thrash** (destruction) | Distorsion | Passif | Accordage de cordes : 6 cibles, +15 % |
+| | Enceinte de façade | Actif 25 dB / 14 s | Enceinte posée au curseur : 6 pulsations de 1d8 + CHA (4 m) |
+| | Overdrive | Passif | Riff électrique : 5 paliers, ×4 max |
+| | Pyrotechnie | Actif 40 dB / 20 s | 6 colonnes de feu autour du héros après 0,8 s : 4d6 chacune |
+
+**Rôles en coop (à venir)** : Ballade = soigneur, Mur du Son = tank, Mosh Pit = contrôle de zone, Transe = contrôle de foule (idéal pour que les alliés frappent pendant que les ennemis headbanguent), Thrash = dégâts.
 
 ## 15. Feuille de route
 Voir [ROADMAP.md](ROADMAP.md).

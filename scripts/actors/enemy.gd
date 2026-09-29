@@ -4,11 +4,13 @@ extends CharacterBody3D
 ##   ERRANCE  — se promène au hasard autour de son point d'origine ;
 ##   POURSUITE — dès que le héros est à moins de 4 m (Balance.ENEMY_DETECT_RADIUS) ;
 ##   ATTAQUE  — au contact : 1 attaque toutes les 2,5 s, précédée d'un élan visible ;
-##   SONNÉ    — bref étourdissement après un gros recul ;
+##   SONNÉ    — étourdissement (gros recul, Pogo, Growl sur un boss) ;
+##   TRANSE   — figé, en plein headbang (Solo endiablé) ;
+##   PEUR     — fuit le héros (Growl de l'Abîme) ;
 ##   MORT.
 ## Vitesse = 0,25 × vitesse du héros (Balance.ENEMY_SPEED_RATIO).
 
-enum State { WANDER, CHASE, ATTACK, STAGGER, DEAD }
+enum State { WANDER, CHASE, ATTACK, STAGGER, TRANCE, FEAR, DEAD }
 
 var display_name := "Ennemi"
 var max_hp := 10
@@ -49,6 +51,10 @@ var _flash_mats: Array[StandardMaterial3D] = []
 var _hp_bar: Node3D
 var _hp_fill: MeshInstance3D
 var _alert: Label3D
+var _slow_factor := 1.0
+var _slow_time := 0.0
+var _fear_time := 0.0
+var _trance_label: Label3D
 
 
 func _ready() -> void:
@@ -114,6 +120,10 @@ func _physics_process(delta: float) -> void:
 	if hero == null or not is_instance_valid(hero):
 		hero = get_tree().get_first_node_in_group("hero") as Hero
 	_attack_timer = maxf(0.0, _attack_timer - delta)
+	_slow_time = maxf(0.0, _slow_time - delta)
+	if _slow_time <= 0.0:
+		_slow_factor = 1.0
+	var speed := move_speed * _slow_factor
 	var dist := INF
 	var to_hero := Vector3.ZERO
 	if hero != null and not hero.dead:
@@ -124,7 +134,7 @@ func _physics_process(delta: float) -> void:
 	var desired := Vector3.ZERO
 	match state:
 		State.WANDER:
-			if dist <= detect_radius:
+			if dist <= effective_detect_radius():
 				_aggro()
 			else:
 				desired = _wander(delta)
@@ -136,7 +146,7 @@ func _physics_process(delta: float) -> void:
 			elif dist <= attack_range + radius + 0.35:
 				state = State.ATTACK
 			else:
-				desired = to_hero.normalized() * move_speed
+				desired = to_hero.normalized() * speed
 		State.ATTACK:
 			if dist > attack_range + radius + 0.35 + 0.5 and not _attacking:
 				state = State.CHASE
@@ -146,8 +156,18 @@ func _physics_process(delta: float) -> void:
 			_stagger -= delta
 			if _stagger <= 0.0:
 				state = State.CHASE
+		State.TRANCE:
+			# Headbang : tout le corps bat la mesure, plus aucune action.
+			model.rotation.x = absf(sin(_anim_t * 11.0)) * 0.45
+		State.FEAR:
+			_fear_time -= delta
+			if dist < INF:
+				desired = -to_hero.normalized() * speed * 1.4
+			if _fear_time <= 0.0:
+				state = State.CHASE
 
-	_update_special(delta, dist)
+	if state != State.TRANCE:
+		_update_special(delta, dist)
 	velocity = desired + _knock
 	_knock = _knock.move_toward(Vector3.ZERO, 20.0 * delta)
 	move_and_slide()
@@ -159,7 +179,66 @@ func _physics_process(delta: float) -> void:
 	if look.length() > 0.05:
 		model.rotation.y = lerp_angle(model.rotation.y, atan2(look.x, look.z), 1.0 - exp(-10.0 * delta))
 	_anim_t += delta
-	_animate(delta, desired.length() > 0.05)
+	if state != State.TRANCE:
+		_animate(delta, desired.length() > 0.05)
+
+
+## Rayon de détection réel (trait « Un des leurs » des héros squelettes).
+func effective_detect_radius() -> float:
+	if GameState.race() == "squelette" and self is Skeleton:
+		return minf(detect_radius, 3.0)
+	return detect_radius
+
+
+# --- Contrôle de foule (talents) ---------------------------------------------
+
+## Solo endiablé : l'ennemi se fige et headbangue jusqu'à exit_trance().
+func enter_trance() -> void:
+	if state == State.DEAD or state == State.TRANCE:
+		return
+	state = State.TRANCE
+	_knock = Vector3.ZERO
+	_attacking = false
+	if _trance_label == null:
+		_trance_label = Visuals.label(self, "♫", Vector3(0, height + 0.7, 0), Color(0.85, 0.6, 1.0), 70)
+
+
+func exit_trance() -> void:
+	if state != State.TRANCE:
+		return
+	state = State.CHASE
+	model.rotation.x = 0.0
+	if _trance_label != null:
+		_trance_label.queue_free()
+		_trance_label = null
+
+
+func is_in_trance() -> bool:
+	return state == State.TRANCE
+
+
+## Growl : fuite (les boss ne sont que sonnés).
+func fear(duration: float) -> void:
+	if state == State.DEAD or state == State.TRANCE:
+		return
+	if is_boss:
+		stun(0.6)
+		return
+	state = State.FEAR
+	_fear_time = duration
+	DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.5, 0), "Terrifié !", Color(0.8, 0.5, 1.0))
+
+
+func stun(duration: float) -> void:
+	if state == State.DEAD or state == State.TRANCE:
+		return
+	state = State.STAGGER
+	_stagger = maxf(_stagger, duration)
+
+
+func slow(factor: float, duration: float) -> void:
+	_slow_factor = minf(_slow_factor, factor)
+	_slow_time = maxf(_slow_time, duration)
 
 
 ## À surcharger : capacités spéciales (boss).
@@ -221,7 +300,7 @@ func _begin_attack() -> void:
 	_attack_anim(Balance.ENEMY_ATTACK_WINDUP)
 	await get_tree().create_timer(Balance.ENEMY_ATTACK_WINDUP, false).timeout
 	_attacking = false
-	if state == State.DEAD or hero == null or not is_instance_valid(hero) or hero.dead:
+	if state == State.DEAD or state == State.TRANCE or state == State.FEAR or hero == null or not is_instance_valid(hero) or hero.dead:
 		return
 	var to := hero.global_position - global_position
 	to.y = 0.0
@@ -229,7 +308,7 @@ func _begin_attack() -> void:
 		return # le héros a esquivé en reculant
 	Sfx.play("clack", -10.0)
 	if Dice.attack_roll(attack_bonus, GameState.armor_class()) > 0:
-		hero.take_hit(Dice.roll(damage_dice.x, damage_dice.y, damage_dice.z), global_position)
+		hero.take_hit(Dice.roll(damage_dice.x, damage_dice.y, damage_dice.z), global_position, self)
 	else:
 		DamageNumber.spawn(get_parent(), hero.global_position + Vector3(0, 2.2, 0), "Esquive", Color(0.7, 0.8, 1.0))
 
@@ -257,7 +336,7 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 		color = Color(1.0, 0.8, 0.2)
 	DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.3, 0), "%d%s" % [amount, "!" if crit else ""], color, crit)
 	_flash()
-	if not is_boss:
+	if not is_boss and state != State.TRANCE: # en transe, rien ne les fait bouger
 		var away := global_position - from
 		away.y = 0.0
 		if away.length() > 0.01:
@@ -268,7 +347,7 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 	Sfx.play("clack", -12.0, 0.15)
 	if hp <= 0:
 		_die()
-	elif knockback >= 4.0 and not is_boss:
+	elif knockback >= 4.0 and not is_boss and state != State.TRANCE:
 		state = State.STAGGER
 		_stagger = 0.4
 

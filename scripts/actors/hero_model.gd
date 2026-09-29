@@ -1,7 +1,8 @@
 class_name HeroModel
 extends Node3D
-## Apparence de Riffald : longue crinière rousse sombre (clin d'œil à Dave Mustaine),
-## manteau de cuir noir, médaillon à cornes (hommage à Ronnie James Dio).
+## Apparence du héros, construite selon le personnage créé (RaceDB) :
+## sexe, race (taille et carrure), cornes, défenses, barbe, coiffure longue, couleur de cheveux.
+## Tenue commune : manteau de cuir noir, médaillon à cornes (hommage à Ronnie James Dio).
 ## Il joue d'une réplique de Gibson Flying V, portée bas à la sangle comme un guitariste
 ## de metal, et se déplace avec la posture voûtée et la démarche claudicante des
 ## Réprouvés (morts-vivants) de World of Warcraft. Le modèle regarde vers +Z.
@@ -18,6 +19,9 @@ const GUITAR_SOLO := Vector3(-0.5, 0.0, 0.5) # manche dressé vers le ciel pour 
 const GUITAR_WINDUP := Vector3(-0.6, 0.0, 2.9) # guitare levée au-dessus de l'épaule, tenue par le manche
 const GUITAR_STRIKE := Vector3(1.2, 0.0, 2.9) # abattue vers l'avant
 
+## Apparence à afficher (clés de RaceDB.DEFAULT_APPEARANCE). Vide = celle de GameState.
+var appearance := {}
+
 var _torso: Node3D
 var _head: Node3D
 var _hip_l: Node3D
@@ -29,7 +33,7 @@ var _upper_r: Node3D
 var _fore_l: Node3D
 var _fore_r: Node3D
 var _guitar: Node3D
-var _hair_back: MeshInstance3D
+var _hair_back: Node3D
 var _aura: Node3D
 var _aura_light: OmniLight3D
 var _strings_mat: StandardMaterial3D
@@ -47,10 +51,43 @@ var _twitch_timer := 2.0
 
 
 func _ready() -> void:
+	if appearance.is_empty():
+		appearance = GameState.appearance.duplicate()
+	_build()
+
+
+## Change l'apparence (écran de création de personnage) et reconstruit le modèle.
+func set_appearance(a: Dictionary) -> void:
+	appearance = a.duplicate()
+	if not is_inside_tree():
+		return
+	for c in get_children():
+		remove_child(c)
+		c.queue_free()
+	_flash_mats.clear()
+	_build()
+
+
+## Hauteur réelle du personnage (m).
+func height() -> float:
+	return float(RaceDB.get_race(str(appearance.get("race", "humain"))).get("height", 1.8))
+
+
+func _build() -> void:
+	var race_id := str(appearance.get("race", "humain"))
+	var race := RaceDB.get_race(race_id)
+	var female: bool = appearance.get("sex", "m") == "f"
+	var skeleton := race_id == "squelette"
+	# Taille et carrure : le modèle de base mesure 1,8 m.
+	var h := float(race.get("height", 1.8)) / 1.8
+	var w := float(race.get("width", 1.0)) * (0.9 if female else 1.0)
+	scale = Vector3(w * sqrt(h), h, w * sqrt(h))
+
 	var leather := _own_mat(Color(0.09, 0.07, 0.07), 0.6)
 	var coat := _own_mat(Color(0.05, 0.045, 0.055), 0.8)
-	var skin := _own_mat(Color(0.74, 0.6, 0.52), 0.65) # teint blafard
-	var hair := _own_mat(Color(0.42, 0.11, 0.05), 0.75)
+	var skin := _own_mat(race.get("skin", Color(0.8, 0.63, 0.52)), 0.55 if skeleton else 0.65)
+	var hair_colors: Array = RaceDB.HAIR_COLORS
+	var hair := _own_mat(hair_colors[clampi(int(appearance.get("hair_color", 0)), 0, hair_colors.size() - 1)], 0.75)
 	var metal := Visuals.mat(Color(0.78, 0.78, 0.82), 0.25, 0.9)
 
 	# --- Jambes : hanche → genou → pied, genoux fléchis en permanence.
@@ -62,7 +99,15 @@ func _ready() -> void:
 	# --- Torse (pivot au bassin, penché en avant).
 	_torso = _pivot(self, Vector3(0, 0.86, 0))
 	_torso.rotation.x = TORSO_LEAN
-	Visuals.box(_torso, Vector3(0.44, 0.6, 0.26), Vector3(0, 0.32, 0), leather)
+	var chest_w := 0.38 if female else 0.44
+	Visuals.box(_torso, Vector3(chest_w, 0.6, 0.26), Vector3(0, 0.32, 0), leather)
+	if female:
+		for side: float in [-1.0, 1.0]:
+			Visuals.sphere(_torso, 0.085, Vector3(0.085 * side, 0.4, 0.12), leather, Vector3(1.0, 0.9, 0.8))
+	if skeleton:
+		# Côtes apparentes entre les pans du manteau.
+		for i in 4:
+			Visuals.box(_torso, Vector3(0.2 - i * 0.02, 0.03, 0.02), Vector3(0, 0.5 - i * 0.08, 0.135), skin)
 	Visuals.box(_torso, Vector3(0.2, 0.95, 0.3), Vector3(-0.18, 0.08, -0.02), coat) # pans du manteau
 	Visuals.box(_torso, Vector3(0.2, 0.95, 0.3), Vector3(0.18, 0.08, -0.02), coat)
 	Visuals.box(_torso, Vector3(0.52, 0.11, 0.3), Vector3(0, 0.02, 0), coat) # ceinture
@@ -70,25 +115,17 @@ func _ready() -> void:
 		Visuals.sphere(_torso, 0.022, Vector3(-0.2 + i * 0.1, 0.02, 0.16), metal)
 	Visuals.sphere(_torso, 0.045, Vector3(0, 0.46, 0.14), Visuals.glow_mat(Color(1.0, 0.2, 0.1), 2.5)) # médaillon
 	# Épaules haussées et épaulières à pointes.
+	var shoulder := 0.24 if female else 0.27
 	for side: float in [-1.0, 1.0]:
-		Visuals.sphere(_torso, 0.13, Vector3(0.27 * side, 0.62, 0.02), coat, Vector3(1.2, 0.85, 1.1))
-		Visuals.cylinder(_torso, 0.0, 0.035, 0.14, Vector3(0.33 * side, 0.72, 0.0), metal, Vector3(0, 0, -30 * side))
+		Visuals.sphere(_torso, 0.13, Vector3(shoulder * side, 0.62, 0.02), coat, Vector3(1.2, 0.85, 1.1))
+		Visuals.cylinder(_torso, 0.0, 0.035, 0.14, Vector3((shoulder + 0.06) * side, 0.72, 0.0), metal, Vector3(0, 0, -30 * side))
 	# Sangle de guitare en travers du torse.
 	Visuals.box(_torso, Vector3(0.05, 0.72, 0.02), Vector3(-0.01, 0.32, 0.15), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, 33))
 
-	# --- Tête projetée en avant (cou tendu), crinière, barbe naissante.
+	# --- Tête projetée en avant (cou tendu).
 	_head = _pivot(_torso, Vector3(0, 0.64, 0.1))
 	_head.rotation.x = -0.2
-	Visuals.box(_head, Vector3(0.11, 0.12, 0.11), Vector3(0, 0.04, -0.02), skin) # cou
-	Visuals.sphere(_head, 0.155, Vector3(0, 0.2, 0.03), skin, Vector3(0.92, 1.1, 1.0))
-	Visuals.sphere(_head, 0.17, Vector3(0, 0.26, -0.01), hair, Vector3(1.05, 0.95, 1.05))
-	_hair_back = Visuals.box(_head, Vector3(0.32, 0.62, 0.09), Vector3(0, -0.12, -0.12), hair)
-	Visuals.box(_head, Vector3(0.07, 0.5, 0.12), Vector3(-0.16, -0.06, 0.02), hair, Vector3(0, 0, -5))
-	Visuals.box(_head, Vector3(0.07, 0.5, 0.12), Vector3(0.16, -0.06, 0.02), hair, Vector3(0, 0, 5))
-	Visuals.box(_head, Vector3(0.18, 0.08, 0.05), Vector3(0, 0.1, 0.16), hair)
-	var eye_mat := Visuals.glow_mat(Color(0.6, 0.85, 1.0), 1.8)
-	Visuals.sphere(_head, 0.022, Vector3(-0.055, 0.23, 0.16), eye_mat)
-	Visuals.sphere(_head, 0.022, Vector3(0.055, 0.23, 0.16), eye_mat)
+	_build_head(race_id, race, female, skin, hair)
 
 	# --- Guitare Flying V.
 	_guitar = _pivot(_torso, GUITAR_REST_POS)
@@ -97,8 +134,8 @@ func _ready() -> void:
 	_build_flying_v(_guitar, metal)
 
 	# --- Bras (IK à deux os).
-	_upper_l = _pivot(_torso, Vector3(-0.28, 0.58, 0.03))
-	_upper_r = _pivot(_torso, Vector3(0.28, 0.58, 0.03))
+	_upper_l = _pivot(_torso, Vector3(-shoulder - 0.01, 0.58, 0.03))
+	_upper_r = _pivot(_torso, Vector3(shoulder + 0.01, 0.58, 0.03))
 	_fore_l = _build_arm(_upper_l, coat, skin)
 	_fore_r = _build_arm(_upper_r, coat, skin)
 
@@ -113,8 +150,133 @@ func _ready() -> void:
 	_aura_light.light_energy = 2.5
 	_aura_light.omni_range = 4.0
 	_aura.add_child(_aura_light)
-	_aura.visible = false
+	_aura.visible = _soloing
 	_update_arms()
+
+
+# --- Tête : visage, oreilles, cornes, défenses, barbe, coiffure ------------------
+
+func _build_head(race_id: String, race: Dictionary, female: bool, skin: Material, hair: Material) -> void:
+	var skeleton := race_id == "squelette"
+	var eye_mat := Visuals.glow_mat(race.get("eyes", Color(0.6, 0.85, 1.0)), 2.2)
+	Visuals.box(_head, Vector3(0.1, 0.12, 0.1), Vector3(0, 0.04, -0.02), skin) # cou
+	var head_scale := Vector3(0.92, 1.1, 1.0)
+	match race_id:
+		"ogre":
+			head_scale = Vector3(1.15, 1.05, 1.1)
+		"troll":
+			head_scale = Vector3(0.9, 1.15, 1.05)
+		"orc":
+			head_scale = Vector3(1.0, 1.05, 1.0)
+	if female:
+		head_scale *= 0.94
+	Visuals.sphere(_head, 0.155, Vector3(0, 0.2, 0.03), skin, head_scale)
+	if skeleton:
+		# Crâne : orbites creuses, trou du nez, mâchoire.
+		var dark := Visuals.mat(Color(0.03, 0.02, 0.02))
+		for side: float in [-1.0, 1.0]:
+			Visuals.sphere(_head, 0.045, Vector3(0.055 * side, 0.22, 0.14), dark)
+		Visuals.box(_head, Vector3(0.03, 0.035, 0.02), Vector3(0, 0.165, 0.17), dark)
+		Visuals.box(_head, Vector3(0.14, 0.05, 0.1), Vector3(0, 0.1, 0.08), skin)
+	else:
+		# Mâchoire (plus massive chez les orcs, trolls et ogres).
+		var jaw := Vector3(0.16, 0.06, 0.1)
+		if race.get("tusks", false):
+			jaw = Vector3(0.22 if race_id == "ogre" else 0.19, 0.08, 0.12)
+		Visuals.box(_head, jaw, Vector3(0, 0.12, 0.08), skin)
+	Visuals.sphere(_head, 0.022, Vector3(-0.055, 0.23, 0.16), eye_mat)
+	Visuals.sphere(_head, 0.022, Vector3(0.055, 0.23, 0.16), eye_mat)
+	# Nez et oreilles selon la race.
+	if race_id == "troll":
+		Visuals.cylinder(_head, 0.0, 0.035, 0.12, Vector3(0, 0.19, 0.2), skin, Vector3(80, 0, 0), 8)
+	elif race_id == "ogre":
+		Visuals.sphere(_head, 0.04, Vector3(0, 0.18, 0.18), skin, Vector3(1.3, 1.0, 1.0))
+	if race_id in ["orc", "troll", "demon"]:
+		var ear_len := 0.22 if race_id == "troll" else 0.12
+		for side: float in [-1.0, 1.0]:
+			Visuals.cylinder(_head, 0.0, 0.035, ear_len, Vector3((0.15 + ear_len * 0.35) * side, 0.24, 0.0), skin,
+				Vector3(0, 0, -75 * side), 6)
+	# Cornes (démon).
+	if race.get("horns", false):
+		_build_horns(int(appearance.get("horns", 0)))
+	# Défenses (orc, troll, ogre).
+	if race.get("tusks", false):
+		_build_tusks(int(appearance.get("tusks", 0)))
+	# Barbe (hommes, sauf squelettes).
+	if RaceDB.can_have_beard(appearance):
+		_build_beard(int(appearance.get("beard", 0)), hair)
+	_build_hair(int(appearance.get("hair", 2)), hair)
+
+
+func _build_horns(kind: int) -> void:
+	var horn := Visuals.mat(Color(0.32, 0.27, 0.22), 0.3) # corne polie, un peu claire pour ressortir dans le noir
+	for side: float in [-1.0, 1.0]:
+		match kind:
+			0: # bélier : spirales enroulées sur les tempes
+				Visuals.torus(_head, 0.06, 0.13, Vector3(0.16 * side, 0.27, -0.02), horn, Vector3(0, 0, 90))
+				Visuals.cylinder(_head, 0.0, 0.03, 0.08, Vector3(0.17 * side, 0.2, 0.06), horn, Vector3(60, 0, 0), 8)
+			1: # taureau : vers l'extérieur puis vers le haut
+				Visuals.cylinder(_head, 0.04, 0.055, 0.16, Vector3(0.19 * side, 0.32, 0.0), horn, Vector3(0, 0, -80 * side), 8)
+				Visuals.cylinder(_head, 0.0, 0.04, 0.18, Vector3(0.28 * side, 0.42, 0.0), horn, Vector3(0, 0, -15 * side), 8)
+			_: # infernales : longues, balayées vers l'arrière, avec une petite paire devant
+				Visuals.cylinder(_head, 0.0, 0.055, 0.38, Vector3(0.08 * side, 0.45, -0.1), horn, Vector3(-40, 0, -12 * side), 8)
+				Visuals.cylinder(_head, 0.0, 0.025, 0.1, Vector3(0.06 * side, 0.36, 0.1), horn, Vector3(20, 0, -10 * side), 6)
+
+
+func _build_tusks(kind: int) -> void:
+	var ivory := Visuals.mat(Color(0.92, 0.88, 0.75), 0.4)
+	for side: float in [-1.0, 1.0]:
+		var length := 0.06
+		var tilt := 10.0
+		match kind:
+			1:
+				length = 0.14
+				tilt = 25.0
+			2:
+				length = 0.13 if side < 0.0 else 0.035 # une défense brisée
+		Visuals.cylinder(_head, 0.0, 0.018, length, Vector3(0.07 * side, 0.13 + length * 0.5, 0.14), ivory,
+			Vector3(-10, 0, -tilt * side), 6)
+
+
+func _build_beard(kind: int, hair: Material) -> void:
+	match kind:
+		0: # courte
+			Visuals.box(_head, Vector3(0.2, 0.1, 0.1), Vector3(0, 0.1, 0.1), hair)
+		1: # longue barbe tressée, anneaux de fer
+			Visuals.box(_head, Vector3(0.18, 0.1, 0.1), Vector3(0, 0.1, 0.1), hair)
+			Visuals.cylinder(_head, 0.02, 0.05, 0.36, Vector3(0, -0.07, 0.15), hair, Vector3(-10, 0, 0), 8)
+			for i in 2:
+				Visuals.torus(_head, 0.035, 0.05, Vector3(0, -0.02 - i * 0.12, 0.155), Visuals.mat(Color(0.5, 0.5, 0.55), 0.3, 0.8))
+		_: # bouc
+			Visuals.cylinder(_head, 0.01, 0.04, 0.12, Vector3(0, 0.04, 0.15), hair, Vector3(180, 0, 0), 8)
+
+
+## Coiffures (toujours longues) : tresses, queue de cheval, longs lâchés, glam-metal.
+func _build_hair(style: int, hair: Material) -> void:
+	_hair_back = _pivot(_head, Vector3(0, 0.2, -0.1))
+	match style:
+		0: # tresses : calotte + deux tresses sur l'avant des épaules + dos
+			Visuals.sphere(_head, 0.165, Vector3(0, 0.26, -0.01), hair, Vector3(1.05, 0.9, 1.05))
+			Visuals.box(_hair_back, Vector3(0.28, 0.42, 0.07), Vector3(0, -0.22, -0.02), hair)
+			for side: float in [-1.0, 1.0]:
+				for i in 5:
+					Visuals.sphere(_head, 0.04 - i * 0.003, Vector3(0.14 * side, 0.12 - i * 0.08, 0.06 + i * 0.012), hair)
+		1: # queue de cheval haute
+			Visuals.sphere(_head, 0.163, Vector3(0, 0.26, -0.01), hair, Vector3(1.02, 0.88, 1.05))
+			Visuals.sphere(_hair_back, 0.05, Vector3(0, 0.1, -0.05), hair)
+			Visuals.capsule(_hair_back, 0.055, 0.6, Vector3(0, -0.2, -0.08), hair, Vector3(-12, 0, 0))
+		2: # longs lâchés
+			Visuals.sphere(_head, 0.17, Vector3(0, 0.26, -0.01), hair, Vector3(1.05, 0.95, 1.05))
+			Visuals.box(_hair_back, Vector3(0.32, 0.62, 0.09), Vector3(0, -0.32, -0.02), hair)
+			Visuals.box(_head, Vector3(0.07, 0.5, 0.12), Vector3(-0.16, -0.06, 0.02), hair, Vector3(0, 0, -5))
+			Visuals.box(_head, Vector3(0.07, 0.5, 0.12), Vector3(0.16, -0.06, 0.02), hair, Vector3(0, 0, 5))
+			Visuals.box(_head, Vector3(0.18, 0.08, 0.05), Vector3(0, 0.34, 0.14), hair) # frange
+		_: # glam-metal : volume crêpé énorme
+			Visuals.sphere(_head, 0.22, Vector3(0, 0.34, -0.12), hair, Vector3(1.35, 0.95, 1.0))
+			for side: float in [-1.0, 1.0]:
+				Visuals.sphere(_head, 0.14, Vector3(0.21 * side, 0.12, -0.08), hair, Vector3(0.8, 1.6, 0.9))
+			Visuals.sphere(_hair_back, 0.2, Vector3(0, -0.2, -0.04), hair, Vector3(1.4, 1.8, 0.6))
+			Visuals.box(_head, Vector3(0.2, 0.08, 0.06), Vector3(0, 0.36, 0.15), hair, Vector3(-20, 0, 0))
 
 
 func _build_leg(hip: Node3D, leather: Material, coat: Material) -> Node3D:

@@ -29,8 +29,11 @@ signal toast(text: String, color: Color)
 signal interaction_prompt(text: String)
 signal dialogue_requested(npc_id: String)
 signal dialogue_closed
-signal solo_requested
-signal solo_finished(hits: int, total: int)
+signal solo_requested(mode: String, notes: int) # mode : "foudre" ou "endiable"
+signal solo_finished(mode: String, hits: int, total: int)
+signal solo_note_hit(mode: String, hits: int)
+signal talents_changed
+signal shield_changed(amount: int)
 signal portal_opened
 
 # --- Effets d'écran --------------------------------------------------------

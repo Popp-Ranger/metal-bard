@@ -29,6 +29,12 @@
 - [x] Menu Options > Audio : Musique / Sorts et effets / Dialogues, réglages sauvegardés
 - [x] Voix babillées pendant les dialogues
 
+## ✅ v0.1.3 — Personnage et talents
+- [x] Création de personnage : nom, sexe, 6 races (1,8 à 2,5 m) avec bonus et traits, cornes, défenses, barbes, 4 coiffures longues, couleurs
+- [x] Arbre de talents : 5 branches × 4 paliers (soins, protection, repoussement, contrôle, destruction), 1 point par niveau
+- [x] 10 sorts actifs sur les touches 4 à 7 dont le Solo endiablé (headbang des ennemis)
+- [x] Ennemis : états transe, peur, ralentissement, étourdissement
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

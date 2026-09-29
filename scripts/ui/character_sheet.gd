@@ -44,8 +44,9 @@ func _refresh() -> void:
 		_content.remove_child(c)
 		c.queue_free()
 	var s := GameState.stats
-	_content.add_child(UiStyle.label("%s, %s" % [GameState.HERO_NAME, GameState.HERO_TITLE], 28, Color(1.0, 0.8, 0.45)))
-	_content.add_child(UiStyle.label("Barde humain — Niveau %d   •   XP %d / %d" % [s.level, s.xp, GameState.next_level_xp()], 18, UiStyle.DIM))
+	_content.add_child(UiStyle.label("%s, %s" % [GameState.hero_name, GameState.HERO_TITLE], 28, Color(1.0, 0.8, 0.45)))
+	_content.add_child(UiStyle.label("%s — Niveau %d   •   XP %d / %d" % [RaceDB.title(GameState.appearance), s.level, s.xp, GameState.next_level_xp()], 18, UiStyle.DIM))
+	_content.add_child(UiStyle.label("Trait racial — %s" % RaceDB.get_race(GameState.race()).get("trait", ""), 15, Color(0.75, 0.9, 0.7)))
 	_content.add_child(HSeparator.new())
 
 	var columns := HBoxContainer.new()

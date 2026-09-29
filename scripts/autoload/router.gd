@@ -2,6 +2,7 @@ extends CanvasLayer
 ## Changements de scène avec fondu au noir.
 
 const MAIN_MENU := "res://scenes/main_menu.tscn"
+const CHARACTER_CREATION := "res://scenes/character_creation.tscn"
 const TAVERN := "res://scenes/tavern.tscn"
 const DUNGEON := "res://scenes/dungeon.tscn"
 

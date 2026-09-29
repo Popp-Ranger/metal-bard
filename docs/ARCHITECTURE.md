@@ -17,6 +17,8 @@ metal-bard/
 │   │   ├── sfx.gd             Sons synthétisés + ambiances (Sfx)
 │   │   └── router.gd          Changements de scène avec fondu (Router)
 │   ├── rpg/                   Données et règles (aucun nœud)
+│   │   ├── race_db.gd         Races, options d'apparence, bonus raciaux
+│   │   ├── talent_db.gd       Arbre de talents (5 branches × 4 paliers)
 │   │   ├── balance.gd         TOUTES les valeurs d'équilibrage
 │   │   ├── dice.gd            Dés D&D
 │   │   ├── character_stats.gd Caractéristiques / modificateurs
@@ -51,6 +53,8 @@ metal-bard/
 
 ## Acteurs
 
+- **`HeroModel`** : apparence construite depuis `GameState.appearance` (race, sexe, cornes, défenses, barbe, coiffure) ; `set_appearance()` reconstruit le modèle (écran de création).
+- **`TalentCaster`** (enfant du héros) : les 10 sorts actifs et les passifs de l'arbre de talents.
 - **`Hero`** (`CharacterBody3D`, mode flottant) : déplacement relatif à la caméra iso, visée souris, compétences, interaction avec le groupe `"interactable"` (tout nœud ayant `interact_radius`, `get_prompt()` et `interact(hero)`).
 - **`Enemy`** (base) : machine à états Errance / Poursuite / Attaque / Sonné / Mort, jets D&D, recul, barre de vie, butin. Les sous-classes surchargent `_configure()`, `_build_model()`, `_animate()`, `_attack_anim()` et éventuellement `_update_special()` :
   - `Skeleton` (+ variante `captain`)

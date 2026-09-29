@@ -16,6 +16,11 @@ const KEY_ACTIONS := {
 	"potion": [KEY_R],
 	"interact": [KEY_E],
 	"character_sheet": [KEY_C],
+	"talents": [KEY_T],
+	"talent_1": [KEY_4, KEY_KP_4],
+	"talent_2": [KEY_5, KEY_KP_5],
+	"talent_3": [KEY_6, KEY_KP_6],
+	"talent_4": [KEY_7, KEY_KP_7],
 	"pause": [KEY_ESCAPE],
 	# Mini-jeu du solo (façon Guitar Hero) : touches 1 2 3 4 (rangée du haut ou pavé numérique).
 	# Pendant le solo, ces touches sont réservées au mini-jeu (elles ne lancent pas de sort).

@@ -11,6 +11,7 @@ func _ready() -> void:
 	_test_rules()
 	_test_generator()
 	_test_audio()
+	await _test_characters()
 	await _test_quest_flow()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
@@ -43,7 +44,8 @@ func _test_rules() -> void:
 	GameState.add_xp(300)
 	_check(GameState.stats.level == 2, "300 XP → niveau 2")
 	_check(GameState.stats.unspent_points == Balance.POINTS_PER_LEVEL, "points gagnés au niveau 2")
-	_check(GameState.spend_point("CHA") and GameState.ability("CHA") == 17, "dépense d'un point en CHA")
+	var cha_before := GameState.ability("CHA")
+	_check(GameState.spend_point("CHA") and GameState.ability("CHA") == cha_before + 1, "dépense d'un point en CHA")
 	for i in 200:
 		var r := Dice.roll(2, 6, 1)
 		if r < 3 or r > 13:
@@ -171,6 +173,73 @@ func _test_quest_flow() -> void:
 	solo._hits = Balance.SOLO_NOTES
 	solo._finish()
 	_check(not hero.casting_solo, "fin du solo, le héros redevient vulnérable")
+	# --- Talents actifs : chacun se lance sans erreur et produit son effet. ---
+	GameState.talent_points = 20
+	for id in TalentDB.all_ids():
+		GameState.learn_talent(id)
+	_check(GameState.talents.size() == 20, "les 20 talents peuvent être appris dans l'ordre")
+	var victims: Array[Enemy] = []
+	for n in get_tree().get_nodes_in_group("enemies"):
+		var e := n as Enemy
+		if not e.is_boss and victims.size() < 3:
+			e.hp = 5000
+			e.max_hp = 5000
+			victims.append(e)
+	var place_victims := func() -> void:
+		for i in victims.size():
+			victims[i].global_position = hero.global_position + Vector3(2.0 + i, 0, 0.5 * i)
+			victims[i].exit_trance()
+			victims[i].state = Enemy.State.CHASE
+	var actives: Array[String] = []
+	for id in TalentDB.all_ids():
+		if TalentDB.is_active(id) and id != "solo_endiable":
+			actives.append(id)
+	var cast_ok := true
+	for id in actives:
+		place_victims.call()
+		GameState.mana = GameState.max_mana()
+		hero.cooldowns[id] = 0.0
+		hero.aim_point = hero.global_position + Vector3(3, 0, 0)
+		hero.facing = Vector3(1, 0, 0)
+		if not hero.talents_caster.cast(id):
+			cast_ok = false
+			printerr("    le talent %s n'a pas pu être lancé" % id)
+		await _frames(3)
+		if id == "stage_diving":
+			await get_tree().create_timer(0.8).timeout
+	_check(cast_ok, "les 9 autres talents actifs se lancent")
+	await get_tree().create_timer(1.5).timeout
+	# Bouclier du Mur de Larsen.
+	hero.talents_caster.set_shield(20)
+	var hp_shield := GameState.hp
+	hero._invuln = 0.0
+	hero.take_hit(8, Vector3.ZERO)
+	_check(GameState.hp == hp_shield and GameState.shield < 20, "le Mur de Larsen absorbe les dégâts")
+	hero.talents_caster.set_shield(0)
+	# Growl : fuite.
+	place_victims.call()
+	hero.cooldowns["growl"] = 0.0
+	GameState.mana = GameState.max_mana()
+	hero.talents_caster.cast("growl")
+	_check(victims[0].state == Enemy.State.FEAR, "Growl de l'Abîme : les ennemis fuient")
+	# Solo endiablé : transe tant que les notes sont réussies, brisée à la 1re fausse note.
+	place_victims.call()
+	hero.cooldowns["solo_endiable"] = 0.0
+	GameState.mana = GameState.max_mana()
+	hero.talents_caster.cast("solo_endiable")
+	await _frames(3)
+	var frenzy_solo := (dungeon as Level).hud.solo
+	_check(frenzy_solo._active and frenzy_solo.mode == "endiable" and frenzy_solo._notes.size() == 16,
+		"Solo endiablé : mini-jeu de 16 notes (Maître du tempo)")
+	_check(victims[0].is_in_trance() and not get_tree().paused, "les ennemis proches headbanguent, figés")
+	var trance_pos := victims[1].global_position
+	await get_tree().create_timer(0.5).timeout
+	_check(victims[1].global_position.distance_to(trance_pos) < 0.05, "en transe, ils ne bougent plus")
+	await get_tree().create_timer(2.5).timeout # aucune touche pressée : la 1re note est ratée
+	_check(not frenzy_solo._active and not victims[0].is_in_trance() and not hero.talents_caster.in_frenzy,
+		"une fausse note brise la transe")
+	for e in victims:
+		e.hp = 1
 	# On élimine tout le monde, boss compris.
 	var xp_before := GameState.stats.xp
 	for n in get_tree().get_nodes_in_group("enemies"):
@@ -226,3 +295,54 @@ func _test_audio() -> void:
 		Sfx.set_volume(bus_name, float(saved[bus_name]))
 	Sfx.save_settings()
 	_check(Sfx._streams.has("voice_0") and Sfx._streams.has("voice_3"), "voix des dialogues générées")
+
+
+func _test_characters() -> void:
+	print("[Races, talents, création de personnage]")
+	GameState.new_game()
+	_check(GameState.talent_points == 1, "1 point de talent au niveau 1")
+	_check(GameState.talent_block_reason("rappel") != "", "palier 2 verrouillé tant que le palier 1 n'est pas appris")
+	_check(GameState.learn_talent("ballade_reparatrice") and GameState.spell_slots[0] == "ballade_reparatrice"
+		and GameState.talent_points == 0, "talent actif appris → placé sur la touche 4")
+	_check(not GameState.learn_talent("rappel"), "plus de point : impossible d'apprendre")
+	GameState.add_xp(400)
+	_check(GameState.talent_points == 1, "+1 point de talent en montant de niveau")
+	GameState.cycle_slot("ballade_reparatrice")
+	_check(GameState.spell_slots[1] == "ballade_reparatrice" and GameState.spell_slots[0] == "", "changement de touche (4 → 5)")
+	# Races : taille et bonus.
+	GameState.new_game()
+	var base_hp := GameState.max_hp()
+	GameState.appearance["race"] = "ogre"
+	_check(GameState.max_hp() > base_hp + 10, "Ogre : plus de points de vie (Colosse)")
+	GameState.appearance["race"] = "demon"
+	_check(GameState.ability("CHA") == 18 and is_equal_approx(GameState.spell_power(), 1.1), "Démon : +2 CHA et +10 % aux sorts")
+	GameState.appearance["race"] = "humain"
+	# Écran de création : toutes les combinaisons de race / sexe / options se construisent.
+	var creation: Node = load("res://scenes/character_creation.tscn").instantiate()
+	add_child(creation)
+	await _frames(3)
+	var heights := {}
+	var built := true
+	for race_id: String in RaceDB.RACE_ORDER:
+		for sex: String in ["m", "f"]:
+			for option in 4:
+				creation.appearance = {"sex": sex, "race": race_id, "horns": option % 3, "tusks": option % 3,
+					"beard": option % 3, "hair": option, "hair_color": option}
+				creation._refresh()
+				await get_tree().process_frame
+				var model: HeroModel = creation._model
+				if model == null or model._torso == null or model._head.get_child_count() < 6:
+					built = false
+			heights[race_id] = creation._model.height()
+	_check(built, "48 apparences construites (6 races × 2 sexes × 4 variantes)")
+	_check(is_equal_approx(float(heights["ogre"]), 2.5) and is_equal_approx(float(heights["troll"]), 2.2)
+		and is_equal_approx(float(heights["orc"]), 2.0) and is_equal_approx(float(heights["squelette"]), 1.8),
+		"tailles : squelette 1,8 m, orc 2 m, troll 2,2 m, ogre 2,5 m")
+	creation._name_edit.text = "Lemmy"
+	creation.appearance = {"sex": "f", "race": "troll", "horns": 0, "tusks": 1, "beard": 0, "hair": 3, "hair_color": 4}
+	GameState.hero_name = creation._name_edit.text
+	GameState.appearance = creation.appearance.duplicate()
+	_check(DialogueDB.hero() == "Lemmy" and RaceDB.title(GameState.appearance) == "Barde trollesse"
+		and GameState.g("le barde", "la barde") == "la barde", "nom et genre repris dans les dialogues")
+	creation.queue_free()
+	await _frames(3)

@@ -1,12 +1,16 @@
 class_name Hero
 extends CharacterBody3D
-## Riffald, le barde métal. Déplacement ZQSD/WASD relatif à la caméra iso,
-## visée à la souris, coup de guitare + 4 sorts + potion + interaction.
+## Le barde métal (personnage créé par le joueur). Déplacement ZQSD/WASD relatif à la
+## caméra iso, visée à la souris, coup de guitare + 4 sorts de base + talents (touches 4-7)
+## + potion + interaction.
 
 var camera: IsoCamera
 var model: HeroModel
+var talents_caster: TalentCaster
 var dead := false
 var casting_solo := false
+var leaping := false # Stage Diving en cours
+var _regen_tick := 0.0
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
 var cooldowns := {"attack": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
@@ -25,15 +29,20 @@ func _ready() -> void:
 	collision_layer = 2
 	collision_mask = 1 | 4
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
+	model = HeroModel.new()
+	add_child(model)
+	# Collision adaptée à la taille de la race (1,8 m à 2,5 m).
+	var h := model.height()
+	radius = 0.35 * model.scale.x
 	var col := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = radius
-	cap.height = 1.8
+	cap.height = maxf(h, radius * 2.0)
 	col.shape = cap
-	col.position.y = 0.9
+	col.position.y = h * 0.5
 	add_child(col)
-	model = HeroModel.new()
-	add_child(model)
+	talents_caster = TalentCaster.new()
+	add_child(talents_caster)
 	# Halo de lumière chaude qui suit le héros (la « torche » façon Darkest Dungeon).
 	var halo := OmniLight3D.new()
 	halo.position = Vector3(1.3, 3.0, 1.3) # décalée vers la caméra pour éclairer le héros de face
@@ -54,14 +63,22 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 	GameState.regen_mana(delta)
+	if GameState.race() == "troll":
+		_regen_tick -= delta
+		if _regen_tick <= 0.0:
+			_regen_tick = 2.0
+			if GameState.hp < GameState.max_hp():
+				GameState.heal_hero(1) # Régénération trollesque
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var move := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
-	if casting_solo:
-		move = Vector3.ZERO # il est planté sur place, en plein solo
-	velocity = move * Balance.HERO_SPEED
-	move_and_slide()
-	global_position.y = 0.0
+	if casting_solo or leaping:
+		move = Vector3.ZERO # planté sur place en plein solo (ou en plein vol)
+	var speed := Balance.HERO_SPEED * (0.6 if talents_caster.in_frenzy else 1.0)
+	if not leaping:
+		velocity = move * speed
+		move_and_slide()
+		global_position.y = 0.0
 
 	if camera != null:
 		aim_point = camera.mouse_ground_point()
@@ -94,6 +111,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		drink_potion()
 	elif event.is_action_pressed("interact") and _interact_target != null:
 		_interact_target.call("interact", self)
+	else:
+		for slot in TalentDB.SLOT_COUNT:
+			if event.is_action_pressed("talent_%d" % (slot + 1)):
+				talents_caster.cast_slot(slot)
+				return
 
 
 # --- Ciblage ---------------------------------------------------------------
@@ -118,7 +140,31 @@ func _cooldown(skill: String, base: float) -> void:
 
 
 func _ready_skill(skill: String) -> bool:
-	return float(cooldowns[skill]) <= 0.0 and not casting_solo
+	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not talents_caster.blocks_actions()
+
+
+# API utilisée par TalentCaster.
+func skill_ready(skill: String) -> bool:
+	return _ready_skill(skill)
+
+
+func start_cooldown(skill: String, base: float) -> void:
+	_cooldown(skill, base)
+
+
+func no_mana() -> void:
+	_no_mana()
+
+
+## Inflige des dégâts de sort à un ennemi : bonus racial (Démon), recul, et talent Pogo
+## (les ennemis fortement repoussés restent assommés).
+func hit_enemy(e: Enemy, dmg: int, knockback: float, kind: String, from: Vector3 = Vector3.INF) -> void:
+	if e == null or not e.is_alive():
+		return
+	var origin := global_position if from == Vector3.INF else from
+	e.take_damage(maxi(1, roundi(dmg * GameState.spell_power())), origin, knockback, false, kind)
+	if knockback >= 4.0 and GameState.has_talent("pogo") and e.is_alive():
+		e.stun(1.5)
 
 
 # --- Compétences -----------------------------------------------------------
@@ -147,7 +193,7 @@ func melee() -> void:
 			e.show_miss()
 			continue
 		var crit := result == 2
-		var dmg := Dice.roll(2 if crit else 1, 8, GameState.mod("FOR"))
+		var dmg := Dice.roll(2 if crit else 1, 8, GameState.mod("FOR") + (2 if GameState.race() == "orc" else 0))
 		e.take_damage(maxi(1, dmg), global_position, Balance.MELEE_KNOCKBACK, crit, "phys")
 	Sfx.play("thud" if hit_any else "swoosh", -4.0 if hit_any else -10.0)
 
@@ -168,12 +214,13 @@ func cast_tuning() -> void:
 	Sfx.play("zap", Balance.ZAP_VOLUME_DB)
 	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
 	var cha := GameState.mod("CHA")
+	var bonus := 1.15 if GameState.has_talent("distorsion") else 1.0
 	for i in targets.size():
 		var e := targets[i]
 		var to := e.global_position + Vector3(0, 0.9, 0)
 		ArcBolt.spawn(get_parent(), from, to)
-		var dmg := roundi(Dice.roll(2, 6, cha) * (1.0 - Balance.TUNING_FALLOFF * i))
-		e.take_damage(maxi(1, dmg), global_position, 0.8, false, "shock")
+		var dmg := roundi(Dice.roll(2, 6, cha) * (1.0 - Balance.TUNING_FALLOFF * i) * bonus)
+		hit_enemy(e, dmg, 0.8, "shock")
 		from = to
 
 
@@ -192,30 +239,42 @@ func cast_riff() -> void:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
 	var on_beat := absf((now - _riff_last) - Balance.RIFF_BEAT) <= Balance.RIFF_BEAT_TOLERANCE
-	riff_stack = mini(riff_stack + 1, Balance.RIFF_MAX_STACKS) if on_beat else 1
+	var max_stacks := riff_max_stacks()
+	riff_stack = mini(riff_stack + 1, max_stacks) if on_beat else 1
 	_riff_last = now
-	var mult := riff_multiplier(riff_stack)
+	var mult := riff_multiplier(riff_stack, max_stacks, riff_max_mult())
 	# Délai fixe (non réduit par l'INT) : le tempo doit rester stable.
 	cooldowns["riff"] = Balance.RIFF_MIN_INTERVAL
 	Events.cooldown_started.emit("riff", Balance.RIFF_MIN_INTERVAL)
 	Events.riff_combo.emit(riff_stack, mult)
 	model.strum()
-	var k := float(riff_stack - 1) / float(Balance.RIFF_MAX_STACKS - 1)
+	var k := float(riff_stack - 1) / float(max_stacks - 1)
 	var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
 	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
 	ArcBolt.spawn(get_parent(), from, target.global_position + Vector3(0, 0.9, 0), 0.1 + 0.06 * riff_stack, 0.25, color)
-	Sfx.play("note_%d" % (riff_stack - 1), -5.0, 0.0)
+	Sfx.play("note_%d" % mini(riff_stack - 1, 3), -5.0, 0.0)
 	Sfx.play("zap", Balance.ZAP_VOLUME_DB - 3.0)
 	var dmg := roundi(Dice.roll(1, 10, GameState.mod("CHA")) * mult)
-	target.take_damage(maxi(1, dmg), global_position, 0.4, riff_stack >= Balance.RIFF_MAX_STACKS, "shock")
+	target.take_damage(maxi(1, roundi(dmg * GameState.spell_power())), global_position, 0.4, riff_stack >= max_stacks, "shock")
+	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
+		target.slow(0.6, 2.0)
 	if riff_stack > 1:
-		var label := "RYTHME ×%.1f" % mult if riff_stack < Balance.RIFF_MAX_STACKS else "EN RYTHME ×3 !"
+		var label := "RYTHME ×%.1f" % mult if riff_stack < max_stacks else "EN RYTHME ×%d !" % roundi(mult)
 		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), label, color)
 
 
-static func riff_multiplier(stack: int) -> float:
-	var steps := float(Balance.RIFF_MAX_STACKS - 1)
-	return 1.0 + (Balance.RIFF_MAX_MULT - 1.0) * float(clampi(stack, 1, Balance.RIFF_MAX_STACKS) - 1) / steps
+static func riff_multiplier(stack: int, max_stacks: int = Balance.RIFF_MAX_STACKS, max_mult: float = Balance.RIFF_MAX_MULT) -> float:
+	var steps := float(max_stacks - 1)
+	return 1.0 + (max_mult - 1.0) * float(clampi(stack, 1, max_stacks) - 1) / steps
+
+
+## Overdrive : 5 paliers et ×4 au lieu de 4 paliers et ×3.
+func riff_max_stacks() -> int:
+	return Balance.RIFF_MAX_STACKS + (1 if GameState.has_talent("overdrive") else 0)
+
+
+func riff_max_mult() -> float:
+	return Balance.RIFF_MAX_MULT + (1.0 if GameState.has_talent("overdrive") else 0.0)
 
 
 func _riff_target() -> Enemy:
@@ -246,7 +305,8 @@ func _arc_targets() -> Array[Enemy]:
 	if first == null:
 		return result
 	result.append(first)
-	while result.size() < Balance.TUNING_MAX_TARGETS:
+	var max_targets := Balance.TUNING_MAX_TARGETS + (1 if GameState.has_talent("distorsion") else 0)
+	while result.size() < max_targets:
 		var last := result[-1]
 		var next: Enemy = null
 		var nd := Balance.TUNING_JUMP_RANGE
@@ -272,17 +332,19 @@ func cast_wave() -> void:
 		return
 	_cooldown("wave", Balance.WAVE_COOLDOWN)
 	model.strum()
-	Shockwave.spawn(get_parent(), global_position, Balance.WAVE_RADIUS)
+	var wave_radius := Balance.WAVE_RADIUS + (2.0 if GameState.has_talent("larsen_persistant") else 0.0)
+	var wave_knock := Balance.WAVE_KNOCKBACK * (1.5 if GameState.has_talent("larsen_persistant") else 1.0)
+	Shockwave.spawn(get_parent(), global_position, wave_radius)
 	Sfx.play("boom", -2.0)
 	Events.camera_shake.emit(0.2, 0.25)
 	var dc := GameState.spell_dc()
 	for e in enemies():
-		if _flat_dist(e.global_position, global_position) > Balance.WAVE_RADIUS + e.radius:
+		if _flat_dist(e.global_position, global_position) > wave_radius + e.radius:
 			continue
 		var dmg := Dice.roll(2, 8, GameState.mod("CHA"))
 		if e.saving_throw(dc):
 			dmg = floori(dmg / 2.0)
-		e.take_damage(maxi(1, dmg), global_position, Balance.WAVE_KNOCKBACK, false, "sound")
+		hit_enemy(e, dmg, wave_knock, "sound")
 
 
 ## Sort 3 — Solo de la Foudre : lance le mini-jeu ; le résultat arrive via Events.solo_finished.
@@ -295,11 +357,11 @@ func cast_solo() -> void:
 	casting_solo = true
 	model.solo_pose(true)
 	Events.notify("SOLO ! Invincible le temps du solo — touches 1 2 3 4", Events.COLOR_GOLD)
-	Events.solo_requested.emit()
+	Events.solo_requested.emit("foudre", Balance.SOLO_NOTES)
 
 
-func _on_solo_finished(hits: int, total: int) -> void:
-	if not casting_solo:
+func _on_solo_finished(mode: String, hits: int, total: int) -> void:
+	if mode != "foudre" or not casting_solo:
 		return
 	casting_solo = false
 	model.solo_pose(false)
@@ -323,7 +385,7 @@ func _on_solo_finished(hits: int, total: int) -> void:
 	for e in enemies():
 		if _flat_dist(e.global_position, global_position) <= Balance.SOLO_SCREEN_RADIUS:
 			targets.append(e)
-	LightningStorm.spawn(get_parent(), global_position, targets, power)
+	LightningStorm.spawn(get_parent(), global_position, targets, power * GameState.spell_power())
 
 
 func drink_potion() -> void:
@@ -351,8 +413,8 @@ func _no_mana() -> void:
 
 # --- Dégâts ----------------------------------------------------------------
 
-func take_hit(amount: int, _from: Vector3) -> void:
-	if dead or _invuln > 0.0:
+func take_hit(amount: int, _from: Vector3, attacker: Node3D = null) -> void:
+	if dead or _invuln > 0.0 or leaping:
 		return
 	if casting_solo:
 		# Invincible pendant le solo : les coups ricochent sur l'aura dorée.
@@ -360,6 +422,17 @@ func take_hit(amount: int, _from: Vector3) -> void:
 		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), "Invincible", Color(1.0, 0.85, 0.4))
 		return
 	_invuln = 0.2
+	# Talents de protection : Pile d'amplis, Sustain, Mur de Larsen, Encore !
+	if talents_caster.amps_active():
+		amount = ceili(amount * 0.5)
+		talents_caster.retaliate(attacker)
+	if GameState.has_talent("sustain"):
+		amount = ceili(amount * 0.9)
+	amount = talents_caster.absorb(amount)
+	if amount <= 0:
+		return
+	if amount >= GameState.hp and talents_caster.try_encore():
+		return
 	GameState.damage_hero(amount)
 	model.flash()
 	DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), str(amount), Events.COLOR_BAD)

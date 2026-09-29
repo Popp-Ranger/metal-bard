@@ -10,6 +10,10 @@ const SKILLS := [
 	{"id": "riff", "name": "Riff\nélectrique", "action": "spell_riff", "cost": Balance.RIFF_COST, "color": Color(0.4, 0.95, 1.0)},
 	{"id": "wave", "name": "Onde\nde choc", "action": "spell_wave", "cost": Balance.WAVE_COST, "color": Color(0.75, 0.55, 1.0)},
 	{"id": "solo", "name": "Solo de\nla Foudre", "action": "spell_solo", "cost": Balance.SOLO_COST, "color": Color(1.0, 0.85, 0.35)},
+	{"id": "tslot_0", "name": "—", "action": "talent_1", "cost": 0.0, "color": Color(0.55, 0.55, 0.55)},
+	{"id": "tslot_1", "name": "—", "action": "talent_2", "cost": 0.0, "color": Color(0.55, 0.55, 0.55)},
+	{"id": "tslot_2", "name": "—", "action": "talent_3", "cost": 0.0, "color": Color(0.55, 0.55, 0.55)},
+	{"id": "tslot_3", "name": "—", "action": "talent_4", "cost": 0.0, "color": Color(0.55, 0.55, 0.55)},
 	{"id": "potion", "name": "Potion", "action": "potion", "cost": 0.0, "color": Color(0.95, 0.3, 0.3)},
 ]
 
@@ -41,6 +45,8 @@ var _death_screen: Control
 var _riff_beat_bar: ColorRect
 var _riff_combo_label: Label
 var _riff_time := -100.0
+var _talent_slot_of := {} # id de talent -> clé d'emplacement ("tslot_0"...)
+var talent_tree: TalentTree
 
 
 func _ready() -> void:
@@ -63,6 +69,8 @@ func _ready() -> void:
 	_root.add_child(solo)
 	sheet = CharacterSheet.new()
 	_root.add_child(sheet)
+	talent_tree = TalentTree.new()
+	_root.add_child(talent_tree)
 	options = OptionsMenu.new()
 	_root.add_child(options)
 	options.closed.connect(_on_options_closed)
@@ -82,6 +90,8 @@ func _connect_events() -> void:
 	Events.interaction_prompt.connect(func(t: String) -> void: _prompt.text = t)
 	Events.cooldown_started.connect(_on_cooldown)
 	Events.riff_combo.connect(_on_riff_combo)
+	Events.talents_changed.connect(_refresh_talent_slots)
+	Events.shield_changed.connect(func(_s: int) -> void: _on_hp(GameState.hp, GameState.max_hp()))
 	Events.quest_updated.connect(_refresh_quest)
 	Events.portal_opened.connect(func() -> void: _refresh_quest(""))
 	Events.boss_health.connect(_on_boss_health)
@@ -111,7 +121,7 @@ func _build_status() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 12)
 	vb.add_child(head)
-	head.add_child(UiStyle.label(GameState.HERO_NAME, 22, Color(1.0, 0.8, 0.45)))
+	head.add_child(UiStyle.label(GameState.hero_name, 22, Color(1.0, 0.8, 0.45)))
 	_level_label = UiStyle.label("Niv. 1", 18, UiStyle.BONE)
 	head.add_child(_level_label)
 	_gold_label = UiStyle.label("0 po", 18, Events.COLOR_GOLD)
@@ -141,7 +151,7 @@ func _build_skills() -> void:
 	bar.anchor_top = 1.0
 	bar.anchor_bottom = 1.0
 	bar.offset_left = -(SKILLS.size() * 96) * 0.5
-	bar.offset_top = -126
+	bar.offset_top = -134
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bar)
 	for s: Dictionary in SKILLS:
@@ -174,8 +184,9 @@ func _build_skills() -> void:
 		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		overlay.size = Vector2(84, 0)
 		panel.add_child(overlay)
-		_slots[s["id"]] = {"overlay": overlay, "panel": panel, "remaining": 0.0, "duration": 1.0, "extra": extra, "cost": cost}
+		_slots[s["id"]] = {"overlay": overlay, "panel": panel, "remaining": 0.0, "duration": 1.0, "extra": extra, "cost": cost, "name": name_label}
 	_on_potions(GameState.potions)
+	_refresh_talent_slots()
 	# Métronome du Riff électrique : la barre se remplit jusqu'au prochain temps,
 	# elle devient verte dans la fenêtre où il faut appuyer.
 	var riff_panel: Panel = _slots["riff"]["panel"]
@@ -189,15 +200,15 @@ func _build_skills() -> void:
 	_riff_combo_label.position = Vector2(-10, -30)
 	_riff_combo_label.size = Vector2(104, 26)
 	riff_panel.add_child(_riff_combo_label)
-	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  Molette : zoom  •  %s : parler  •  %s : fiche  •  Échap : pause" % [
-		Controls.key_label("interact"), Controls.key_label("character_sheet")], 13, UiStyle.DIM)
+	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  %s : parler  •  %s : fiche  •  %s : talents  •  Échap : pause" % [
+		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("talents")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
 	help.anchor_right = 0.5
 	help.anchor_top = 1.0
 	help.anchor_bottom = 1.0
 	help.offset_left = -400
 	help.offset_right = 400
-	help.offset_top = -30
+	help.offset_top = -26
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(help)
 	_prompt = UiStyle.label("", 20, Color(1.0, 0.9, 0.6))
@@ -277,8 +288,8 @@ func _build_pause_menu() -> void:
 	_pause_menu.anchor_bottom = 0.5
 	_pause_menu.offset_left = -170
 	_pause_menu.offset_right = 170
-	_pause_menu.offset_top = -180
-	_pause_menu.offset_bottom = 180
+	_pause_menu.offset_top = -205
+	_pause_menu.offset_bottom = 205
 	_root.add_child(_pause_menu)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
@@ -286,7 +297,7 @@ func _build_pause_menu() -> void:
 	var title := UiStyle.label("PAUSE", 32, Color(1.0, 0.8, 0.45))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(title)
-	for entry: Array in [["Reprendre", _toggle_pause], ["Fiche de personnage", _open_sheet_from_pause], ["Options", _open_options_from_pause],
+	for entry: Array in [["Reprendre", _toggle_pause], ["Fiche de personnage", _open_sheet_from_pause], ["Arbre de talents", _open_talents_from_pause], ["Options", _open_options_from_pause],
 			["Menu principal", _to_main_menu], ["Quitter le jeu", func() -> void: get_tree().quit()]]:
 		var b := Button.new()
 		b.text = str(entry[0])
@@ -343,7 +354,7 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _death_screen.visible or options.visible:
+	if _death_screen.visible or options.visible or talent_tree.visible:
 		return
 	if event.is_action_pressed("pause"):
 		if sheet.visible:
@@ -353,6 +364,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("character_sheet") and not dialogue.visible and not solo.visible and not _pause_menu.visible:
 		sheet.toggle()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("talents") and not dialogue.visible and not solo.visible and not _pause_menu.visible and not sheet.visible:
+		talent_tree.open()
 		get_viewport().set_input_as_handled()
 
 
@@ -368,6 +382,8 @@ func _on_hp(hp: int, max_hp: int) -> void:
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = hp
 	_hp_label.text = "%d / %d PV" % [hp, max_hp]
+	if GameState.shield > 0:
+		_hp_label.text += "  (+%d bouclier)" % GameState.shield
 
 
 func _on_mana(mana: float, max_mana: float) -> void:
@@ -408,9 +424,10 @@ func _on_potions(count: int) -> void:
 
 
 func _on_cooldown(skill_id: String, duration: float) -> void:
-	if not _slots.has(skill_id):
+	var key: String = skill_id if _slots.has(skill_id) else str(_talent_slot_of.get(skill_id, ""))
+	if not _slots.has(key):
 		return
-	var slot: Dictionary = _slots[skill_id]
+	var slot: Dictionary = _slots[key]
 	slot["remaining"] = duration
 	slot["duration"] = duration
 
@@ -474,6 +491,11 @@ func _toggle_pause() -> void:
 	get_tree().paused = _pause_menu.visible
 
 
+func _open_talents_from_pause() -> void:
+	_pause_menu.visible = false
+	talent_tree.open()
+
+
 func _open_options_from_pause() -> void:
 	_pause_menu.visible = false
 	options.open()
@@ -508,3 +530,30 @@ func _revive() -> void:
 	GameState.flags["in_dungeon"] = true
 	GameState.save_game()
 	Router.go_to(Router.TAVERN)
+
+
+## Met à jour les emplacements 4 à 7 selon les talents actifs assignés.
+func _refresh_talent_slots() -> void:
+	_talent_slot_of.clear()
+	for i in TalentDB.SLOT_COUNT:
+		var key := "tslot_%d" % i
+		var slot: Dictionary = _slots[key]
+		var id: String = GameState.spell_slots[i]
+		var name_label: Label = slot["name"]
+		var extra: Label = slot["extra"]
+		var panel: Panel = slot["panel"]
+		if id.is_empty():
+			name_label.text = "—"
+			name_label.add_theme_color_override("font_color", Color(0.45, 0.45, 0.45))
+			extra.text = ""
+			slot["cost"] = 0.0
+			panel.add_theme_stylebox_override("panel", UiStyle.box(Color(0.07, 0.05, 0.05, 0.7), Color(0.25, 0.22, 0.2), 2))
+			continue
+		var t := TalentDB.get_talent(id)
+		var color: Color = TalentDB.branch_of(id).get("color", Color.WHITE)
+		name_label.text = str(t.get("name", id)).replace(" ", "\n")
+		name_label.add_theme_color_override("font_color", color)
+		slot["cost"] = float(t.get("cost", 0.0))
+		extra.text = "%d dB" % roundi(float(slot["cost"]))
+		panel.add_theme_stylebox_override("panel", UiStyle.box(Color(0.07, 0.05, 0.05, 0.92), color.darkened(0.3), 2))
+		_talent_slot_of[id] = key

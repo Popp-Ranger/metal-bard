@@ -16,7 +16,9 @@ const NPCS := {
 	"tableau": {"name": "Tableau des quêtes", "title": "", "color": Color(0.8, 0.75, 0.6)},
 }
 
-const HERO := "Riffald"
+## Nom du héros choisi à la création du personnage.
+static func hero() -> String:
+	return GameState.hero_name
 
 
 static func npc_name(id: String) -> String:
@@ -56,10 +58,10 @@ static func _gerald() -> Dictionary:
 		QuestDB.State.AVAILABLE:
 			return {
 				"lines": [
-					[g, "Par les Neuf Enfers... Vous êtes le barde ? Celui dont le luth crache la foudre ?"],
+					[g, "Par les Neuf Enfers... Vous êtes %s ? %s dont la guitare crache la foudre ?" % [GameState.g("le barde", "la barde"), GameState.g("Celui", "Celle")]],
 					[g, "C'est Plumeau, mon petit ours-hibou. Une bande de squelettes l'a enlevé cette nuit, en plein poulailler !"],
 					[g, "Ils claquaient des dents en rythme et chantaient faux. Je les ai vus filer vers les Catacombes Suintantes."],
-					[HERO, "Des squelettes qui chantent faux ? Ça, c'est une offense personnelle."],
+					[hero(), "Des squelettes qui chantent faux ? Ça, c'est une offense personnelle."],
 					[g, "Je n'ai que 100 pièces d'or et le pendentif de sa mère... mais ramenez-le-moi, je vous en supplie !"],
 				],
 				"choices": [
@@ -80,7 +82,7 @@ static func _gerald() -> Dictionary:
 				"lines": [
 					[g, "PLUMEAU ! Mon tout petit ! Tu es sain et sauf !"],
 					["Plumeau", "Hou-grrrr ! Hou-hou !"],
-					[g, "Une grenouille géante ? Couronnée ?! Barde, vous êtes un héros. Voici tout ce que je possède."],
+					[g, "Une grenouille géante ? Couronnée ?! Barde, vous êtes %s. Voici tout ce que je possède." % GameState.g("un héros", "une héroïne")],
 				],
 				"choices": [["Rendre Plumeau à Gérald", "turn_in:plumeau"]],
 			}
@@ -184,7 +186,7 @@ static func _borin() -> Dictionary:
 	var lines := [
 		"Hic ! Tu joues du luth ? Moi je joue de la chope. Regarde. *glou glou* Magnifique, non ?",
 		"Un jour j'ai frappé un squelette avec ma barbe. Il s'est effondré. De rire, mais quand même.",
-		"Les grenouilles, c'est des crapauds qui ont réussi. Retiens bien ça, gamin.",
+		"Les grenouilles, c'est des crapauds qui ont réussi. Retiens bien ça, %s." % GameState.g("gamin", "gamine"),
 		"Tu sais pourquoi les squelettes ne se battent jamais entre eux ? Ils n'ont pas les tripes. HAHAHA ! Hic.",
 	]
 	return {"lines": [[npc_name("borin"), str(lines.pick_random())]], "choices": [["« Santé, Borin. »", "close"]]}
@@ -194,8 +196,8 @@ static func _sylvaine() -> Dictionary:
 	var s := npc_name("sylvaine")
 	return {
 		"lines": [
-			[s, "Tiens, le hurleur. Tu appelles ça de la musique ? Moi, j'appelle ça un orage dans une casserole."],
-			[HERO, "Au moins, mon orage à moi foudroie les morts-vivants."],
+			[s, "Tiens, %s. Tu appelles ça de la musique ? Moi, j'appelle ça un orage dans une casserole." % GameState.g("le hurleur", "la hurleuse")],
+			[hero(), "Au moins, mon orage à moi foudroie les morts-vivants."],
 			[s, "...Touché. Un jour, on fera un duel de solos. Et je gagnerai."],
 		],
 		"choices": [["« Quand tu veux. »", "close"]],

@@ -111,7 +111,7 @@ func _process(delta: float) -> void:
 
 func _on_new_game() -> void:
 	GameState.new_game()
-	Router.go_to(Router.TAVERN)
+	Router.go_to(Router.CHARACTER_CREATION)
 
 
 func _on_continue() -> void:

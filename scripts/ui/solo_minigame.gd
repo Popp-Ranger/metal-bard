@@ -23,6 +23,8 @@ var _feedback_color := Color.WHITE
 var _feedback_t := 0.0
 var _lane_flash := [0.0, 0.0, 0.0, 0.0]
 var _end_t := 0.0
+## "foudre" (Solo de la Foudre, 5 notes) ou "endiable" (Solo endiablé : s'arrête à la 1re fausse note).
+var mode := "foudre"
 
 
 func _ready() -> void:
@@ -33,17 +35,18 @@ func _ready() -> void:
 	Events.solo_requested.connect(start)
 
 
-func start() -> void:
+func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -> void:
+	mode = solo_mode
 	_notes.clear()
 	var t := LEAD_TIME
 	var last_lane := -1
-	for i in Balance.SOLO_NOTES:
+	for i in note_count:
 		var lane := randi_range(0, LANES - 1)
 		if lane == last_lane:
 			lane = (lane + randi_range(1, LANES - 1)) % LANES
 		last_lane = lane
 		_notes.append({"lane": lane, "time": t, "judged": false, "hit": false})
-		t += randf_range(0.38, 0.6)
+		t += randf_range(0.34, 0.5) if mode == "endiable" else randf_range(0.38, 0.6)
 	_end_t = t + 0.5
 	_t = 0.0
 	_hits = 0
@@ -67,6 +70,9 @@ func _process(delta: float) -> void:
 			n["judged"] = true
 			_set_feedback("RATÉ", Color(1.0, 0.35, 0.3))
 			Sfx.play("dud", -10.0)
+			if mode == "endiable":
+				_finish() # fausse note : la transe se brise
+				return
 	if _t >= _end_t and _all_judged():
 		_finish()
 	queue_redraw()
@@ -106,6 +112,7 @@ func _press(lane: int) -> void:
 	best["judged"] = true
 	best["hit"] = true
 	_hits += 1
+	Events.solo_note_hit.emit(mode, _hits)
 	Sfx.play("note_%d" % lane, -3.0, 0.0)
 	if best_err <= WINDOW_PERFECT:
 		_set_feedback("PARFAIT !", Color(1.0, 0.9, 0.3))
@@ -122,7 +129,7 @@ func _set_feedback(text: String, color: Color) -> void:
 func _finish() -> void:
 	_active = false
 	visible = false
-	Events.solo_finished.emit(_hits, _notes.size())
+	Events.solo_finished.emit(mode, _hits, _notes.size())
 
 
 func _draw() -> void:
@@ -135,8 +142,8 @@ func _draw() -> void:
 	var panel := Rect2(origin, PANEL_SIZE)
 	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
-	draw_string(font, origin + Vector2(0, 42), "SOLO DE LA FOUDRE", HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 30, Color(1.0, 0.8, 0.4))
-	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  INVINCIBLE" % [_hits, _notes.size()], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, Color(1.0, 0.85, 0.45))
+	draw_string(font, origin + Vector2(0, 42), "SOLO ENDIABLÉ" if mode == "endiable" else "SOLO DE LA FOUDRE", HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 30, Color(1.0, 0.8, 0.4))
+	draw_string(font, origin + Vector2(0, 70), ("%d / %d notes  •  TRANSE" if mode == "endiable" else "%d / %d notes  •  INVINCIBLE") % [_hits, _notes.size()], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, Color(1.0, 0.85, 0.45))
 
 	var lane_w := 76.0
 	var lanes_x := origin.x + (PANEL_SIZE.x - lane_w * LANES) * 0.5

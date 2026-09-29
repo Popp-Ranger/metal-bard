@@ -84,7 +84,7 @@ func _show_line() -> void:
 	_voice_pitch = _pitch_for(speaker)
 	_last_blip = -1
 	var color := Color(1.0, 0.8, 0.45)
-	if speaker == DialogueDB.HERO:
+	if speaker == DialogueDB.hero():
 		color = Color(0.55, 0.85, 1.0)
 	_speaker.add_theme_color_override("font_color", color)
 	_text.text = str(line[1])
@@ -199,10 +199,22 @@ func _process(_delta: float) -> void:
 
 ## Timbre de voix propre à chaque personnage (stable d'une partie à l'autre).
 func _pitch_for(speaker: String) -> float:
-	match speaker:
-		DialogueDB.HERO:
-			return 0.8 # voix grave de metalleux
-		"Plumeau":
-			return 1.8
+	if speaker == DialogueDB.hero():
+		return hero_voice_pitch()
+	if speaker == "Plumeau":
+		return 1.8
 	var h := absi(speaker.hash()) % 1000
 	return 0.85 + 0.6 * h / 1000.0
+
+
+## Voix du héros selon son sexe et sa race (les ogres et trolls parlent plus grave).
+static func hero_voice_pitch() -> float:
+	var pitch := 1.15 if GameState.is_female() else 0.8
+	match GameState.race():
+		"ogre":
+			pitch *= 0.8
+		"troll", "orc":
+			pitch *= 0.9
+		"squelette":
+			pitch *= 1.1
+	return pitch

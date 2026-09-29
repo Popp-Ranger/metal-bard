@@ -3,7 +3,7 @@ extends Node
 ## Tout ce qui doit survivre à un changement de scène vit ici.
 
 const SAVE_PATH := "user://metal_bard_save.json"
-const HERO_NAME := "Riffald"
+const DEFAULT_NAME := "Riffald"
 const HERO_TITLE := "Barde du Tonnerre"
 
 var stats := CharacterStats.new()
@@ -16,6 +16,15 @@ var quests := {} # quest_id -> QuestDB.State
 var flags := {}
 var active_quest := ""
 var dungeon_seed := 0
+## Personnage créé au début de la partie (voir RaceDB).
+var hero_name := DEFAULT_NAME
+var appearance := RaceDB.DEFAULT_APPEARANCE.duplicate()
+## Arbre de talents (voir TalentDB).
+var talents: Array[String] = []
+var talent_points := 1
+var spell_slots: Array[String] = ["", "", "", ""] # talents actifs sur les touches 4 à 7
+## Bouclier temporaire (Mur de Larsen), non sauvegardé.
+var shield := 0
 
 
 func _ready() -> void:
@@ -34,6 +43,12 @@ func new_game() -> void:
 		quests[id] = QuestDB.State.AVAILABLE if requires.is_empty() else QuestDB.State.LOCKED
 	active_quest = ""
 	dungeon_seed = 0
+	hero_name = DEFAULT_NAME
+	appearance = RaceDB.DEFAULT_APPEARANCE.duplicate()
+	talents.clear()
+	talent_points = 1
+	spell_slots = ["", "", "", ""]
+	shield = 0
 	hp = max_hp()
 	mana = max_mana()
 
@@ -42,7 +57,7 @@ func new_game() -> void:
 
 ## Valeur totale d'une caractéristique : base + bonus des reliques.
 func ability(ab: String) -> int:
-	var total := stats.base(ab)
+	var total := stats.base(ab) + RaceDB.bonus(race(), ab)
 	for item_id in inventory:
 		var bonus: Dictionary = ItemDB.get_item(item_id).get("bonus", {})
 		total += int(bonus.get(ab, 0))
@@ -61,7 +76,7 @@ func proficiency() -> int:
 func max_hp() -> int:
 	var con := mod("CON")
 	return maxi(10, Balance.HERO_BASE_HP + Balance.HERO_HP_PER_CON * con
-		+ (stats.level - 1) * (Balance.HERO_HP_PER_LEVEL + con))
+		+ (stats.level - 1) * (Balance.HERO_HP_PER_LEVEL + con)) + (15 if race() == "ogre" else 0)
 
 
 func max_mana() -> float:
@@ -70,7 +85,7 @@ func max_mana() -> float:
 
 
 func armor_class() -> int:
-	return Balance.HERO_BASE_AC + mod("DEX")
+	return Balance.HERO_BASE_AC + mod("DEX") + (2 if has_talent("cuir_renforce") else 0)
 
 
 ## DD des jets de sauvegarde contre les sorts du barde : 8 + maîtrise + CHA.
@@ -146,15 +161,19 @@ func add_item(id: String) -> void:
 
 
 func add_xp(amount: int) -> void:
+	if race() == "humain":
+		amount = roundi(amount * 1.1) # Polyvalent : +10 % d'XP
 	stats.xp += amount
 	while stats.level < Balance.MAX_LEVEL and stats.xp >= next_level_xp():
 		stats.level += 1
 		stats.unspent_points += Balance.POINTS_PER_LEVEL
+		talent_points += 1
 		hp = max_hp()
 		mana = max_mana()
 		Events.level_up.emit(stats.level)
-		Events.notify("NIVEAU %d ! +%d points de caractéristique [%s]" % [
-			stats.level, Balance.POINTS_PER_LEVEL, Controls.key_label("character_sheet")], Events.COLOR_GOLD)
+		Events.notify("NIVEAU %d ! +%d points de caractéristique [%s] et +1 point de talent [%s]" % [
+			stats.level, Balance.POINTS_PER_LEVEL, Controls.key_label("character_sheet"),
+			Controls.key_label("talents")], Events.COLOR_GOLD)
 	Events.xp_changed.emit(stats.xp, next_level_xp(), stats.level)
 	_on_stats_changed()
 
@@ -192,6 +211,76 @@ func apply_death_penalty() -> void:
 	hp = max_hp()
 	mana = max_mana()
 	flags["last_death_gold_lost"] = lost
+
+
+# --- Personnage : race, sexe, talents ------------------------------------------
+
+func race() -> String:
+	return str(appearance.get("race", "humain"))
+
+
+func is_female() -> bool:
+	return appearance.get("sex", "m") == "f"
+
+
+## Accorde un mot au sexe du personnage : g("le barde", "la barde").
+func g(masculine: String, feminine: String) -> String:
+	return feminine if is_female() else masculine
+
+
+## Multiplicateur des dégâts de sorts (Démon : Sang infernal).
+func spell_power() -> float:
+	return 1.1 if race() == "demon" else 1.0
+
+
+func has_talent(id: String) -> bool:
+	return talents.has(id)
+
+
+## Vide si le talent peut être appris, sinon la raison du refus.
+func talent_block_reason(id: String) -> String:
+	if has_talent(id):
+		return "Déjà appris"
+	if talent_points <= 0:
+		return "Aucun point de talent"
+	var pre := TalentDB.prerequisite(id)
+	if not pre.is_empty() and not has_talent(pre):
+		return "Nécessite : %s" % TalentDB.get_talent(pre).get("name", pre)
+	return ""
+
+
+func learn_talent(id: String) -> bool:
+	if not talent_block_reason(id).is_empty():
+		return false
+	talents.append(id)
+	talent_points -= 1
+	if TalentDB.is_active(id):
+		var free := spell_slots.find("")
+		if free != -1:
+			spell_slots[free] = id
+	Events.notify("Talent appris : %s" % TalentDB.get_talent(id).get("name", id), Events.COLOR_GOLD)
+	Events.talents_changed.emit()
+	_on_stats_changed()
+	return true
+
+
+## Place un talent actif sur l'emplacement `slot` (0..3) ; échange si déjà placé ailleurs.
+func assign_slot(id: String, slot: int) -> void:
+	var old := spell_slots.find(id)
+	if old != -1:
+		spell_slots[old] = spell_slots[slot]
+	spell_slots[slot] = id
+	Events.talents_changed.emit()
+
+
+## Fait tourner le talent sur les emplacements 4 → 5 → 6 → 7 → (aucun).
+func cycle_slot(id: String) -> void:
+	var cur := spell_slots.find(id)
+	if cur == TalentDB.SLOT_COUNT - 1:
+		spell_slots[cur] = ""
+		Events.talents_changed.emit()
+	else:
+		assign_slot(id, cur + 1)
 
 
 # --- Quêtes ----------------------------------------------------------------
@@ -285,6 +374,11 @@ func save_game() -> void:
 	var data := {
 		"version": 1,
 		"stats": stats.to_dict(),
+		"hero_name": hero_name,
+		"appearance": appearance,
+		"talents": talents,
+		"talent_points": talent_points,
+		"spell_slots": spell_slots,
 		"hp": hp,
 		"mana": mana,
 		"gold": gold,
@@ -321,6 +415,19 @@ func load_game() -> bool:
 		quests[id] = int(saved_quests[id])
 	flags = data.get("flags", {})
 	active_quest = str(data.get("active_quest", ""))
+	hero_name = str(data.get("hero_name", DEFAULT_NAME))
+	var saved_look: Dictionary = data.get("appearance", {})
+	for key: String in RaceDB.DEFAULT_APPEARANCE:
+		var default_value: Variant = RaceDB.DEFAULT_APPEARANCE[key]
+		var v: Variant = saved_look.get(key, default_value)
+		appearance[key] = str(v) if default_value is String else int(v)
+	talents.clear()
+	for id: Variant in data.get("talents", []):
+		talents.append(str(id))
+	talent_points = int(data.get("talent_points", 1))
+	var saved_slots: Array = data.get("spell_slots", [])
+	for i in TalentDB.SLOT_COUNT:
+		spell_slots[i] = str(saved_slots[i]) if i < saved_slots.size() else ""
 	hp = clampi(int(data.get("hp", max_hp())), 1, max_hp())
 	mana = clampf(float(data.get("mana", max_mana())), 0.0, max_mana())
 	return true
