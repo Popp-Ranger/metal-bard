@@ -3,6 +3,7 @@ extends Control
 
 var _flash: ColorRect
 var _controls_panel: PanelContainer
+var _options: OptionsMenu
 var _bolt_timer := 2.0
 
 
@@ -46,6 +47,7 @@ func _ready() -> void:
 	cont.disabled = not GameState.has_save()
 	vb.add_child(cont)
 	vb.add_child(_button("Contrôles", func() -> void: _controls_panel.visible = not _controls_panel.visible))
+	vb.add_child(_button("Options", func() -> void: _options.open()))
 	vb.add_child(_button("Quitter", func() -> void: get_tree().quit()))
 	(cont if not cont.disabled else new_game).grab_focus()
 
@@ -84,6 +86,8 @@ func _ready() -> void:
 	credits.offset_left = 16
 	credits.offset_top = -30
 	add_child(credits)
+	_options = OptionsMenu.new()
+	add_child(_options)
 	Sfx.play_ambience("amb_dungeon", -18.0)
 
 

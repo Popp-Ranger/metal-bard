@@ -12,6 +12,8 @@ var _choice_data: Array = []
 var _index := 0
 var _npc_id := ""
 var _typing := false
+var _voice_pitch := 1.0
+var _last_blip := -1
 var _open := false
 
 
@@ -79,6 +81,8 @@ func _show_line() -> void:
 	var line: Array = _lines[_index]
 	var speaker := str(line[0])
 	_speaker.text = speaker
+	_voice_pitch = _pitch_for(speaker)
+	_last_blip = -1
 	var color := Color(1.0, 0.8, 0.45)
 	if speaker == DialogueDB.HERO:
 		color = Color(0.55, 0.85, 1.0)
@@ -179,3 +183,26 @@ func _input(event: InputEvent) -> void:
 		_show_line()
 	elif _choice_data.is_empty():
 		close()
+
+
+## Babillement pendant que le texte s'affiche (une syllabe toutes les 3 lettres),
+## sur le canal audio « Dialogues ».
+func _process(_delta: float) -> void:
+	if not _open or not _typing:
+		return
+	var shown := int(_text.visible_ratio * _text.get_total_character_count())
+	var syllable := floori(shown / 3.0)
+	if syllable != _last_blip and shown < _text.get_total_character_count():
+		_last_blip = syllable
+		Sfx.play_voice(_voice_pitch)
+
+
+## Timbre de voix propre à chaque personnage (stable d'une partie à l'autre).
+func _pitch_for(speaker: String) -> float:
+	match speaker:
+		DialogueDB.HERO:
+			return 0.8 # voix grave de metalleux
+		"Plumeau":
+			return 1.8
+	var h := absi(speaker.hash()) % 1000
+	return 0.85 + 0.6 * h / 1000.0

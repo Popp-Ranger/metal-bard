@@ -10,11 +10,15 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_test_rules()
 	_test_generator()
+	_test_audio()
 	await _test_quest_flow()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
 	else:
 		printerr("SMOKE TEST : %d échec(s)" % _failures)
+	Sfx.stop_ambience()
+	Sfx._ambience.stream = null
+	await get_tree().create_timer(0.2).timeout # laisse le serveur audio libérer la musique
 	get_tree().quit(1 if _failures > 0 else 0)
 
 
@@ -89,6 +93,10 @@ func _test_quest_flow() -> void:
 	await _frames(30)
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	_check(enemies.size() >= 8, "donjon peuplé (%d ennemis)" % enemies.size())
+	var dungeon_music := Sfx._ambience.stream as AudioStreamMP3
+	_check(dungeon_music != null and dungeon_music.loop and dungeon_music.resource_path.ends_with("dungeon_theme.mp3"),
+		"musique du donjon chargée et en boucle")
+	dungeon_music = null
 	var hero := get_tree().get_first_node_in_group("hero") as Hero
 	_check(hero != null, "héros présent dans le donjon")
 	# Les ennemis n'ont pas été générés dans la salle du héros.
@@ -188,3 +196,33 @@ func _count_portals(root: Node) -> int:
 	for child in root.get_children():
 		count += _count_portals(child)
 	return count
+
+
+func _test_audio() -> void:
+	print("[Audio]")
+	var ok := true
+	for channel: Array in Sfx.CHANNELS:
+		if AudioServer.get_bus_index(str(channel[0])) == -1:
+			ok = false
+	_check(ok, "3 canaux audio : Musique, Sorts et effets, Dialogues")
+	_check(Sfx._ambience.bus == Sfx.BUS_MUSIC and Sfx._players[0].bus == Sfx.BUS_SFX
+		and Sfx._voice.bus == Sfx.BUS_DIALOGUE, "chaque lecteur est branché sur son canal")
+	# Réglages indépendants + sauvegarde / rechargement (on restaure ensuite ceux du joueur).
+	var saved := {}
+	for channel: Array in Sfx.CHANNELS:
+		saved[channel[0]] = Sfx.get_volume(str(channel[0]))
+	Sfx.set_volume(Sfx.BUS_MUSIC, 0.25)
+	Sfx.set_volume(Sfx.BUS_SFX, 1.0)
+	Sfx.set_volume(Sfx.BUS_DIALOGUE, 0.0)
+	Sfx.save_settings()
+	Sfx.set_volume(Sfx.BUS_MUSIC, 0.9)
+	Sfx.load_settings()
+	var music_idx := AudioServer.get_bus_index(Sfx.BUS_MUSIC)
+	_check(is_equal_approx(Sfx.get_volume(Sfx.BUS_MUSIC), 0.25)
+		and is_equal_approx(AudioServer.get_bus_volume_db(music_idx), linear_to_db(0.25)), "volume musique réglé et rechargé")
+	_check(AudioServer.is_bus_mute(AudioServer.get_bus_index(Sfx.BUS_DIALOGUE))
+		and not AudioServer.is_bus_mute(AudioServer.get_bus_index(Sfx.BUS_SFX)), "canaux indépendants (dialogues muets, effets actifs)")
+	for bus_name: String in saved:
+		Sfx.set_volume(bus_name, float(saved[bus_name]))
+	Sfx.save_settings()
+	_check(Sfx._streams.has("voice_0") and Sfx._streams.has("voice_3"), "voix des dialogues générées")

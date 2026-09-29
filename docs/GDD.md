@@ -208,8 +208,10 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 **Prévu** : salles « préfabriquées » (autel, bibliothèque, arène à pièges), coffres et pièges, salles secrètes, étages multiples, biomes par donjon, difficulté dynamique.
 
 ## 12. Audio
-- **Taverne** : musique metal dédiée (`audio/music/tavern_theme.mp3`, 3 min 21, jouée en boucle via `Sfx.play_music()`).
-- **Bruitages synthétisés par code** (`scripts/autoload/sfx.gd`) : décharge électrique, onde de choc, power chords distordus, tonnerre, coassements, os qui claquent, bourdon d'ambiance du donjon.
+- **Musiques** (`audio/music/`, jouées en boucle via `Sfx.play_music()`) : `tavern_theme.mp3` dans la taverne (3 min 21), `dungeon_theme.mp3` dans le donjon.
+- **Dialogues** : chaque lettre affichée fait « babiller » le personnage (syllabes synthétisées à partir de formants de voyelles), avec un timbre propre à chacun (Riffald grave, Plumeau aigu).
+- **Bruitages synthétisés par code** (`scripts/autoload/sfx.gd`) : décharge électrique, onde de choc, power chords distordus, tonnerre, coassements, os qui claquent. Le bourdon d'ambiance ne sert plus qu'à l'écran titre.
+- **Trois canaux (bus) réglables séparément** dans **Options > Audio** (écran titre et menu pause) : *Musique*, *Sorts et effets*, *Dialogues*. Réglages appliqués en direct et sauvegardés dans `user://settings.cfg`.
 - **Cible** : bande-son heavy / doom metal originale ; la musique s'intensifie en combat (couches adaptatives : batterie seule → + basse → + guitares au contact du boss) ; le Solo de la Foudre se cale sur le tempo de la musique.
 - Volume des sorts calibré (Riff électrique à −8 dB, « volume moyen »).
 

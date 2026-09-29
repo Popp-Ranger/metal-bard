@@ -1,28 +1,94 @@
 extends Node
-## Sons du jeu, synthétisés au démarrage (aucun fichier audio requis).
-## Chaque son est généré échantillon par échantillon puis converti en AudioStreamWAV.
-## Pour utiliser de vrais fichiers plus tard : remplacer l'entrée dans `_streams`
-## par `load("res://audio/xxx.ogg")` — l'API `Sfx.play("id")` ne change pas.
+## Audio du jeu : musiques (fichiers MP3/OGG) + bruitages synthétisés au démarrage.
+## Trois canaux (bus) réglables indépendamment dans le menu Options > Audio :
+##   « Musique », « Sorts et effets », « Dialogues ».
+## Les réglages sont sauvegardés dans user://settings.cfg.
 
 const RATE := 22050
 const NOTE_FREQS := [329.63, 392.0, 440.0, 493.88] # Mi, Sol, La, Si — gamme pentatonique de Mi
+const SETTINGS_PATH := "user://settings.cfg"
+
+const BUS_MUSIC := "Musique"
+const BUS_SFX := "Effets"
+const BUS_DIALOGUE := "Dialogues"
+## Canaux affichés dans le menu Options : [nom du bus, libellé].
+const CHANNELS := [
+	[BUS_MUSIC, "Musique"],
+	[BUS_SFX, "Sorts et effets"],
+	[BUS_DIALOGUE, "Dialogues"],
+]
 
 var _streams := {}
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
 var _ambience: AudioStreamPlayer
+var _voice: AudioStreamPlayer
+var _volumes := {BUS_MUSIC: 0.8, BUS_SFX: 0.8, BUS_DIALOGUE: 0.8} # linéaire 0..1
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_create_buses()
 	for i in 16:
 		var p := AudioStreamPlayer.new()
+		p.bus = BUS_SFX
 		add_child(p)
 		_players.append(p)
 	_ambience = AudioStreamPlayer.new()
+	_ambience.bus = BUS_MUSIC
 	add_child(_ambience)
+	_voice = AudioStreamPlayer.new()
+	_voice.bus = BUS_DIALOGUE
+	add_child(_voice)
 	_build_all()
+	load_settings()
 
+
+# --- Canaux et réglages ---------------------------------------------------------
+
+func _create_buses() -> void:
+	for bus_name: String in [BUS_MUSIC, BUS_SFX, BUS_DIALOGUE]:
+		if AudioServer.get_bus_index(bus_name) != -1:
+			continue
+		AudioServer.add_bus()
+		var idx := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(idx, bus_name)
+		AudioServer.set_bus_send(idx, "Master")
+
+
+## Volume d'un canal, de 0.0 (muet) à 1.0 (maximum).
+func get_volume(bus_name: String) -> float:
+	var v: float = _volumes.get(bus_name, 1.0)
+	return v
+
+
+func set_volume(bus_name: String, linear: float) -> void:
+	linear = clampf(linear, 0.0, 1.0)
+	_volumes[bus_name] = linear
+	var idx := AudioServer.get_bus_index(bus_name)
+	if idx == -1:
+		return
+	AudioServer.set_bus_mute(idx, linear <= 0.001)
+	AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(linear, 0.001)))
+
+
+func save_settings() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH) # conserve les autres sections éventuelles
+	for bus_name: String in _volumes:
+		cfg.set_value("audio", bus_name, _volumes[bus_name])
+	cfg.save(SETTINGS_PATH)
+
+
+func load_settings() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH) # fichier absent au premier lancement : valeurs par défaut
+	for bus_name: String in _volumes.keys():
+		var v := float(cfg.get_value("audio", bus_name, _volumes[bus_name]))
+		set_volume(bus_name, v)
+
+
+# --- Lecture ------------------------------------------------------------------------
 
 func play(id: String, volume_db: float = 0.0, pitch_jitter: float = 0.05) -> void:
 	var stream: AudioStreamWAV = _streams.get(id)
@@ -36,6 +102,15 @@ func play(id: String, volume_db: float = 0.0, pitch_jitter: float = 0.05) -> voi
 	p.play()
 
 
+## « Voix » des personnages pendant les dialogues (petits babillements façon RPG),
+## sur le canal Dialogues. `pitch` donne le timbre propre à chaque personnage.
+func play_voice(pitch: float, volume_db: float = -10.0) -> void:
+	_voice.stream = _streams.get("voice_%d" % randi_range(0, 3))
+	_voice.volume_db = volume_db
+	_voice.pitch_scale = pitch * randf_range(0.93, 1.07)
+	_voice.play()
+
+
 func play_ambience(id: String, volume_db: float = -12.0) -> void:
 	var stream: AudioStreamWAV = _streams.get(id)
 	if stream == null:
@@ -46,7 +121,7 @@ func play_ambience(id: String, volume_db: float = -12.0) -> void:
 
 
 ## Musique de fond lue depuis un fichier (MP3 / OGG), jouée en boucle
-## sur la même piste que les ambiances : elle s'arrête aux changements de scène.
+## sur le canal Musique : elle s'arrête aux changements de scène.
 func play_music(path: String, volume_db: float = -8.0) -> void:
 	var stream := load(path) as AudioStream
 	if stream == null:
@@ -90,6 +165,11 @@ func _build_all() -> void:
 		var f: float = NOTE_FREQS[i]
 		_streams["note_%d" % i] = _to_wav(_power_chord(f, 0.5))
 	_streams["amb_dungeon"] = _to_wav(_amb_dungeon(), true)
+	# Syllabes de « voix » (voyelles a, é, o, i) pour les dialogues.
+	var vowels := [[730.0, 1090.0], [530.0, 1840.0], [570.0, 840.0], [300.0, 2200.0]]
+	for i in vowels.size():
+		var v: Array = vowels[i]
+		_streams["voice_%d" % i] = _to_wav(_voice_blip(float(v[0]), float(v[1])))
 
 
 func _to_wav(buf: PackedFloat32Array, loop: bool = false) -> AudioStreamWAV:
@@ -338,4 +418,29 @@ func _amb_dungeon() -> PackedFloat32Array:
 			if dt >= 0.0 and dt < 0.15:
 				drip += sin(TAU * lerpf(1800.0, 900.0, dt / 0.15) * dt) * exp(-dt * 40.0) * 0.35
 		b[i] = drone + lp * 6.0 + drip
+	return b
+
+
+## Syllabe de voix : train d'impulsions (cordes vocales, 140 Hz) filtré par deux formants.
+func _voice_blip(f1: float, f2: float) -> PackedFloat32Array:
+	var b := _buffer(0.075)
+	var y1 := 0.0
+	var y1b := 0.0
+	var y2 := 0.0
+	var y2b := 0.0
+	# Résonateurs du 2e ordre (formants).
+	var r := 0.97
+	var c1 := 2.0 * r * cos(TAU * f1 / RATE)
+	var c2 := 2.0 * r * cos(TAU * f2 / RATE)
+	for i in b.size():
+		var t := float(i) / RATE
+		var pulse := 1.0 if fposmod(t * 140.0, 1.0) < 0.08 else 0.0
+		var o1 := pulse + c1 * y1 - r * r * y1b
+		y1b = y1
+		y1 = o1
+		var o2 := pulse + c2 * y2 - r * r * y2b
+		y2b = y2
+		y2 = o2
+		var env := sin(PI * t / 0.075)
+		b[i] = tanh((o1 * 0.05 + o2 * 0.03) * env)
 	return b

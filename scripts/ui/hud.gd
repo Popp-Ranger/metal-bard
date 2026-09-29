@@ -16,6 +16,7 @@ const SKILLS := [
 var dialogue: DialogueBox
 var solo: SoloMinigame
 var sheet: CharacterSheet
+var options: OptionsMenu
 
 var _root: Control
 var _hp_bar: ProgressBar
@@ -62,6 +63,9 @@ func _ready() -> void:
 	_root.add_child(solo)
 	sheet = CharacterSheet.new()
 	_root.add_child(sheet)
+	options = OptionsMenu.new()
+	_root.add_child(options)
+	options.closed.connect(_on_options_closed)
 	_build_pause_menu()
 	_build_death_screen()
 	_connect_events()
@@ -273,8 +277,8 @@ func _build_pause_menu() -> void:
 	_pause_menu.anchor_bottom = 0.5
 	_pause_menu.offset_left = -170
 	_pause_menu.offset_right = 170
-	_pause_menu.offset_top = -150
-	_pause_menu.offset_bottom = 150
+	_pause_menu.offset_top = -180
+	_pause_menu.offset_bottom = 180
 	_root.add_child(_pause_menu)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
@@ -282,7 +286,7 @@ func _build_pause_menu() -> void:
 	var title := UiStyle.label("PAUSE", 32, Color(1.0, 0.8, 0.45))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(title)
-	for entry: Array in [["Reprendre", _toggle_pause], ["Fiche de personnage", _open_sheet_from_pause],
+	for entry: Array in [["Reprendre", _toggle_pause], ["Fiche de personnage", _open_sheet_from_pause], ["Options", _open_options_from_pause],
 			["Menu principal", _to_main_menu], ["Quitter le jeu", func() -> void: get_tree().quit()]]:
 		var b := Button.new()
 		b.text = str(entry[0])
@@ -339,7 +343,7 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _death_screen.visible:
+	if _death_screen.visible or options.visible:
 		return
 	if event.is_action_pressed("pause"):
 		if sheet.visible:
@@ -468,6 +472,17 @@ func _on_flash(color: Color, duration: float) -> void:
 func _toggle_pause() -> void:
 	_pause_menu.visible = not _pause_menu.visible
 	get_tree().paused = _pause_menu.visible
+
+
+func _open_options_from_pause() -> void:
+	_pause_menu.visible = false
+	options.open()
+
+
+## Retour au menu pause après les options (le jeu reste en pause).
+func _on_options_closed() -> void:
+	if get_tree().paused:
+		_pause_menu.visible = true
 
 
 func _open_sheet_from_pause() -> void:

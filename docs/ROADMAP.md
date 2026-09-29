@@ -24,13 +24,18 @@
 - [x] Nouveau Riff électrique : une cible, combo rythmique jusqu'à ×3 + métronome dans le HUD
 - [x] Salles et couloirs plus grands, torches espacées, rendu moins sombre
 
+## ✅ v0.1.2 — Audio
+- [x] Musiques metal de la taverne et du donjon
+- [x] Menu Options > Audio : Musique / Sorts et effets / Dialogues, réglages sauvegardés
+- [x] Voix babillées pendant les dialogues
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
 - [ ] Musique metal adaptative (couches) + vrais bruitages
 - [ ] Particules : étincelles, poussière d'os, éclaboussures
 - [ ] Coffres, pièges, salles préfabriquées
-- [ ] Options : volume, plein écran, remappage des touches, accessibilité du solo
+- [ ] Options : plein écran, remappage des touches, accessibilité du solo
 - [ ] Support manette
 
 ## v0.3 — Contenu

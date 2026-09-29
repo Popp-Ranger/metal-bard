@@ -34,7 +34,7 @@ func _ready() -> void:
 	_spawn_flee_portal(start + Vector3(-3.0, 0.0, -3.0))
 	spawn_hero(start)
 	Events.boss_defeated.connect(_on_boss_defeated)
-	Sfx.play_ambience("amb_dungeon", -10.0)
+	Sfx.play_music("res://audio/music/dungeon_theme.mp3", -8.0) # musique du donjon
 	if GameState.quest_state(quest_id) == QuestDB.State.ACTIVE:
 		Events.notify("Trouvez Plumeau au fond des catacombes...", Events.COLOR_DEFAULT)
 
