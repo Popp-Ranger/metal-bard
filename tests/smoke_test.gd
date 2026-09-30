@@ -67,6 +67,12 @@ func _test_generator() -> void:
 			all_ok = false
 			printerr("    graine %d : %d salles, connecté=%s" % [s + 1, g.rooms.size(), g.is_start_connected_to_boss()])
 	_check(all_ok, "50 donjons générés, départ toujours relié au boss")
+	var sealed_ok := true
+	for s in 200:
+		var g2 := DungeonGenerator.new()
+		g2.generate_sealed(s * 4513 + 1, 10, 5)
+		sealed_ok = sealed_ok and g2.boss_room_sealable(5) and g2.all_rooms_reachable_without_boss_room()
+	_check(sealed_ok, "200 donjons : salle du boss toujours scellable, le reste accessible sans elle")
 
 
 func _frames(n: int) -> void:
@@ -195,11 +201,13 @@ func _test_quest_flow() -> void:
 	dummy.global_position = hero.global_position + Vector3(3, 0, 0)
 	hero.aim_point = dummy.global_position
 	for beat in 5:
+		GameState.hp = GameState.max_hp() # les squelettes réveillés ne doivent pas tuer le héros pendant le test
 		hero.cooldowns["riff"] = 0.0
 		hero.cast_riff()
 		await get_tree().create_timer(Balance.RIFF_BEAT).timeout
 	_check(hero.riff_stack == Balance.RIFF_MAX_STACKS, "5 riffs en rythme → combo au maximum")
 	await get_tree().create_timer(Balance.RIFF_BEAT * 2.5).timeout
+	GameState.hp = GameState.max_hp()
 	hero.cooldowns["riff"] = 0.0
 	hero.cast_riff()
 	_check(hero.riff_stack == 1, "riff à contretemps → combo remis à ×1")
@@ -782,3 +790,4 @@ func _test_click_move() -> void:
 
 func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
+

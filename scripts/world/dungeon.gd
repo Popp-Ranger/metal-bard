@@ -42,11 +42,7 @@ func _ready() -> void:
 	var seed_value := GameState.dungeon_seed if GameState.dungeon_seed != 0 else randi_range(1, 999999)
 	# La salle du boss est fermée à clé : on garde la première graine où toutes les autres
 	# salles restent accessibles sans la traverser.
-	for attempt in 40:
-		gen.generate(seed_value, int(cfg.get("rooms", 10)))
-		if gen.all_rooms_reachable_without_boss_room():
-			break
-		seed_value = seed_value % 999983 + 7919
+	seed_value = gen.generate_sealed(seed_value, int(cfg.get("rooms", 10)), DOOR_MAX_CELLS)
 	GameState.dungeon_seed = seed_value
 	_rng.seed = seed_value
 

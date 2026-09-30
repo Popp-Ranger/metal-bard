@@ -296,3 +296,26 @@ func room_openings(room_index: int) -> Array[Dictionary]:
 				out.append({"cell": start + step * run_start, "step": step, "out": side[2], "length": k - run_start})
 				run_start = -1
 	return out
+
+
+## Toutes les entrées de la salle du boss sont assez étroites pour recevoir une porte
+## (sinon elle ne pourrait pas être scellée).
+func boss_room_sealable(max_door_cells: int) -> bool:
+	var openings := room_openings(boss_room)
+	if openings.is_empty():
+		return false
+	for o in openings:
+		if int(o["length"]) > max_door_cells:
+			return false
+	return true
+
+
+## Génère le premier donjon valide à partir de `seed_value` : salle du boss scellable et
+## toutes les autres salles accessibles sans la traverser. Renvoie la graine retenue.
+func generate_sealed(seed_value: int, room_count: int, max_door_cells: int) -> int:
+	for attempt in 60:
+		generate(seed_value, room_count)
+		if all_rooms_reachable_without_boss_room() and boss_room_sealable(max_door_cells):
+			break
+		seed_value = seed_value % 999983 + 7919
+	return seed_value
