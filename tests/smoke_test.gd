@@ -557,15 +557,21 @@ func _test_new_features() -> void:
 	_check(err.is_empty() and Net.is_host() and Net.player_count() == 1, "partie ouverte en coop (hôte)")
 	Net.leave()
 	_check(not Net.is_online(), "partie coop fermée")
-	# Intro : cimetière, lune de sang, route d'environ 40 s.
+	# Intro : cimetière, lune de sang, route sinueuse d'environ 20 s.
 	var intro: Node = load("res://scenes/intro.tscn").instantiate()
 	add_child(intro)
 	await _frames(10)
 	var i_level := intro as Level
-	var road_time := 222.0 / Balance.HERO_SPEED
+	var road_len: float = (intro.get_script() as Script).get_script_constant_map()["ROAD_LENGTH"]
+	var road_time := road_len / Balance.HERO_SPEED
+	var max_turn := 0.0
+	for s in range(0, int(road_len), 2):
+		var dir: Vector3 = intro.call("road_dir", float(s))
+		max_turn = maxf(max_turn, dir.angle_to(IsoCamera.SCREEN_UP))
 	_check(i_level.hero.captive and bool(intro.get("_cinematic")), "intro : cinématique de la lune de sang, héros figé")
 	_check(Sfx.storm_playing() and Sfx._strikes.size() >= 5, "intro : musique d'orage lightning_menu.mp3 (%d coups de tonnerre repérés)" % Sfx._strikes.size())
-	_check(road_time > 35.0 and road_time < 45.0, "route pavée d'environ 40 s de marche (%.0f s)" % road_time)
+	_check(road_time > 17.0 and road_time < 23.0, "route pavée d'environ 20 s de marche (%.0f s)" % road_time)
+	_check(max_turn > 0.9, "route sinueuse : virages jusqu'à %.0f°" % rad_to_deg(max_turn))
 	intro.set("_cinematic", false)
 	i_level.hero.captive = false
 	intro.call("_lightning")

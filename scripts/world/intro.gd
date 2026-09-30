@@ -4,13 +4,13 @@ extends Level
 ##      chapelle — tombes déterrées et vides, cadavres de toutes les races amicales.
 ##   2. Le héros : « Aaaaaah, une bonne vieille balade par ce temps est si agréable.
 ##      Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un » en coop).
-##   3. Environ 40 s de marche sur une route pavée de pierres grises, entre champs et
+##   3. Environ 20 s de marche sur une route pavée sinueuse, entre champs et
 ##      prairies, cadavres ensanglantés et chauves-souris ; orage sans pluie : des éclairs
 ##      frappent le décor hors de la route (flash + légers tremblements d'écran).
 ##   4. Au bout de la route, le Crâne Hurlant : on entre, et les portes se referment.
-## La route suit la direction « haut de l'écran » de la caméra isométrique.
+## La route part vers le « haut de l'écran » de la caméra isométrique puis serpente.
 
-const ROAD_LENGTH := 222.0 # ≈ 40 s de marche à 5,5 m/s
+const ROAD_LENGTH := 110.0 # ≈ 20 s de marche à 5,5 m/s (longueur réelle du tracé sinueux)
 const ROAD_HALF_WIDTH := 1.7
 const ROAM_HALF_WIDTH := 13.0 # on peut s'écarter un peu dans les champs, pas plus
 const START_S := 3.0
@@ -47,15 +47,43 @@ func _ready() -> void:
 
 
 # =====================================================================================
-# Géométrie de la route : s = distance parcourue, décalage latéral qui ondule.
+# Géométrie de la route : s = distance réellement parcourue le long du tracé. La route
+# sort tout droit du cimetière puis serpente en virages marqués (jusqu'à ~70°) entre les
+# champs, avant de se redresser devant la taverne.
 # =====================================================================================
 
-func _lateral(s: float) -> float:
-	return sin(s / 28.0) * 5.0 + sin(s / 11.0) * 1.2
+const PATH_STEP := 1.0
+const PATH_START := -30.0
+var _path := PackedVector3Array()
+
+
+## Cap de la route (radians, par rapport au « haut de l'écran ») selon la distance.
+func _heading(s: float) -> float:
+	var k := smoothstep(14.0, 26.0, s) * (1.0 - smoothstep(ROAD_LENGTH - 16.0, ROAD_LENGTH - 4.0, s))
+	return (sin((s - 14.0) / 11.0) * 1.05 + sin(s / 4.5 + 1.3) * 0.22) * k
+
+
+func _build_path() -> void:
+	_path.clear()
+	var p := IsoCamera.SCREEN_UP * PATH_START
+	var s := PATH_START
+	while s <= TAVERN_S + 30.0:
+		_path.append(p)
+		p += IsoCamera.SCREEN_UP.rotated(Vector3.UP, _heading(s)) * PATH_STEP
+		s += PATH_STEP
 
 
 func road_point(s: float) -> Vector3:
-	return IsoCamera.SCREEN_UP * s + IsoCamera.SCREEN_RIGHT * _lateral(s)
+	if _path.is_empty():
+		_build_path()
+	var f := (s - PATH_START) / PATH_STEP
+	var last := _path.size() - 1
+	if f <= 0.0:
+		return _path[0] + (_path[1] - _path[0]) * f
+	if f >= last:
+		return _path[last] + (_path[last] - _path[last - 1]) * (f - last)
+	var i := int(f)
+	return _path[i].lerp(_path[i + 1], f - i)
 
 
 func road_dir(s: float) -> Vector3:
@@ -66,9 +94,31 @@ func road_right(s: float) -> Vector3:
 	return road_dir(s).cross(Vector3.UP).normalized() * -1.0
 
 
-## Abscisse curviligne approximative (projection sur l'axe de la route).
+## Distance parcourue au point du tracé le plus proche de `p`.
 func road_s(p: Vector3) -> float:
-	return p.dot(IsoCamera.SCREEN_UP)
+	if _path.is_empty():
+		_build_path()
+	var flat := Vector3(p.x, 0.0, p.z)
+	var best := INF
+	var best_s := 0.0
+	for i in _path.size() - 1:
+		var a := _path[i]
+		var ab := _path[i + 1] - a
+		var t := clampf((flat - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		var d := flat.distance_squared_to(a + ab * t)
+		if d < best:
+			best = d
+			best_s = PATH_START + (i + t) * PATH_STEP
+	# Au-delà des extrémités : on prolonge (pour borner le héros avant le cimetière).
+	if best_s <= PATH_START + 0.01:
+		best_s = PATH_START + (flat - _path[0]).dot(road_dir(PATH_START))
+	return best_s
+
+
+## Distance du point au bord de la chaussée la plus proche (pour placer le décor).
+func dist_to_road(p: Vector3) -> float:
+	var s := road_s(p)
+	return Vector3(p.x, 0.0, p.z).distance_to(road_point(s))
 
 
 # =====================================================================================
@@ -138,6 +188,8 @@ func _build_ground() -> void:
 		var s := _rng.randf_range(-20.0, ROAD_LENGTH + 20.0)
 		var side := _rng.randf_range(ROAD_HALF_WIDTH + 0.3, 40.0) * (1.0 if _rng.randf() < 0.5 else -1.0)
 		var p := road_point(s) + road_right(s) * side
+		if dist_to_road(p) < ROAD_HALF_WIDTH + 0.3:
+			p.y = -5.0 # dans un virage, la touffe tomberait sur la chaussée : on l'enterre
 		var sc := _rng.randf_range(0.6, 1.5)
 		mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(sc, sc * _rng.randf_range(0.8, 1.6), sc)), p + Vector3(0, 0.15 * sc, 0)))
 		var v := _rng.randf_range(0.7, 1.2)
@@ -205,6 +257,7 @@ func _build_road() -> void:
 func _build_fields() -> void:
 	var wheat := Visuals.mat(Color(0.28, 0.24, 0.1), 0.95)
 	var furrow := Visuals.mat(Color(0.08, 0.05, 0.03), 1.0)
+	var field_centers: Array[Vector3] = []
 	var s := 30.0
 	while s < ROAD_LENGTH - 20.0:
 		for side: float in [-1.0, 1.0]:
@@ -213,6 +266,14 @@ func _build_fields() -> void:
 			var right := road_right(s)
 			var dir := road_dir(s)
 			var center := road_point(s) + right * side * _rng.randf_range(10.0, 18.0)
+			if dist_to_road(center) < 10.5:
+				continue # dans un virage, le champ mordrait sur la route
+			var crowded := false
+			for other in field_centers:
+				crowded = crowded or other.distance_to(center) < 15.0
+			if crowded:
+				continue # pas de champs qui se chevauchent
+			field_centers.append(center)
 			var field := Node3D.new()
 			field.position = center
 			field.rotation.y = atan2(dir.x, dir.z) + _rng.randf_range(-0.15, 0.15)
@@ -240,7 +301,8 @@ func _build_fields() -> void:
 	for k in 26:
 		var ts := _rng.randf_range(0.0, ROAD_LENGTH)
 		var p := road_point(ts) + road_right(ts) * (_rng.randf_range(6.0, 30.0) * (1.0 if _rng.randf() < 0.5 else -1.0))
-		_dead_tree(p)
+		if dist_to_road(p) > 4.0:
+			_dead_tree(p)
 
 
 func _dead_tree(p: Vector3) -> void:
@@ -394,7 +456,7 @@ func _build_road_side() -> void:
 		s += _rng.randf_range(12.0, 22.0)
 	# Bornes et poteaux indicateurs.
 	var wood := Visuals.mat(Color(0.2, 0.13, 0.07), 0.85)
-	for sign_s: float in [40.0, 130.0]:
+	for sign_s: float in [30.0, 75.0]:
 		var p := road_point(sign_s) + road_right(sign_s) * 2.6
 		Visuals.box(self, Vector3(0.14, 2.2, 0.14), p + Vector3(0, 1.1, 0), wood)
 		var board := Visuals.box(self, Vector3(1.3, 0.35, 0.06), p + Vector3(0.3, 1.9, 0), wood)
@@ -499,6 +561,8 @@ func _lightning() -> void:
 	var s := road_s(hero.global_position) + _rng.randf_range(-4.0, 14.0)
 	var side := 1.0 if _rng.randf() < 0.5 else -1.0
 	var ground := road_point(s) + road_right(s) * side * _rng.randf_range(ROAD_HALF_WIDTH + 5.0, 16.0)
+	if dist_to_road(ground) < ROAD_HALF_WIDTH + 4.0:
+		ground = road_point(s) - road_right(s) * side * 12.0 # jamais sur la route, même dans un virage
 	var sky := ground + Vector3(_rng.randf_range(-4, 4), 40.0, _rng.randf_range(-4, 4))
 	ArcBolt.spawn(self, sky, ground, 0.6, 0.45, Color(0.85, 0.9, 1.0))
 	ArcBolt.spawn(self, sky + Vector3(1, -8, 0), ground + Vector3(2.0, 0, 1.0), 0.15, 0.25, Color(0.7, 0.8, 1.0))

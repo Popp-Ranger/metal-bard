@@ -77,6 +77,9 @@
 - [x] Touche K : arbre de talents ; touche T : portail bleu de retour à la taverne, donjon persistant jusqu'à la fin
 - [x] Chambre louée : se coucher sur le lit pour récupérer (1 PV → 100 % en 10 s)
 
+## ✅ v0.1.9 — Intro plus courte
+- [x] Route de l'intro ramenée à ~20 s de marche, tracé sinueux (virages jusqu'à ~70°)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
