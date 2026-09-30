@@ -114,6 +114,14 @@
 - [x] Plusieurs codes pour l'hôte : Internet (adresse publique, port ouvert à la main), VPN (Radmin VPN, Tailscale, ZeroTier...), réseau local
 - [x] Rejoindre en tapant une adresse IP ; abandon au bout de 12 s sans réponse, avec des pistes
 
+## ✅ v0.1.17 — Riffald v3, texturé
+- [x] Modèle refait au plus près de la planche 3D : épaulières en chevron à quatre pointes, genouillères en écusson, bottes à revers clouté et bout ferré, crinière en mèches ondulées, visage encadré par les mèches
+- [x] Mains gauche et droite remises à l'endroit
+- [x] Textures peintes avec ombres (cuir froissé, acier rayé, tissu, peau, mèches) cuites dans un atlas 4096 (art/riffald/texture_riffald.py)
+- [x] Cuir et acier assombris en jeu pour ne pas être délavés par les projecteurs
+- [x] Mains sur la guitare : la gauche au bout du manche (près du sillet), doigts repliés sur la touche ; la droite qui gratte sur la caisse ; guitare de Riffald agrandie ×1,3 comme ses mains
+- [x] Pas de sorts ni de coups de guitare dans la taverne (sauf au sous-sol d'entraînement) : la guitare passe dans le dos, manche vers le bas incliné à 45° vers la gauche
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

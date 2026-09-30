@@ -85,7 +85,7 @@ func cast(id: String) -> bool:
 	var t := TalentDB.get_talent(id)
 	if not GameState.has_talent(id) or not bool(t.get("active", false)):
 		return false
-	if not hero.skill_ready(id):
+	if not hero.skill_ready(id) or not hero.can_cast():
 		return false
 	var cost := float(t.get("cost", 0.0))
 	if GameState.mana < cost:

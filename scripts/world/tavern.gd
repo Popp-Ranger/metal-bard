@@ -85,7 +85,7 @@ func _process(_delta: float) -> void:
 	if hero != null:
 		_cut_stone.set_shader_parameter("hero_pos", hero.global_position)
 		# Sous-sol d'entraînement : décibels toujours au maximum.
-		var in_cellar := hero.global_position.x > CELLAR.x - 20.0
+		var in_cellar := is_in_cellar(hero.global_position)
 		if in_cellar != GameState.infinite_mana:
 			GameState.infinite_mana = in_cellar
 			if in_cellar:
@@ -93,6 +93,15 @@ func _process(_delta: float) -> void:
 		if in_cellar and GameState.mana < GameState.max_mana():
 			GameState.mana = GameState.max_mana()
 			Events.hero_mana_changed.emit(GameState.mana, GameState.max_mana())
+
+
+## On ne joue pas dans la salle commune ni à l'étage : sorts seulement au sous-sol d'entraînement.
+func spells_allowed_at(pos: Vector3) -> bool:
+	return is_in_cellar(pos)
+
+
+func is_in_cellar(pos: Vector3) -> bool:
+	return pos.x > CELLAR.x - 20.0
 
 
 # =====================================================================================

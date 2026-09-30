@@ -23,12 +23,17 @@ PROFILES = {
     }),
 }
 P = PROFILES["riffald"]
+SHADE = ["MATERIAL", "STUDIO"]  # couleurs des matériaux éclairées ; ("TEXTURE", "FLAT") : atlas peint seul
 
 
 def use(name):
     global P
     P = PROFILES[name]
     return P
+
+
+def shading(color_type="MATERIAL", light="STUDIO"):
+    SHADE[:] = [color_type, light]
 
 
 def img_to_np(img):
@@ -83,8 +88,7 @@ def _camera(W, H):
     sc.camera = cam
     sc.render.engine = "BLENDER_WORKBENCH"
     sh = sc.display.shading
-    sh.light = "STUDIO"
-    sh.color_type = "MATERIAL"
+    sh.color_type, sh.light = SHADE
     sh.show_cavity = True
     sh.show_specular_highlight = False
     sh.show_object_outline = True

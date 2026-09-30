@@ -185,7 +185,8 @@ def export(rig, actions):
     bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format="GLB", use_selection=True, export_apply=False,
                               export_yup=True, export_animations=True, export_animation_mode="NLA_TRACKS",
                               export_force_sampling=True, export_frame_step=1, export_anim_slide_to_zero=True,
-                              export_def_bones=False, export_optimize_animation_size=False)
+                              export_def_bones=False, export_optimize_animation_size=False,
+                              export_image_format="JPEG", export_jpeg_quality=90)  # atlas peint en JPEG
     print("EXPORT", OUT_GLB)
 
 

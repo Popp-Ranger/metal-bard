@@ -57,7 +57,11 @@ def mat(name, srgb, rough=0.6, metal=0.0, emit=0.0):
         m.use_nodes = True
     except Exception:
         pass
-    b = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    # arbre de nœuds remis à zéro (une passe de texture précédente y branche une image)
+    nt = m.node_tree
+    nt.nodes.clear()
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    nt.links.new(b.outputs[0], nt.nodes.new("ShaderNodeOutputMaterial").inputs[0])
     b.inputs["Base Color"].default_value = (*lin, 1.0)
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
@@ -74,15 +78,19 @@ def mat(name, srgb, rough=0.6, metal=0.0, emit=0.0):
 def materials():
     mat("cuir", (0.15, 0.13, 0.14), 0.45)
     mat("cuir_use", (0.23, 0.21, 0.23), 0.5)
-    mat("sangle", (0.55, 0.34, 0.22), 0.6)
-    mat("metal", (0.26, 0.27, 0.33), 0.35, 0.45)
-    mat("metal_bord", (0.60, 0.61, 0.67), 0.3, 0.55)
-    mat("argent", (0.76, 0.74, 0.74), 0.25, 0.9)
+    mat("sangle", (0.40, 0.25, 0.18), 0.6)
+    mat("sangle_botte", (0.27, 0.17, 0.13), 0.6)
+    mat("semelle", (0.12, 0.10, 0.10), 0.7)
+    mat("trou", (0.10, 0.06, 0.05), 0.8)
+    mat("levre", (0.86, 0.56, 0.46), 0.5)
+    mat("metal", (0.17, 0.19, 0.26), 0.35, 0.45)  # acier sombre bleuté de la planche
+    mat("metal_bord", (0.62, 0.66, 0.74), 0.3, 0.55)
+    mat("argent", (0.64, 0.64, 0.66), 0.25, 0.9)
     mat("peau", (0.98, 0.72, 0.55), 0.55)
     mat("cheveux", (0.97, 0.47, 0.15), 0.45)
     mat("cheveux_ombre", (0.80, 0.28, 0.08), 0.6)
-    mat("sourcils", (0.70, 0.30, 0.10), 0.7)
-    mat("paupiere", (0.36, 0.18, 0.12), 0.7)
+    mat("sourcils", (0.55, 0.21, 0.06), 0.7)
+    mat("paupiere", (0.16, 0.08, 0.06), 0.7)
     mat("cape", (0.38, 0.10, 0.17), 0.8)
     mat("maillot", (0.50, 0.12, 0.16), 0.6, 0.0, 0.15)
     mat("gemme", (0.95, 0.10, 0.18), 0.15, 0.0, 3.0)
@@ -277,11 +285,11 @@ def apply_mods(o):
     bpy.data.meshes.remove(old)
 
 
-def solidify(o, t, offset=0.0):
+def solidify(o, t, offset=0.0, even=True):
     mod = o.modifiers.new("solid", "SOLIDIFY")
     mod.thickness = t
     mod.offset = offset
-    mod.use_even_offset = True
+    mod.use_even_offset = even
     apply_mods(o)
 
 
@@ -300,6 +308,43 @@ def bvh_of(o):
 def snap(bvh, p, off=0.0):
     loc, nrm, idx, d = bvh.find_nearest(Vector(p))
     return loc + nrm * off, nrm
+
+
+def clip(o, planes):
+    """Découpe par des demi-espaces (point, normale) : ne garde que leur intersection, côté des normales."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    for co, no in planes:
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=Vector(co),
+                               plane_no=Vector(no), clear_inner=True)
+    bm.to_mesh(o.data)
+    bm.free()
+    o.data.update()
+    return o
+
+
+def clip_band(o, outer, inner):
+    """Bande entre deux régions convexes : dans outer, hors de inner (rebords d'armure)."""
+    clip(o, outer)
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    for co, no in inner:
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=Vector(co),
+                               plane_no=Vector(no))
+    dead = [f for f in bm.faces
+            if all((f.calc_center_median() - Vector(co)).dot(Vector(no)) > 0 for co, no in inner)]
+    bmesh.ops.delete(bm, geom=dead, context="FACES")
+    bm.to_mesh(o.data)
+    bm.free()
+    o.data.update()
+    return o
+
+
+def on_surface(bvh, p, d, sink=0.004):
+    """Point de la surface touché en venant de l'extérieur le long de -d (base d'une pointe)."""
+    d = Vector(d).normalized()
+    hit = bvh.ray_cast(Vector(p) + d * 0.5, -d)[0]
+    return (hit if hit is not None else Vector(p)) - d * sink
 
 
 def xform(o, pivot, R):
@@ -337,11 +382,15 @@ def arc_shell(name, rings, a0, a1, segs, m, bone):
     return add(name, verts, faces, m, bone)
 
 
-def plate(name, center, normal, up, outline, m, bone, bulge=0.02, rim=0.01, curv=0.0, rim_m=None, thick=0.012):
-    """Plaque bombée à rebord (genouillère) : contour 2D (u, v) en mètres, facettes franches."""
+def plate(name, center, normal, up, outline, m, bone, bulge=0.02, rim=0.01, curv=0.0, rim_m=None, thick=0.012,
+          facet=False):
+    """Plaque bombée à rebord (genouillère) : contour 2D (u, v) en mètres, rebord biseauté net,
+    dôme central lisse (ou à facettes, arêtes partant de chaque sommet du contour)."""
     n, u, r = basis(normal, up)
     c = Vector(center)
-    levels = [(1.0, 0.0), (0.92, rim), (0.80, rim * 0.3)]
+    # (échelle du contour, hauteur) : rebord extérieur, arête du rebord, gorge, puis dôme
+    levels = [(1.0, 0.0), (0.93, rim), (0.84, rim * 0.35), (0.66, bulge * 0.55), (0.42, bulge * 0.85),
+              (0.2, bulge * 0.97)]
     N = len(outline)
 
     def P(ou, ov, h):
@@ -353,19 +402,21 @@ def plate(name, center, normal, up, outline, m, bone, bulge=0.02, rim=0.01, curv
             verts.append(P(ou * s, ov * s, h))
     verts.append(P(0, 0, bulge))
     ctr = len(verts) - 1
-    for L in range(2):
+    L = len(levels)
+    for li in range(L - 1):
         for k in range(N):
-            a = L * N + k
-            b = L * N + (k + 1) % N
+            a = li * N + k
+            b = li * N + (k + 1) % N
             faces.append((a, b, b + N, a + N))
     for k in range(N):
-        faces.append((2 * N + k, 2 * N + (k + 1) % N, ctr))
+        faces.append(((L - 1) * N + k, (L - 1) * N + (k + 1) % N, ctr))
     o = add(name, verts, faces, m, bone, smooth=False)
+    for i, pg in enumerate(o.data.polygons):
+        pg.use_smooth = i >= 2 * N and not facet  # dôme lisse, rebord à arêtes vives
+        if rim_m and i < N:
+            pg.material_index = 1
     if rim_m:
         o.data.materials.append(MATS[rim_m])
-        for i, pg in enumerate(o.data.polygons):
-            if i < N:
-                pg.material_index = 1
     solidify(o, thick, offset=-1.0)
     return o
 
@@ -436,44 +487,52 @@ def leg_at(s, z):
 
 # ---------------------------------------------------------------- tête
 def build_head():
-    #  z, cy, rx, ry_avant, ry_dos : visage long, mâchoire carrée, menton marqué
+    # z, cy, rx, ry_avant, ry_dos — relevés sur la planche : menton 1,56 m, mâchoire carrée (±7 cm à 1,58),
+    # pommettes (±8,6 cm à 1,665), yeux à 1,683, sourcils à 1,70, sommet du crâne 1,85
     H = [
-        (1.543, -0.080, 0.028, 0.020, 0.018),
-        (1.558, -0.068, 0.052, 0.034, 0.040),
-        (1.575, -0.057, 0.064, 0.048, 0.052),
-        (1.598, -0.042, 0.074, 0.062, 0.066),
-        (1.628, -0.030, 0.080, 0.083, 0.076),
-        (1.665, -0.022, 0.087, 0.093, 0.086),
-        (1.700, -0.018, 0.087, 0.096, 0.094),
-        (1.740, -0.014, 0.082, 0.092, 0.100),
-        (1.790, -0.010, 0.074, 0.080, 0.098),
-        (1.830, -0.004, 0.056, 0.058, 0.076),
-        (1.856, 0.000, 0.020, 0.020, 0.028),
+        (1.560, -0.075, 0.026, 0.018, 0.020),
+        (1.568, -0.068, 0.042, 0.030, 0.040),
+        (1.582, -0.056, 0.057, 0.046, 0.055),
+        (1.600, -0.043, 0.068, 0.064, 0.068),
+        (1.618, -0.035, 0.076, 0.077, 0.074),
+        (1.640, -0.027, 0.083, 0.087, 0.082),
+        (1.665, -0.022, 0.087, 0.093, 0.088),
+        (1.690, -0.018, 0.087, 0.096, 0.094),
+        (1.720, -0.014, 0.085, 0.094, 0.100),
+        (1.760, -0.010, 0.082, 0.088, 0.100),
+        (1.800, -0.006, 0.070, 0.075, 0.090),
+        (1.835, 0.000, 0.045, 0.050, 0.065),
+        (1.852, 0.000, 0.015, 0.015, 0.020),
     ]
-    loft("tete", [((0, cy, z), rx, ryf, ryb) for z, cy, rx, ryf, ryb in H], "peau", "head", segs=24, p=2.2)
-    loft("cou", [((0, 0.0, 1.44), 0.068, 0.066), ((0, -0.012, 1.59), 0.058, 0.056)], "peau", "neck",
-         segs=14, caps=(False, False))
-    # nez droit
-    loft("nez", [((0, -0.106, 1.712), 0.006, 0.006), ((0, -0.122, 1.672), 0.008, 0.010),
-                 ((0, -0.128, 1.649), 0.011, 0.011), ((0, -0.122, 1.639), 0.010, 0.008)], "peau", "head", segs=8)
+    loft("tete", [((0, cy, z), rx, ryf, ryb) for z, cy, rx, ryf, ryb in H], "peau", "head", segs=28, p=2.3)
+    loft("cou", [((0, 0.0, 1.44), 0.068, 0.066), ((0, -0.015, 1.585), 0.060, 0.058)], "peau", "neck",
+         segs=16, caps=(False, False))
+    # nez droit, pointe à 1,636, ailes du nez marquées
+    loft("nez", [((0, -0.106, 1.705), 0.005, 0.004), ((0, -0.118, 1.675), 0.0065, 0.008),
+                 ((0, -0.128, 1.645), 0.0085, 0.010), ((0, -0.130, 1.637), 0.009, 0.008),
+                 ((0, -0.124, 1.630), 0.009, 0.006)], "peau", "head", segs=10)
     for s in (1, -1):
-        ellipsoid(sname("oreille", s), (0.082 * s, 0.000, 1.668), (0.014, 0.024, 0.034), "peau", "head", 10, 6)
-        # boucle d'oreille (anneau d'argent au lobe)
-        c = Vector((0.090 * s, 0.004, 1.628))
-        loft(sname("boucle_oreille", s), [(c + Vector((0, 0.009 * math.cos(a), 0.009 * math.sin(a))), 0.0022, 0.0022)
-                                          for a in [2 * math.pi * k / 10 for k in range(11)]], "argent", "head", segs=6)
-        # yeux plissés, paupière lourde, sourcils épais froncés
-        ellipsoid(sname("oeil", s), (0.034 * s, -0.101, 1.700), (0.020, 0.007, 0.0085), "oeil", "head", 10, 6)
-        ellipsoid(sname("iris", s), (0.031 * s, -0.107, 1.699), (0.0092, 0.004, 0.0085), "iris", "head", 8, 6)
+        ellipsoid(sname("narine", s), (0.011 * s, -0.116, 1.634), (0.008, 0.007, 0.006), "peau", "head", 10, 6)
+        ellipsoid(sname("oreille", s), (0.084 * s, -0.005, 1.645), (0.013, 0.022, 0.030), "peau", "head", 10, 6)
+        # anneau d'argent au lobe, petit clou au-dessus
+        c = Vector((0.089 * s, -0.004, 1.617))
+        loft(sname("boucle_oreille", s), [(c + Vector((0, 0.0075 * math.cos(a), 0.0075 * math.sin(a))), 0.0018, 0.0018)
+                                          for a in [2 * math.pi * k / 12 for k in range(13)]], "argent", "head", segs=6)
+        stud(sname("clou_oreille", s), (0.0945 * s, -0.008, 1.632), 0.0025, "head")
+        # yeux étroits sous une paupière lourde qui descend vers le nez
+        ellipsoid(sname("oeil", s), (0.043 * s, -0.1005, 1.683), (0.021, 0.007, 0.0065), "oeil", "head", 12, 6)
+        ellipsoid(sname("iris", s), (0.041 * s, -0.1063, 1.6825), (0.0105, 0.0042, 0.0068), "iris", "head", 10, 6)
         R = Matrix.Rotation(math.radians(-10 * s), 3, "Y")
-        box(sname("paupiere", s), (0.034 * s, -0.106, 1.7085), (0.046, 0.010, 0.0075), "paupiere", "head", rot=R)
-        R = Matrix.Rotation(math.radians(-17 * s), 3, "Y") @ Matrix.Rotation(math.radians(10 * s), 3, "Z")
-        box(sname("sourcil", s), (0.037 * s, -0.106, 1.724), (0.050, 0.016, 0.013), "sourcils", "head", rot=R)
-    # sourire en coin (coin gauche relevé)
-    mouth = [(-0.027, -0.104, 1.606), (-0.01, -0.110, 1.604), (0.008, -0.110, 1.606), (0.024, -0.105, 1.613),
-             (0.032, -0.099, 1.621)]
-    loft("bouche", [(p, 0.0035, 0.003) for p in mouth], "bouche", "head", segs=6)
-    ellipsoid("menton", (0, -0.082, 1.556), (0.030, 0.020, 0.018), "peau", "head", 10, 6)
+        box(sname("paupiere", s), (0.043 * s, -0.1066, 1.6885), (0.048, 0.009, 0.0085), "paupiere", "head", rot=R)
+        # sourcils épais, froncés : bout intérieur bas (1,692), bout extérieur haut (1,708)
+        brow = [(0.015, -0.1085, 1.6925), (0.035, -0.1095, 1.699), (0.056, -0.1065, 1.7065), (0.072, -0.099, 1.7075)]
+        loft(sname("sourcil", s), [((x * s, y, z), h, 0.0045) for (x, y, z), h in
+                                   zip(brow, (0.0055, 0.0072, 0.0065, 0.0035))], "sourcils", "head", segs=8)
+    # large sourire en coin : les deux coins remontent, le gauche du personnage davantage
+    mouth = [(-0.038, -0.1015, 1.620), (-0.02, -0.1085, 1.6135), (0.0, -0.1105, 1.611), (0.022, -0.1085, 1.6145),
+             (0.038, -0.1025, 1.620), (0.046, -0.0965, 1.625)]
+    loft("bouche", [(p, 0.0024, 0.0024) for p in mouth], "bouche", "head", segs=6)
+    ellipsoid("levre", (0.0, -0.1065, 1.6035), (0.016, 0.006, 0.0045), "levre", "head", 10, 6)
 
 
 # ---------------------------------------------------------------- buste
@@ -528,28 +587,30 @@ def build_lapels():
         solidify(o, 0.01)
         # clous le long du bord extérieur
         a, b, c = Vector(corners[3]), Vector(corners[2]), Vector(corners[1])
-        for k in range(5):
-            p = a.lerp(b, (k + 0.5) / 5)
+        for k in range(7):
+            p = a.lerp(b, (k + 0.5) / 7)
             loc, nrm = snap(bvh, p, 0.018)
             stud(f"revers_clou{k}" + (".L" if s > 0 else ".R"), loc - Vector((0.012 * s, 0, 0.01)), 0.0065, "chest")
-        for k in range(3):
-            p = b.lerp(c, (k + 0.5) / 3)
+        for k in range(4):
+            p = b.lerp(c, (k + 0.5) / 4)
             loc, nrm = snap(bvh, p, 0.018)
             stud(f"revers_clouB{k}" + (".L" if s > 0 else ".R"), loc + Vector((0, 0, 0.012)), 0.0065, "chest")
-    # rangées de clous le long des pans de la veste
-    for s in (1, -1):
-        for k in range(7):
-            loc, nrm = snap(bvh, (0.05 * s, -0.3, 1.27 - k * 0.036), 0.004)
-            stud(f"veste_clou{k}" + (".L" if s > 0 else ".R"), loc, 0.0062, "spine")
-    # fermetures éclair en biais sur la poitrine
-    for s in (1, -1):
-        a, _ = snap(bvh, (0.15 * s, -0.2, 1.24), 0.006)
-        b, _ = snap(bvh, (0.10 * s, -0.2, 1.17), 0.006)
+    # perfecto : fermeture décalée — deux rangées de clous asymétriques jusqu'à la ceinture
+    for label, x, z0, n_studs in (("D", -0.104, 1.30, 8), ("G", 0.047, 1.22, 6)):
+        for k in range(n_studs):
+            loc, nrm = snap(bvh, (x, -0.3, z0 - k * (z0 - 1.035) / (n_studs - 1)), 0.004)
+            stud(f"veste_clou{label}{k}", loc, 0.0058, "spine")
+    # fermetures éclair : poche en biais sur la poitrine gauche du personnage, courte à droite
+    for label, pa, pb in (("G", (0.172, 1.315), (0.096, 1.249)), ("D", (-0.157, 1.215), (-0.142, 1.165))):
+        a, _ = snap(bvh, (pa[0], -0.3, pa[1]), 0.005)
+        b, _ = snap(bvh, (pb[0], -0.3, pb[1]), 0.005)
         d = (b - a)
         n = Vector((0, -1, 0))
         r = d.normalized().cross(n).normalized()
-        box(sname("zip", s), (a + b) / 2, (0.008, 0.006, d.length), "argent", "chest",
-            rot=Matrix((r, n, d.normalized())).transposed())
+        R = Matrix((r, n, d.normalized())).transposed()
+        box("zip" + label, (a + b) / 2, (0.009, 0.005, d.length), "argent", "chest", rot=R)
+        box("zip_tirette" + label, a + d * 0.12 + Vector((0, -0.004, 0)), (0.007, 0.004, 0.016), "argent", "chest",
+            rot=R)
 
 
 # ---------------------------------------------------------------- bras et mains
@@ -559,17 +620,22 @@ def build_arms():
         sh, el, wr, d2 = arm_points(s)
         d1 = (el - sh).normalized()
         # manche de cuir retroussée au coude
-        loft("bras" + side, [(sh, 0.080, 0.078), (sh.lerp(el, 0.5), 0.077, 0.074), (el + d2 * 0.02, 0.072, 0.07)],
+        loft("bras" + side, [(sh, 0.080, 0.078), (sh.lerp(el, 0.45), 0.081, 0.078), (el + d2 * 0.02, 0.073, 0.071)],
              "cuir", "upper_arm" + side, segs=14)
-        for k, t in enumerate((0.38, 0.7)):
-            band(f"pli{k}" + side, sh.lerp(el, t), 0.081, 0.078, 0.014, "cuir_use", "upper_arm" + side, axis=d1)
+        # manche roulée au coude : bourrelet, clous côté extérieur, bouton-pression devant
         c = el + d2 * 0.012
         band("manchette" + side, c, 0.086, 0.083, 0.055, "cuir_use", "forearm" + side, axis=d2)
         x, y = frame(d2)
-        for k in range(9):
-            a = 2 * math.pi * k / 9
-            stud(f"clou_manchette{side}{k}", c + (x * math.cos(a) * 0.088 + y * math.sin(a) * 0.085), 0.0065,
+        a_out = math.pi if s > 0 else 0.0
+        for k in range(7):
+            a = a_out + math.radians(-75 + 25 * k) * s
+            stud(f"clou_manchette{side}{k}", c + (x * math.cos(a) * 0.088 + y * math.sin(a) * 0.085), 0.0062,
                  "forearm" + side)
+        a = a_out - math.radians(115) * s
+        pb = c + (x * math.cos(a) * 0.089 + y * math.sin(a) * 0.086) + d2 * 0.012
+        loft(f"pression{side}", [(pb + Vector((0, -0.003, 0)) + Vector((0.0068 * math.cos(t), 0, 0.0068 * math.sin(t))),
+                                  0.0018, 0.0018) for t in [2 * math.pi * k / 10 for k in range(11)]],
+             "argent", "forearm" + side, segs=5)
         # avant-bras nu, musclé
         loft("avant_bras" + side, [(el, 0.062, 0.060), (el.lerp(wr, 0.35), 0.066, 0.059),
                                    (el.lerp(wr, 0.8), 0.052, 0.047), (wr, 0.046, 0.043)],
@@ -600,18 +666,18 @@ def build_hand(s, wr, d):
         dirv = d.copy()
         pts = [p]
         for seg in L:
-            dirv = (dirv - n * 0.42).normalized()
+            dirv = (dirv + n * 0.42).normalized()  # les doigts se replient vers la paume
             p = p + dirv * seg
             pts.append(p)
         loft(f"doigt{fi}_gant{side}", [(pts[0], r + 0.002, r + 0.002), (pts[0].lerp(pts[1], 0.55), r + 0.002, r + 0.002)],
              "cuir", bone, segs=8, ref=w)
         loft(f"doigt{fi}{side}", [(pts[0].lerp(pts[1], 0.3), r, r), (pts[1], r, r), (pts[2], r * 0.95, r * 0.95),
                                   (pts[3], r * 0.85, r * 0.85)], "peau", bone, segs=8, ref=w)
-    # pouce
-    p0 = wr + d * 0.035 + w * 0.045 - n * 0.012
-    p1 = p0 + (d * 0.5 + w * 0.7 - n * 0.3).normalized() * 0.034
-    p2 = p1 + (d * 0.8 + w * 0.3 - n * 0.45).normalized() * 0.029
-    p3 = p2 + (d * 0.9 - n * 0.45).normalized() * 0.022
+    # pouce, côté paume : main gauche en +X, main droite en -X (chiralité correcte)
+    p0 = wr + d * 0.035 + w * 0.045 + n * 0.012
+    p1 = p0 + (d * 0.5 + w * 0.7 + n * 0.3).normalized() * 0.034
+    p2 = p1 + (d * 0.8 + w * 0.3 + n * 0.45).normalized() * 0.029
+    p3 = p2 + (d * 0.9 + n * 0.45).normalized() * 0.022
     loft("pouce_gant" + side, [(p0, 0.017, 0.017), (p0.lerp(p1, 0.6), 0.016, 0.016)], "cuir", bone, segs=8)
     loft("pouce" + side, [(p0.lerp(p1, 0.4), 0.015, 0.015), (p1, 0.015, 0.015), (p2, 0.0135, 0.0135),
                           (p3, 0.012, 0.012)], "peau", bone, segs=8)
@@ -623,7 +689,10 @@ def build_hand(s, wr, d):
 
 
 # ---------------------------------------------------------------- jambes et bottes
-HEX = [(0.0, 0.118), (0.088, 0.064), (0.088, -0.05), (0.0, -0.108), (-0.088, -0.05), (-0.088, 0.064)]
+# genouillère en écusson : haut légèrement bombé, plus large au tiers supérieur, pointe en bas
+# (15,7 x 21,7 cm sur la planche)
+HEX = [(-0.058, 0.103), (0.0, 0.109), (0.058, 0.103), (0.077, 0.072), (0.078, 0.018), (0.036, -0.05), (0.0, -0.108),
+       (-0.036, -0.05), (-0.078, 0.018), (-0.077, 0.072)]
 
 
 def build_legs():
@@ -636,10 +705,12 @@ def build_legs():
         loft("jambe" + side, [(knee, 0.080, 0.083), (leg_at(s, 0.44), 0.078, 0.080), (leg_at(s, 0.30), 0.068, 0.07)],
              "cuir", "shin" + side, segs=16)
         # genouillère hexagonale à rebord
-        plate("genouillere" + side, knee + Vector((0, -0.082, 0.02)), (0, -1, 0.08), (0, 0, 1), HEX, "metal",
-              "shin" + side, bulge=0.028, rim=0.012, curv=4.0, rim_m="metal_bord")
-        band("genou_sangle_h" + side, knee + Vector((0, 0.004, 0.085)), 0.086, 0.089, 0.018, "cuir_use", "thigh" + side)
-        band("genou_sangle_b" + side, knee + Vector((0, 0.004, -0.07)), 0.083, 0.086, 0.018, "cuir_use", "shin" + side)
+        plate("genouillere" + side, knee + Vector((0, -0.098, 0.014)), (0, -1, -0.06), (0, 0, 1), HEX, "metal",
+              "shin" + side, bulge=0.042, rim=0.015, curv=4.0, rim_m="metal_bord", thick=0.02, facet=True)
+        # sangle marron derrière la genouillère, rivet sur le côté extérieur
+        cs = knee + Vector((0, 0.006, -0.004))
+        band("genou_sangle" + side, cs, 0.084, 0.087, 0.02, "sangle_botte", "thigh" + side)
+        stud("genou_rivet" + side, cs + Vector((0.085 * s, 0.0, 0)), 0.0055, "thigh" + side)
         build_boot(s)
 
 
@@ -648,51 +719,81 @@ def build_boot(s):
     hip, knee, ankle = leg_points(s)
     fb = "foot" + side
     sb = "shin" + side
-    top = 0.40
-    loft("tige_botte" + side, [(leg_at(s, 0.09), 0.062, 0.070), (leg_at(s, 0.20), 0.064, 0.070),
-                               (leg_at(s, 0.33), 0.070, 0.074), (leg_at(s, top), 0.076, 0.079)],
-         "cuir", sb, segs=18, caps=(True, False))
-    # revers clouté à pointes sous le genou
-    c = leg_at(s, top + 0.005)
-    band("botte_revers" + side, c, 0.082, 0.085, 0.045, "cuir_use", sb, segs=18)
-    for k in range(11):
-        a = math.radians(-100 + 200 * k / 10) - math.pi / 2  # autour de l'avant
+    top = 0.42
+    loft("tige_botte" + side, [(leg_at(s, 0.09), 0.064, 0.072), (leg_at(s, 0.20), 0.070, 0.074),
+                               (leg_at(s, 0.33), 0.075, 0.077), (leg_at(s, top), 0.079, 0.080)],
+         "cuir", sb, segs=20, caps=(True, False))
+    # revers : large sangle marron, pyramides et clous ronds alternés devant, boucle côté extérieur,
+    # pointe côté intérieur
+    c = leg_at(s, 0.39)
+    band("botte_revers" + side, c, 0.086, 0.088, 0.066, "sangle_botte", sb, segs=24)
+    for k in range(5):
+        a = -math.pi / 2 + math.radians(-56 + 28 * k)
         dirv = Vector((math.cos(a), math.sin(a), 0))
-        spike(f"botte_pointe{k}" + side, c + Vector((dirv.x * 0.082, dirv.y * 0.085, 0)), dirv, 0.02, 0.0085, sb)
-    # sangle et boucle à mi-mollet
-    c = leg_at(s, 0.27)
-    band("botte_sangle" + side, c, 0.074, 0.078, 0.028, "cuir_use", sb, segs=18)
-    buckle("botte_boucle" + side, c + Vector((0.068 * s, -0.04, 0)), (s * 0.87, -0.5, 0), (0, 0, 1), 0.036,
-           0.034, 0.007, sb)
-    # pied (construit pointe vers -Y puis ouvert de FOOT_SPLAY)
+        p = c + Vector((dirv.x * 0.087, dirv.y * 0.089, 0))
+        if k % 2 == 0:
+            spike(f"botte_pyramide{k}" + side, p, dirv + Vector((0, 0, 0.25)), 0.02, 0.012, sb)
+        else:
+            stud(f"botte_clou{k}" + side, p, 0.0085, sb)
+    spike("botte_pointe" + side, c + Vector((-0.087 * s, -0.012, 0)), (-s, -0.15, 0.1), 0.026, 0.011, sb)
+    buckle("botte_boucle0" + side, c + Vector((0.09 * s, 0.01, 0)), (s, 0, 0), (0, 0, 1), 0.058, 0.07, 0.009, sb)
+    # sangle à mi-tige, grosse boucle côté extérieur
+    c = leg_at(s, 0.25)
+    band("botte_sangle" + side, c, 0.077, 0.079, 0.055, "sangle_botte", sb, segs=24)
+    buckle("botte_boucle1" + side, c + Vector((0.081 * s, 0.004, 0)), (s, 0, 0), (0, 0, 1), 0.052, 0.066, 0.009, sb)
+    stud("botte_rivet" + side, c + Vector((0.052 * s, -0.058, 0)), 0.006, sb)
+    # pied (construit pointe vers -Y puis ouvert de FOOT_SPLAY) : bout large et arrondi
     ax, ay = ankle.x, ankle.y
     F = [  # y local, z centre, demi-hauteur, demi-largeur
-        (0.070, 0.078, 0.060, 0.050),
-        (0.020, 0.082, 0.078, 0.058),
-        (-0.050, 0.070, 0.070, 0.062),
-        (-0.130, 0.055, 0.052, 0.062),
-        (-0.200, 0.050, 0.040, 0.054),
-        (-0.242, 0.053, 0.026, 0.038),
-        (-0.258, 0.055, 0.008, 0.012),
+        (0.075, 0.085, 0.062, 0.050),
+        (0.030, 0.090, 0.080, 0.060),
+        (-0.040, 0.088, 0.064, 0.066),  # cambrure dégagée entre talon et semelle
+        (-0.110, 0.070, 0.058, 0.068),
+        (-0.170, 0.060, 0.045, 0.068),
+        (-0.215, 0.057, 0.039, 0.065),
+        (-0.248, 0.054, 0.031, 0.055),
+        (-0.268, 0.051, 0.021, 0.041),
+        (-0.279, 0.049, 0.009, 0.021),
     ]
-    parts = [loft("pied" + side, [((ax, ay + ly, zc), h, w) for ly, zc, h, w in F], "cuir", fb, segs=16, p=2.3)]
-    parts.append(box("semelle" + side, (ax, ay - 0.095, 0.013), (0.12, 0.31, 0.026), "cuir_use", fb))
-    parts.append(box("talon" + side, (ax, ay + 0.042, 0.035), (0.09, 0.07, 0.05), "cuir_use", fb))
-    parts.append(ellipsoid("embout" + side, (ax, ay - 0.21, 0.052), (0.054, 0.055, 0.044), "metal", fb, 12, 8))
-    parts.append(spike("pointe_bout_ext" + side, (ax + 0.046 * s, ay - 0.205, 0.055), (s, -0.45, 0.25), 0.045, 0.014, fb))
-    parts.append(spike("pointe_bout" + side, (ax + 0.012 * s, ay - 0.252, 0.058), (0.25 * s, -1, 0.35), 0.042, 0.013, fb))
-    parts.append(spike("pointe_bout_int" + side, (ax - 0.042 * s, ay - 0.21, 0.055), (-s, -0.5, 0.25), 0.03, 0.011, fb))
-    parts.append(spike("eperon" + side, (ax, ay + 0.08, 0.055), (0, 1, 0.05), 0.035, 0.012, fb))
-    # sangle de cheville en biais, à pointes
-    ca = Vector((ax, ay - 0.005, 0.135))
-    axis = Vector((0, -0.45, 1)).normalized()
-    parts.append(band("cheville_sangle" + side, ca, 0.070, 0.078, 0.024, "cuir_use", fb, axis=axis, segs=16))
+    parts = [loft("pied" + side, [((ax, ay + ly, zc), h, w) for ly, zc, h, w in F], "cuir", fb, segs=20, p=2.6)]
+    # semelle épaisse qui suit le contour du pied, talon carré
+    S = [(-0.286, 0.012), (-0.279, 0.034), (-0.264, 0.051), (-0.236, 0.063), (-0.19, 0.071), (-0.12, 0.073),
+         (-0.05, 0.069), (-0.012, 0.062)]
+    parts.append(loft("semelle" + side, [((ax, ay + ly, 0.016), 0.016, w) for ly, w in S], "semelle", fb,
+                      segs=20, p=3.0))
+    parts.append(box("talon" + side, (ax, ay + 0.04, 0.029), (0.104, 0.09, 0.058), "semelle", fb))
+    # coque d'acier sur le bout, bord arrière clair, trois pointes et un clou
+    cap = [((ax, ay + ly, zc + 0.003), h + 0.007, w + 0.007) for ly, zc, h, w in F[4:]]
+    parts.append(loft("embout" + side, cap, "metal", fb, segs=20, p=2.6, caps=(False, True)))
+    parts.append(loft("embout_bord" + side, [(cap[0][0], cap[0][1] + 0.004, cap[0][2] + 0.004),
+                                             ((ax, ay - 0.182, 0.062), 0.051, 0.074)], "metal_bord", fb,
+                      segs=20, p=2.6, caps=(False, False)))
+    bvh = bvh_of(parts[-2])
+    for nm, p, d, ln, r in (("pointe_bout", (ax + 0.012 * s, ay - 0.262, 0.066), (0.3 * s, -1, 0.7), 0.05, 0.016),
+                            ("pointe_bout_ext", (ax + 0.052 * s, ay - 0.215, 0.058), (s, -0.3, 0.12), 0.056, 0.017),
+                            ("pointe_bout_int", (ax - 0.052 * s, ay - 0.215, 0.058), (-s, -0.3, 0.12), 0.05, 0.016)):
+        parts.append(spike(nm + side, on_surface(bvh, p, d), d, ln, r, fb))
+    parts.append(stud("embout_clou" + side, on_surface(bvh, (ax, ay - 0.2, 0.1), (0, -0.3, 1), 0.001), 0.009, fb,
+                      m="metal_bord"))
+    parts.append(spike("eperon" + side, (ax, ay + 0.085, 0.07), (0, 1, 0.05), 0.035, 0.012, fb))
+    # sangle de cheville inclinée (haute sur le cou-de-pied et dehors, basse au talon et dedans), clous devant,
+    # boucle dehors
+    ca = Vector((ax, ay - 0.012, 0.14))
+    axis = Vector((-0.2 * s, 0.6, 1)).normalized()
+    parts.append(band("cheville_sangle" + side, ca, 0.074, 0.086, 0.028, "sangle_botte", fb, axis=axis, segs=20))
     x, y = frame(axis)
-    for k in range(6):
-        a = math.radians(-60 + 24 * k) if s > 0 else math.radians(180 + 60 - 24 * k)  # côté extérieur
+    for k in range(5):
+        a = -math.pi / 2 + math.radians(-50 + 25 * k)  # autour de l'avant
         dirv = (x * math.cos(a) + y * math.sin(a)).normalized()
-        parts.append(spike(f"cheville_pointe{k}" + side, ca + x * math.cos(a) * 0.07 + y * math.sin(a) * 0.078, dirv,
-                           0.018, 0.0075, fb))
+        pt = ca + x * math.cos(a) * 0.075 + y * math.sin(a) * 0.087
+        if k % 2 == 0:
+            parts.append(spike(f"cheville_pyramide{k}" + side, pt, dirv + axis * 0.2, 0.012, 0.008, fb))
+        else:
+            parts.append(stud(f"cheville_clou{k}" + side, pt, 0.0062, fb))
+    a = -FOOT_SPLAY if s > 0 else math.pi + FOOT_SPLAY  # plein côté extérieur une fois le pied ouvert
+    pb = ca + x * math.cos(a) * 0.077 + y * math.sin(a) * 0.087
+    parts.append(buckle("cheville_boucle" + side, pb, x * math.cos(a) + y * math.sin(a), axis, 0.046, 0.044, 0.008,
+                        fb))
     R = Matrix.Rotation(FOOT_SPLAY * s, 3, "Z")
     for o in parts:
         xform(o, (ax, ay, 0), R)
@@ -702,28 +803,42 @@ def build_boot(s):
 def build_belt():
     loft("ceinture", [((0, 0.0, 0.961), 0.187, 0.148, 0.132), ((0, 0.0, 1.019), 0.187, 0.148, 0.132)], "sangle", "hips",
          segs=28, p=2.3, caps=(False, False))
-    n = 24
-    for k in range(n):
-        a = 2 * math.pi * (k + 0.5) / n
-        ca, sa = math.cos(a), math.sin(a)
-        px = spow(ca, 2 / 2.3) * 0.19
-        py = spow(sa, 2 / 2.3) * (0.151 if sa < 0 else 0.135)
-        if abs(px) < 0.06 and py < 0:
-            continue
-        stud(f"ceinture_clou{k}", (px, py, 0.99), 0.0075, "hips")
-    buckle("ceinture_boucle", (0, -0.153, 0.99), (0, -1, 0), (0, 0, 1), 0.092, 0.066, 0.015, "hips", depth=0.01)
+    # deux rangées de clous, pointes aux hanches
+    n = 30
+    for row, z in enumerate((1.004, 0.976)):
+        for k in range(n):
+            a = 2 * math.pi * (k + 0.5 * row) / n
+            ca, sa = math.cos(a), math.sin(a)
+            px = spow(ca, 2 / 2.3) * 0.19
+            py = spow(sa, 2 / 2.3) * (0.151 if sa < 0 else 0.135)
+            if -0.085 < px < 0.075 and py < 0:
+                continue
+            stud(f"ceinture_clou{row}_{k}", (px, py, z), 0.0062, "hips")
+    for s in (1, -1):
+        for k, dz in enumerate((0.012, -0.012)):
+            spike(f"ceinture_pointe{k}" + ("G" if s > 0 else "D"), (0.186 * s, -0.035, 0.99 + dz), (s, -0.35, 0), 0.02,
+                  0.007, "hips")
+    # grosse boucle décentrée, passant d'argent et bout de ceinture qui dépasse
+    buckle("ceinture_boucle", (-0.023, -0.154, 0.99), (0, -1, 0), (0, 0, 1), 0.092, 0.074, 0.015, "hips",
+           depth=0.012)
+    box("ceinture_passant", (0.048, -0.153, 0.99), (0.013, 0.007, 0.066), "argent", "hips")
+    R = Matrix.Rotation(math.radians(-18), 3, "Z")
+    box("ceinture_bout", (0.098, -0.146, 0.99), (0.075, 0.007, 0.046), "sangle", "hips", rot=R)
+    loft("ceinture_bout_pointe", [((0.134, -0.134, 0.99), 0.023, 0.0035), ((0.15, -0.126, 0.99), 0.004, 0.0035)],
+         "sangle", "hips", segs=4, smooth=False)
 
 
 def build_neck_gear():
     band("collier", (0, -0.004, 1.52), 0.070, 0.068, 0.032, "cuir", "neck", segs=18)
-    for k in range(14):
-        a = 2 * math.pi * k / 14
+    # clous ronds sur l'avant, petites pointes sur les côtés
+    for k in range(18):
+        a = 2 * math.pi * (k + 0.5) / 18
         dirv = Vector((math.cos(a), math.sin(a), 0))
         p = Vector((0, -0.004, 1.52)) + Vector((dirv.x * 0.071, dirv.y * 0.069, 0))
-        if k % 2:
-            spike(f"collier_pointe{k}", p, dirv, 0.016, 0.0065, "neck")
-        else:
-            stud(f"collier_clou{k}", p, 0.006, "neck")
+        if dirv.y < -0.55:
+            stud(f"collier_clou{k}", p, 0.0058, "neck")
+        elif dirv.y < 0.3:
+            spike(f"collier_pointe{k}", p, dirv, 0.014, 0.0058, "neck")
     # trois chaînes d'argent sur la poitrine
     for ci, (drop, spread) in enumerate(((0.05, 0.058), (0.092, 0.068), (0.135, 0.078))):
         n = 20 + ci * 5
@@ -735,7 +850,7 @@ def build_neck_gear():
             stud(f"chaine{ci}_{k}", (x, y, z), 0.0048, "chest")
     # médaillon : gemme rouge en losange
     stud("monture", (0, -0.136, 1.372), 0.012, "chest")
-    loft("gemme", [((0, -0.145, 1.402), 0.001, 0.001), ((0, -0.148, 1.372), 0.019, 0.008),
+    loft("gemme", [((0, -0.145, 1.404), 0.001, 0.001), ((0, -0.149, 1.372), 0.021, 0.014),
                    ((0, -0.145, 1.338), 0.001, 0.001)], "gemme", "chest", segs=4, smooth=False)
 
 
@@ -743,31 +858,57 @@ def build_pauldrons():
     for s in (1, -1):
         side = ".L" if s > 0 else ".R"
         bone = "upper_arm" + side
-        R1 = Matrix.Rotation(math.radians(22 * s), 3, "Y")
-        R2 = Matrix.Rotation(math.radians(48 * s), 3, "Y")
-        c1 = Vector((0.29 * s, 0.0, 1.445))
-        c2 = Vector((0.345 * s, 0.0, 1.325))
-        # coque haute + lame basse (calottes épaisses), bord clair biseauté
-        cap = math.radians(100)
-        o = ellipsoid("epauliere" + side, c1, (0.138, 0.145, 0.095), "metal", bone, 24, 10, rot=R1, p=2.6, cap=cap)
+        R = Matrix.Rotation(math.radians(20 * s), 3, "Y")
+        c = Vector((0.272 * s, 0.0, 1.40))
+        k = 0.77  # pente du chevron vu de face (et de dos)
+
+        def region(w):
+            """Contour du dôme vu de face, rétréci de w : bord intérieur vertical le long du col,
+            biais descendant puis bord horizontal au-dessus du bras."""
+            return [((0.178 * s + w * s, 0, 0), (s, 0, 0)), ((0, 0, 1.384 + w), (0, 0, 1)),
+                    ((0.178 * s, 0, 1.457 + w * math.hypot(1, k)), (k * s, 0, 1))]
+
+        def dome(name, m, e):
+            """Dôme grossi de e, incliné vers l'extérieur : vu de face, carré à sommet plat (haut bord intérieur
+            le long du col) ; de profil, cloche basse à flancs obliques."""
+            secs = []
+            for i in range(17):
+                t = -0.3 + 1.3 * math.sin(math.pi / 2 * i / 16)
+                fx = 1.0 if t <= 0 else max((1 - t ** 3) ** 0.5, 0.03)
+                fy = 1.0 if t <= 0 else max((1 - t ** 1.6) ** 0.5, 0.03)
+                secs.append(((c.x, c.y, c.z + t * (0.172 + e)), (0.13 + e) * fx, (0.162 + e) * fy))
+            o = loft(name, secs, m, bone, segs=40, p=2.4, caps=(False, True))
+            xform(o, c, R)
+            return o
+
+        def lame(name, m, e):
+            """Lame basse : tronc de cône évasé vers le bas, sous le dôme."""
+            secs = [((c.x + 0.012 * s, c.y, c.z + dz), (0.125 + e) * f, (0.15 + e) * f)
+                    for dz, f in ((-0.11, 1.12), (-0.07, 1.06), (-0.03, 0.99), (0.01, 0.92))]
+            o = loft(name, secs, m, bone, segs=40, p=2.4, caps=(False, False))
+            xform(o, c, R)
+            return o
+
+        # dôme (coque épaisse) et rebord clair biseauté qui le borde
+        o = clip(dome("epauliere" + side, "metal", 0.0), region(0))
+        solidify(o, 0.016, offset=-1.0)
+        bvh = bvh_of(o)
+        rim = dome("epauliere_bord" + side, "metal_bord", 0.006)
+        clip_band(rim, region(-0.005), region(0.026))
+        solidify(rim, 0.024, offset=-1.0)
+        # lame inférieure évasée, bord supérieur clair
+        o = clip(lame("epauliere_lame" + side, "metal", 0.0),
+                 [((0.27 * s, 0, 0), (s, 0, 0)), ((0, 0, 1.33), (0, 0, 1)), ((0, 0, 1.392), (0, 0, -1))])
+        solidify(o, 0.013, offset=-1.0)
+        o = clip(lame("epauliere_lame_bord" + side, "metal_bord", 0.005),
+                 [((0.266 * s, 0, 0), (s, 0, 0)), ((0, 0, 1.362), (0, 0, 1)), ((0, 0, 1.392), (0, 0, -1))])
         solidify(o, 0.018, offset=-1.0)
-        band("epauliere_bord" + side, c1 + R1 @ Vector((0, 0, -0.02)), 0.142, 0.149, 0.02, "metal_bord", bone,
-             axis=R1 @ Vector((0, 0, 1)), segs=24, p=2.6)
-        o = ellipsoid("epauliere_lame" + side, c2, (0.095, 0.142, 0.07), "metal", bone, 24, 8, rot=R2, p=2.2,
-                      cap=cap)
-        solidify(o, 0.014, offset=-1.0)
-        band("epauliere_lame_bord" + side, c2 + R2 @ Vector((0, 0, -0.014)), 0.099, 0.146, 0.016, "metal_bord",
-             bone, axis=R2 @ Vector((0, 0, 1)), segs=24, p=2.2)
-        # pointes : une dressée, une vers l'extérieur ; cônes sombres devant et derrière
-        spike("pointe_haut" + side, (0.275 * s, 0.0, 1.53), (0.18 * s, 0, 1), 0.115, 0.034, bone)
-        spike("pointe_ext" + side, (0.37 * s, 0.0, 1.485), (s, 0, 0.65), 0.10, 0.032, bone)
-        for fy in (-1, 1):
-            spike(f"pointe_face{'A' if fy < 0 else 'D'}{side}", (0.30 * s, 0.13 * fy, 1.45), (0.25 * s, fy, 0.35),
-                  0.05, 0.026, bone, m="metal_bord")
-        for k, ph in enumerate((-60, -90, -120, 60, 90, 120)):
-            a = math.radians(ph)
-            p = c1 + R1 @ Vector((0.128 * math.cos(a), 0.14 * math.sin(a), 0.005))
-            stud(f"rivet{k}" + side, p, 0.0075, bone)
+        # pointes : dressée, vers l'extérieur, vers l'avant et vers l'arrière (cônes sur les faces)
+        for nm, p, d, ln, r in (("pointe_haut", (0.282 * s, 0.0, 1.5), (0.25 * s, 0, 1), 0.115, 0.027),
+                                ("pointe_ext", (0.345 * s, 0.0, 1.49), (1.3 * s, 0, 1), 0.112, 0.028),
+                                ("pointe_faceA", (0.268 * s, -0.15, 1.45), (0.12 * s, -1, 0.75), 0.08, 0.025),
+                                ("pointe_faceD", (0.268 * s, 0.15, 1.45), (0.12 * s, 1, 0.75), 0.08, 0.025)):
+            spike(nm + side, on_surface(bvh, p, d), d, ln, r, bone)
 
 
 def build_cape():
@@ -808,24 +949,39 @@ def build_straps(cape):
     for target, fy, label in ((LISSE, -1, "torse"), (cape, 1, "dos")):
         bvh = bvh_of(target)
         for s in (1, -1):
-            a = Vector((0.22 * s, 0.3 * fy, 1.41))
-            b = Vector((-0.20 * s, 0.3 * fy, 1.05))
+            # croisement à 1,25 m devant (1,21 m dans le dos), boucle sous l'épaulière, sortie sur le flanc à 1,13 m
+            if fy < 0:
+                ctrl = [(0.22 * s, -0.3, 1.40), (-0.17 * s, -0.3, 1.132), (-0.222 * s, -0.12, 1.114),
+                        (-0.236 * s, 0.0, 1.108)]
+            else:
+                ctrl = [(0.22 * s, 0.3, 1.39), (-0.175 * s, 0.3, 1.134), (-0.24 * s, 0.14, 1.112)]
+            ctrl = [Vector(c) for c in ctrl]
+            a, b = ctrl[0], ctrl[1]  # partie droite (boucle, trous)
             d = (b - a).normalized()
-            side = Vector((0, fy, 0)).cross(d).normalized()
+            pts = []
+            for c0, c1 in zip(ctrl, ctrl[1:]):
+                k = max(2, int((c1 - c0).length / 0.02))
+                pts += [c0.lerp(c1, i / k) for i in range(k)]
+            pts.append(ctrl[-1])
             verts, faces = [], []
-            n = 26
-            for i in range(n + 1):
-                p = a.lerp(b, i / n)
-                verts += [p - side * 0.028, p + side * 0.028]
-            for i in range(n):
+            for i, p in enumerate(pts):
+                t = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
+                side = (Vector((0, 0, 1)) - t * t.z).normalized()  # largeur de la sangle ⟂ au trajet
+                verts += [p - side * 0.023, p + side * 0.023]
+            for i in range(len(pts) - 1):
                 faces.append((2 * i, 2 * i + 1, 2 * i + 3, 2 * i + 2))
             o = add(sname("sangle_" + label, s), verts, faces, "sangle", "chest")
             shrink(o, target, 0.011)
             solidify(o, 0.01)
             # grosse boucle carrée en haut de la bandoulière
-            pb = a.lerp(b, 0.2)
-            loc, nrm = snap(bvh, pb, 0.022)
-            buckle(sname("sangle_boucle_" + label, s), loc, nrm, -d, 0.056, 0.052, 0.011, "chest", depth=0.009)
+            pb = a.lerp(b, 0.16)
+            loc, nrm = snap(bvh, pb, 0.024)
+            buckle(sname("sangle_boucle_" + label, s), loc, nrm, -d, 0.068, 0.064, 0.012, "chest", depth=0.01)
+            # trous de la sangle, sous la boucle et vers le croisement
+            if fy < 0:
+                for k, t in enumerate((0.24, 0.3, 0.36, 0.5)):
+                    loc, nrm = snap(bvh, a.lerp(b, t), 0.0165)
+                    stud(sname(f"sangle_trou{k}_", s), loc, 0.0042, "chest", m="trou")
     bpy.data.objects.remove(LISSE, do_unlink=True)
 
 
@@ -835,9 +991,10 @@ HAIR = [  # z, cy, rx, ry_avant, ry_dos  (volume de base en cloche ; les mèches
     (1.870, 0.010, 0.050, 0.060, 0.065),
     (1.848, 0.005, 0.078, 0.090, 0.118),
     (1.825, 0.000, 0.100, 0.100, 0.145),
-    (1.795, 0.000, 0.116, 0.095, 0.162),
-    (1.775, 0.005, 0.126, 0.082, 0.172),
-    (1.750, 0.020, 0.140, 0.040, 0.182),
+    (1.795, 0.000, 0.116, 0.100, 0.162),
+    (1.775, 0.000, 0.126, 0.101, 0.172),
+    (1.760, 0.006, 0.136, 0.098, 0.178),
+    (1.742, 0.020, 0.146, 0.035, 0.184),
     (1.710, 0.035, 0.158, 0.012, 0.190),
     (1.660, 0.045, 0.180, 0.000, 0.195),
     (1.610, 0.055, 0.205, 0.000, 0.195),
@@ -870,16 +1027,72 @@ def hair_env(phi, z):
     return Vector((math.sin(phi) * rx + hair_dx(z), cy + c * (ryb if c >= 0 else ryf), z))
 
 
+def env_frame(phi, z):
+    """Point de l'enveloppe et normale sortante (différences finies)."""
+    p = hair_env(phi, z)
+    n = (hair_env(phi + 1e-3, z) - hair_env(phi - 1e-3, z)).cross(hair_env(phi, z + 1e-3) - hair_env(phi, z - 1e-3))
+    radial = Vector((math.sin(phi), math.cos(phi), 0))
+    if n.length < 1e-9:
+        return p, radial
+    n.normalize()
+    return p, (n if n.dot(radial) >= 0 else -n)
+
+
+def hair_strip(name, phi_c, z0, z1, half, height, amp, waves, ph, curl, lift=0.0, nz=44, nu=8):
+    """Mèche en relief posée sur l'enveloppe : section en dôme (bords au ras de l'enveloppe), trajet en S,
+    pointe effilée qui part sur le côté (curl, en radians) et se décolle."""
+    verts, faces = [], []
+    for j in range(nz + 1):
+        t = j / nz
+        z = z0 + (z1 - z0) * t
+        pc = phi_c + amp * math.sin(2 * math.pi * waves * t + ph)
+        k = max(0.0, (t - 0.72) / 0.28)
+        pc += curl * k * k
+        taper = min(1.0, 0.45 + t / 0.1) * (1 - k ** 1.6)
+        for i in range(nu + 1):
+            u = -1 + 2 * i / nu
+            p, n = env_frame(pc + u * half * max(taper, 0.03), z)
+            r = lift + height * (0.25 + 0.75 * taper) * (1 - u * u) ** 0.6 + 0.02 * k * k
+            verts.append(p + n * r)
+    for j in range(nz):
+        for i in range(nu):
+            a = j * (nu + 1) + i
+            faces.append((a, a + 1, a + nu + 2, a + nu + 1))
+    o = add(name, verts, faces, "cheveux", "head")
+    solidify(o, 0.004, offset=-1.0, even=False)  # pointes dégénérées : pas d'épaisseur « égale »
+    return o
+
+
 def build_hair():
-    base = loft("cheveux", [((hair_dx(z), cy, z), rx, ryf, ryb) for z, cy, rx, ryf, ryb in HAIR], "cheveux_ombre", "head",
-                segs=32, p=2.0)
-    bvh = bvh_of(base)
+    # l'enveloppe HAIR guide les mèches ; le volume visible est en retrait dessous (ombre entre les mèches)
+    # et s'arrête au-dessus des pointes, qui pendent librement
+    env = loft("cheveux_env", [((hair_dx(z), cy, z), rx, ryf, ryb) for z, cy, rx, ryf, ryb in HAIR], "cheveux_ombre",
+               "head", segs=32, p=2.0)
+    bvh = bvh_of(env)
+    bpy.data.objects.remove(env, do_unlink=True)
+    # (plus étroit sous 1,62 m : ne déborde pas à côté du cou, vu de face)
+    rows = [((hair_dx(z), cy, z), rx - 0.016 - (0.05 if z < 1.62 else 0.0), max(ryf - 0.016, 0.0), ryb - 0.016)
+            for z, cy, rx, ryf, ryb in HAIR if z >= 1.42]
+    base = loft("cheveux", rows + [((0.0, 0.118, 1.40), 0.11, 0.0, 0.075)], "cheveux_ombre", "head", segs=32, p=2.0)
     rnd = random.Random(5)
     n_lock = [0]
 
-    def make_lock(raw, width, bone="head", curl=0.03, waves=1.5):
+    hb = bvh_of(bpy.data.objects["tete"])
+
+    def over(p):
+        """Posé sur la peau (+1,2 cm) sous 1,75 m, ailleurs sur ce qui est le plus à l'extérieur (peau ou
+        enveloppe) : l'enveloppe n'a pas de devant sous le front."""
+        b, nb = snap(hb, p)
+        b = b + nb * 0.012
+        if p.z < 1.75:
+            return b, nb
+        a, na = snap(bvh, p)
+        c = Vector((0, 0.0, p.z))
+        return (a, na) if (a - c).length >= (b - c).length else (b, nb)
+
+    def make_lock(raw, width, bone="head", curl=0.03, waves=1.5, snapper=None):
         n = len(raw)
-        snapped = [snap(bvh, p) for p in raw]
+        snapped = [snapper(p) if snapper else snap(bvh, p) for p in raw]
         locs = [l for l, _ in snapped]
         nr = [v for _, v in snapped]
         for _ in range(3):  # trajet et normales lissés : pas de dents de scie sur les facettes
@@ -890,8 +1103,8 @@ def build_hair():
             s = i / (n - 1)
             loc, nrm = locs[i], nr[i]
             # grosse boucle : renflements réguliers, pointe effilée
-            w = width * min(1.0, 0.6 + 1.8 * s) * (1 - s ** 2.5) * (1 + 0.16 * math.cos(4 * math.pi * waves * s)) + 0.003
-            th = max(0.007, 0.5 * w)
+            w = width * min(1.0, 0.6 + 1.8 * s) * (1 - s ** 2.5) * (1 + 0.08 * math.cos(4 * math.pi * waves * s)) + 0.003
+            th = max(0.008, 0.6 * w)
             lift = th * 0.55
             if s > 0.75:  # la pointe s'enroule vers l'extérieur
                 k = (s - 0.75) / 0.25
@@ -909,29 +1122,49 @@ def build_hair():
                 for i in range(n)]
 
     # grosses boucles en S du dos et des côtés, pointes sous les épaules
+    # dos : mèches en relief jointives, ondulées en S, pointes recourbées sur le côté
     N = 11
+    sp = math.radians(210 / (N - 1))
     for i in range(N):
-        phi0 = math.radians(-112 + 224 * i / (N - 1))
+        phi0 = math.radians(-105 + 210 * i / (N - 1))
         side = abs(phi0) / math.radians(118)
         z1 = 1.305 + 0.25 * side ** 1.6 + rnd.uniform(-0.01, 0.02)
-        make_lock(path(phi0, 1.86, z1, math.radians(14), 2.2, ph=rnd.uniform(0, 6.3)), 0.064, curl=0.05, waves=2.2)
-    # seconde couche, plus courte, décalée d'une demi-mèche
+        curl = sp * (1.0 if i % 2 else -1.0) if abs(phi0) < math.radians(70) else -sp * math.copysign(1, phi0)
+        hair_strip(f"meche_dos{i}", phi0, 1.875, z1, sp * 0.58, 0.028, sp * 0.55, 2.6, 0.4 + rnd.uniform(-0.3, 0.3),
+                   curl)
+    # seconde couche par-dessus, plus courte, décalée d'une demi-mèche
     for i in range(N - 1):
-        phi0 = math.radians(-101 + 202 * i / (N - 2))
+        phi0 = math.radians(-105 + 210 * (i + 0.5) / (N - 1))
         side = abs(phi0) / math.radians(118)
-        z1 = 1.47 + 0.14 * side ** 2 + rnd.uniform(-0.02, 0.04)
-        make_lock(path(phi0, 1.79, z1, math.radians(15), 1.8, ph=rnd.uniform(0, 6.3)), 0.06, curl=0.045, waves=1.8)
+        z1 = 1.47 + 0.12 * side ** 2 + rnd.uniform(-0.03, 0.05)
+        curl = sp * (1.0 if i % 2 else -1.0) if abs(phi0) < math.radians(70) else -sp * math.copysign(1, phi0)
+        hair_strip(f"meche_dos_b{i}", phi0, 1.83, z1, sp * 0.52, 0.025, sp * 0.55, 2.0, 0.4 + rnd.uniform(-0.3, 0.3),
+                   curl, lift=0.016)
     # boucles qui encadrent le visage (tempes -> épaules), pointes relevées vers l'extérieur
     for s in (1, -1):
-        for k in range(3):
-            phi0 = s * math.radians(130 + 16 * k)
-            make_lock(path(phi0, 1.80, 1.54 + 0.025 * k, math.radians(8), 1.0, n=22, ph=k), 0.062, curl=0.05,
-                      waves=1.0)
+        for k in range(4):
+            phi0 = s * math.radians(112 + 9 * k)
+            make_lock(path(phi0, 1.80, 1.50 + 0.016 * k, math.radians(9), 1.4, n=24, ph=k), 0.052, curl=0.06,
+                      waves=1.4)
+    # rideaux : de la raie (un peu à gauche du personnage), les mèches passent au-dessus des tempes et tombent le
+    # long des joues, pointes relevées vers l'extérieur ; le front reste dégagé au milieu
+    part = 0.022
+    for s, reach in ((-1, 1.60), (1, 1.56)):
+        for k, (dx, dy) in enumerate(((0.0, 0.0), (0.026, 0.028), (0.05, 0.056))):
+            ctrl = [(part, -0.02 + dy * 0.5, 1.885), (part + s * (0.045 + dx * 0.6), -0.095 + dy, 1.855),
+                    (s * (0.07 + dx), -0.105 + dy, 1.79), (s * (0.09 + dx), -0.08 + dy, 1.73),
+                    (s * (0.097 + dx), -0.055 + dy, 1.67), (s * (0.10 + dx), -0.04 + dy, reach + 0.04 - k * 0.01),
+                    (s * (0.13 + dx), -0.03 + dy, reach - k * 0.01)]
+            make_lock(catmull(ctrl, 28), 0.032, curl=0.05, waves=1.2, snapper=over)
     # houppe : du front, grosses mèches qui montent et se rabattent, surtout vers la gauche du personnage
     for k, (x0, sw) in enumerate(((-0.06, -0.10), (-0.02, 0.12), (0.02, 0.16), (0.06, 0.17), (-0.085, -0.13))):
-        ctrl = [(x0, -0.10, 1.785), (x0 + sw * 0.25, -0.10, 1.85), (x0 + sw * 0.6, -0.04, 1.885),
+        ctrl = [(x0, -0.098, 1.782), (x0 + sw * 0.25, -0.10, 1.845), (x0 + sw * 0.6, -0.04, 1.885),
                 (x0 + sw * 0.9, 0.05, 1.865), (x0 + sw, 0.12, 1.79), (x0 + sw * 1.05, 0.16, 1.70)]
-        make_lock(catmull(ctrl, 26), 0.064, curl=0.0, waves=1.0)
+        make_lock(catmull(ctrl, 26), 0.05, curl=0.0, waves=1.0)
+    # pointe de cheveux au milieu du front (descend jusqu'à 1,752 m)
+    pk = [Vector(p) for p in ((0.0, -0.099, 1.795), (0.0, -0.103, 1.778), (0.002, -0.1045, 1.763), (0.004, -0.1045, 1.752))]
+    ribbon("meche_pointe", pk, [Vector((0, -1, 0.15)).normalized()] * 4, [0.03, 0.024, 0.013, 0.003],
+           [0.006, 0.006, 0.005, 0.003], "cheveux", "head", segs=8)
     return base
 
 

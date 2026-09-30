@@ -27,4 +27,12 @@ Les sangles de la planche ne sont pas modélisées.
 ## Dans le jeu (v0.1.12)
 - Remplace la Flying V procédurale pour tous les héros (`HeroModel._build_imported_guitar`).
 - Main gauche placée proportionnellement au manche (sillet à 0,385 m au lieu de 0,64 m).
+- v0.1.17 : main gauche au bout du manche (`HeroModel.FRET_AT` = 86 % de la jonction au sillet), main droite
+  qui gratte sur la caisse. Pour Riffald (`HeroAnimator`) : guitare agrandie ×1,3 comme ses mains
+  (`GUITAR_SCALE`) ; main droite entre le micro aigu et le chevalet (les micros d'une Flying V sont collés au
+  manche), poignet au-dessus des cordes ; main gauche sous le manche, doigts repliés sur la touche ; les deux
+  mains sont orientées explicitement (doigts, paume vers la table), d'après la construction de la main dans
+  Blender (`build_hand`).
+- Là où l'on ne joue pas (taverne hors du sous-sol, `Level.spells_allowed_at`) : guitare dans le dos, manche
+  vers le bas incliné à 45° vers la gauche du héros, cordes vers l'arrière (`HeroModel.set_guitar_slung`).
 - `MB_g_cordes` lumineux (plus vif pendant le solo), `MB_g_gemme` émissif.

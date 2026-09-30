@@ -17,8 +17,10 @@ const NO_OUTLINE := ["MB_oeil", "MB_iris", "MB_paupiere", "MB_sourcils", "MB_bou
 	"MB_cheveux_ombre"]
 ## Surfaces lumineuses (ne clignotent pas en rouge quand le héros est touché).
 const GLOWING := {"MB_gemme": [Color(1.0, 0.1, 0.08), 1.6]}
-## Teintes très claires assombries pour l'éclairage sombre du jeu (0 = inchangé).
-const DARKEN := {"MB_peau": 0.18, "MB_cheveux": 0.12, "MB_cheveux_ombre": 0.1, "MB_oeil": 0.15}
+## Teintes assombries pour l'éclairage du jeu (0 = inchangé) : peau et cheveux très clairs ; cuir et acier
+## (texture peinte, ombres comprises) que les projecteurs délavent en gris.
+const DARKEN := {"MB_peau": 0.18, "MB_cheveux": 0.12, "MB_cheveux_ombre": 0.1, "MB_oeil": 0.15, "MB_cuir": 0.3,
+	"MB_cuir_use": 0.25, "MB_metal": 0.3}
 
 var skeleton: Skeleton3D
 var flash_materials: Array[StandardMaterial3D] = []

@@ -32,6 +32,13 @@ const RIFFALD_MODEL := "res://assets/models/riffald/riffald.glb"
 const GUITAR_MODEL := "res://assets/models/guitare/guitare_heros.glb"
 ## Longueur du manche de la Flying V procédurale (sillet), pour placer la main gauche.
 const PROC_NUT := 0.64
+## Main gauche sur le bout du manche, près du sillet (fraction jonction → sillet) ; pendant le solo,
+## elle court entre SOLO_FRETS.
+const FRET_AT := 0.86
+const SOLO_FRETS := Vector2(0.5, 0.86)
+## Guitare portée dans le dos (là où l'on ne joue pas) : jonction manche/caisse au milieu du dos
+## (repère du torse), manche vers le bas incliné de 45° vers la gauche du héros, cordes vers l'arrière.
+const GUITAR_BACK_POS := Vector3(0.0, 0.3, -0.19)
 ## Animation « sleep » (allongé sur le dos) : rotation et décalage du modèle pour que le corps
 ## soit dans l'axe du lit, tête sur l'oreiller (-Z), dos sur le matelas (voir Hero.lie_down).
 const SLEEP_YAW := -1.97
@@ -74,6 +81,8 @@ var _anim: HeroAnimator
 var tired := false
 ## Rapport de longueur du manche de la guitare utilisée / Flying V procédurale.
 var _neck_scale := 1.0
+## Guitare dans le dos, bras libres (voir set_guitar_slung).
+var guitar_slung := false
 
 var _t := 0.0
 var _walk := 0.0 # 0 = immobile, 1 = marche (lissé)
@@ -121,6 +130,7 @@ func height() -> float:
 func _build() -> void:
 	_skin = null
 	_neck_scale = 1.0
+	guitar_slung = false
 	var race_id := str(appearance.get("race", "humain"))
 	var race := RaceDB.get_race(race_id)
 	var female: bool = appearance.get("sex", "m") == "f"
@@ -648,8 +658,9 @@ func _process(delta: float) -> void:
 # --- IK des bras et des mains ------------------------------------------------------------
 
 func _update_arms() -> void:
-	if _guitar == null:
-		# Sans guitare (PNJ) : bras qui balancent à l'opposé des jambes, mains sur la table assis.
+	if _guitar == null or guitar_slung:
+		# Sans guitare (PNJ) ou guitare dans le dos : bras qui balancent à l'opposé des jambes,
+		# mains sur la table assis.
 		var swing := sin(_phase) * lerpf(0.1, 0.2, clampf((move_speed - 1.5) / 4.0, 0.0, 1.0)) * _walk
 		var l := Vector3(-0.27, 0.02, 0.03 - swing)
 		var r := Vector3(0.27, 0.02, 0.03 + swing)
@@ -667,12 +678,15 @@ func _update_arms() -> void:
 		_curl_fingers(_fingers_r, relaxed)
 		return
 	var gt := _guitar.transform
-	var fret := 0.42 * _neck_scale
+	var nut := PROC_NUT * _neck_scale
+	var fret := FRET_AT * nut # main gauche au bout du manche, près du sillet
 	if _soloing:
-		fret = (0.3 + 0.18 * (0.5 + 0.5 * sin(_t * 5.0))) * _neck_scale # la main gauche court sur le manche
+		fret = lerpf(SOLO_FRETS.x, SOLO_FRETS.y, 0.5 + 0.5 * sin(_t * 5.0)) * nut # elle court sur le manche
 	# Main gauche (pivots « _r », côté +X) derrière le manche : pouce dessous, doigts par-dessus la touche.
 	var left_target := gt * Vector3(0.02, fret, -0.025)
-	var pick := gt * Vector3(0.0, -0.1 + _strum * 0.06, 0.08 + _strum * 0.03)
+	# Main droite au centre de la caisse, entre les micros ; le poignet un peu au-dessus (vers le bord
+	# haut de la caisse) pour que les doigts et le médiator tombent sur les cordes.
+	var pick := gt * Vector3(-0.035, -0.1 + _strum * 0.06, 0.08 + _strum * 0.03)
 	var right_target := pick.lerp(gt * Vector3(0, 0.3 * _neck_scale, -0.02), _smash)
 	_solve_arm(_upper_r, _fore_r, left_target, Vector3(1.0, -0.4, -0.3))
 	_solve_arm(_upper_l, _fore_l, right_target, Vector3(-1.0, -0.6, -0.4))
@@ -732,6 +746,8 @@ func _basis_pointing(v: Vector3) -> Basis:
 
 ## Coup de guitare : empoignée par le manche, levée au-dessus de l'épaule puis abattue.
 func swing() -> void:
+	if guitar_slung:
+		return
 	if _anim != null:
 		if not _soloing:
 			_anim.attack()
@@ -754,7 +770,7 @@ func swing() -> void:
 
 ## Accord rageur (lancement de sort) : la guitare se relève, grattage appuyé.
 func strum() -> void:
-	if _soloing or _guitar == null:
+	if _soloing or _guitar == null or guitar_slung:
 		return
 	if _anim != null:
 		# Grattage appuyé (IK de la main droite) et hochement de tête.
@@ -782,6 +798,32 @@ func solo_pose(active: bool) -> void:
 	var tw := create_tween()
 	tw.tween_property(_guitar, "rotation", GUITAR_SOLO if active else GUITAR_REST, 0.15)
 	_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else Color(0.55, 0.85, 1.0)
+
+
+## Guitare dans le dos (taverne hors du sous-sol) ou reprise en main. Avec les animations importées,
+## c'est HeroAnimator qui la place (il lit `guitar_slung`).
+func set_guitar_slung(value: bool) -> void:
+	if value == guitar_slung or _guitar == null:
+		return
+	guitar_slung = value
+	if _anim != null:
+		return
+	_soloing = false
+	_smash = 0.0
+	if value:
+		_guitar.position = GUITAR_BACK_POS
+		_guitar.quaternion = back_basis().get_rotation_quaternion()
+	else:
+		_guitar.position = GUITAR_REST_POS
+		_guitar.rotation = GUITAR_REST
+
+
+## Orientation de la guitare portée dans le dos (repère du modèle : +X à gauche du héros, +Z devant) :
+## manche (+Y de la guitare) vers le bas et la gauche à 45°, cordes (+Z de la guitare) vers l'arrière.
+static func back_basis() -> Basis:
+	var y := Vector3(1.0, -1.0, 0.0).normalized()
+	var z := Vector3(0.0, 0.0, -1.0)
+	return Basis(y.cross(z), y, z)
 
 
 func flash(color: Color = Color(1.0, 0.1, 0.05)) -> void:
@@ -814,7 +856,7 @@ func knee_slide(duration: float) -> void:
 		return
 	_pose = "slide"
 	_pose_time = duration
-	if _guitar != null:
+	if _guitar != null and not guitar_slung:
 		create_tween().tween_property(_guitar, "rotation", GUITAR_SOLO, 0.08)
 
 
@@ -867,7 +909,7 @@ func _apply_special_pose(delta: float) -> void:
 	_pose_time -= delta
 	if _pose_time <= 0.0:
 		_pose = ""
-		if _guitar != null and not _soloing and not _busy:
+		if _guitar != null and not _soloing and not _busy and not guitar_slung:
 			create_tween().tween_property(_guitar, "rotation", GUITAR_REST, 0.2)
 		return
 	match _pose:

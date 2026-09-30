@@ -470,6 +470,14 @@ func _test_new_features() -> void:
 		"recharge de la glissade : 20 s")
 	hero.dodged()
 	_check(hero.model._pose == "hop", "esquive passive : saut sur une jambe façon Angus Young")
+	# Pas de musique dans la salle commune : sorts et coups de guitare refusés, guitare dans le dos.
+	GameState.mana = GameState.max_mana()
+	hero.cooldowns["wave"] = 0.0
+	hero.cast_wave()
+	hero.melee()
+	_check(not hero.spells_allowed and hero.model.guitar_slung and GameState.mana >= GameState.max_mana() - 0.01
+		and float(hero.cooldowns["wave"]) == 0.0 and float(hero.cooldowns["attack"]) == 0.0,
+		"salle commune : ni sorts ni coups de guitare, guitare dans le dos")
 	# Clients : jamais plus de 2 debout ; chaises déplacées.
 	var patrons: Array[Patron] = []
 	for c in tavern.get_children():
@@ -540,6 +548,14 @@ func _test_new_features() -> void:
 	GameState.mana = 5.0
 	var spent := GameState.spend_mana(40.0)
 	_check(spent and GameState.infinite_mana and GameState.mana >= GameState.max_mana() - 0.01, "sous-sol : décibels toujours au maximum")
+	# Au sous-sol, la guitare revient en main : main gauche au bout du manche (près du sillet),
+	# main droite au centre de la caisse (pivots « _r » = main gauche, côté +X).
+	var hm := hero.model
+	var neck_end := hm._guitar.global_transform * Vector3(0, HeroModel.PROC_NUT * hm._neck_scale, 0)
+	var body_mid := hm._guitar.global_transform * Vector3(0, -0.1, 0)
+	_check(hero.spells_allowed and not hm.guitar_slung and hm._hand_r.global_position.distance_to(neck_end) < 0.1
+		and hm._hand_l.global_position.distance_to(body_mid) < 0.12,
+		"sous-sol : guitare en main, main gauche au bout du manche, main droite au centre de la caisse")
 	# Réinitialisation des talents (l'Inconnue encapuchonnée).
 	GameState.talent_points = 3
 	GameState.learn_talent("ballade_reparatrice")
@@ -707,15 +723,19 @@ func _test_characters() -> void:
 	var anim := rig._anim
 	_check(anim != null and anim.tree.active and anim.lengths.size() >= 15 and anim.lengths.has("run") and anim.lengths.has("sleep"),
 		"Riffald : animations Mixamo (transférées dans Blender) jouées par un AnimationTree")
-	# IK après l'animation : la main gauche (os « hand.L ») est posée sur la case de la guitare.
+	# IK après l'animation : poignets à leur place (main gauche au bout du manche, main droite sur la
+	# caisse), paumes tournées vers la guitare, agrandie comme ses mains.
 	# La pose modifiée n'existe qu'au moment du rendu : on la lit au signal skeleton_updated.
 	await sk.skeleton_updated
 	var gt := anim._skel_to_model().affine_inverse() * rig._guitar.transform.orthonormalized()
-	var fret_target := gt * Vector3(0.02, 0.42 * rig._neck_scale, -0.025)
-	var hand_err := (sk.get_bone_global_pose(sk.find_bone("hand.L")).origin - fret_target).length()
-	_check(hand_err < 0.03, "Riffald : la main gauche reste sur le manche (écart %.3f m)" % hand_err)
-	var pick_err := (sk.get_bone_global_pose(sk.find_bone("hand.R")).origin - gt * (HeroAnimator.PICK + Vector3(0, rig._strum * 0.06, rig._strum * 0.03))).length()
-	_check(pick_err < 0.03, "Riffald : la main droite gratte les cordes (écart %.3f m)" % pick_err)
+	var wrists := anim.hand_targets(gt)
+	var hand_err := (sk.get_bone_global_pose(sk.find_bone("hand.L")).origin - (wrists["L"] as Vector3)).length()
+	_check(hand_err < 0.03, "Riffald : la main gauche tient le bout du manche, près du sillet (écart %.3f m)" % hand_err)
+	var pick_err := (sk.get_bone_global_pose(sk.find_bone("hand.R")).origin - (wrists["R"] as Vector3)).length()
+	_check(pick_err < 0.03, "Riffald : la main droite gratte sur la caisse (écart %.3f m)" % pick_err)
+	var palms := minf(anim.palm_normal("L").dot(-gt.basis.z), anim.palm_normal("R").dot(-gt.basis.z))
+	_check(palms > 0.8 and rig._guitar.transform.basis.get_scale().x > 1.25,
+		"Riffald : paumes tournées vers la guitare (%.2f), guitare agrandie comme ses mains" % palms)
 	# Guitariste droitier : le manche part vers la gauche du héros (+X, le modèle regarde vers +Z).
 	_check(gt.basis.y.x > 0.5 and sk.get_bone_global_pose(sk.find_bone("hand.L")).origin.x > 0.0,
 		"Riffald : droitier, manche à gauche tenu par la main gauche")

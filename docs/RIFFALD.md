@@ -53,11 +53,38 @@ cheveux « Roux flamboyant ».
 - Proportions retenues : 1,80 m sous les cheveux (1,93 m crinière comprise), épaulières jusqu'à ±0,41 m,
   épaules à ±0,275 m, avant-bras nus sous des manches retroussées, grandes mains (bout des doigts vers 0,70 m),
   jambes écartées (chevilles à ±0,20 m), pieds ouverts de 18°.
-- Export : `assets/models/riffald/riffald.glb` — un maillage unique (~23 k faces, 17 matériaux),
-  armature de 17 os nommés comme les pivots de HeroModel (`hips`, `spine`, `chest`, `neck`, `head`,
-  `upper_arm/forearm/hand.L/R`, `thigh/shin/foot.L/R`), pose A, regarde vers +Z dans Godot.
+- Export : `assets/models/riffald/riffald.glb` (~7 Mo) — un maillage unique (~40 k faces, 21 matériaux) avec son
+  atlas peint en JPEG (Godot l'extrait en `riffald_riffald_v3_couleur.jpg`), armature de 17 os nommés comme les
+  pivots de HeroModel (`hips`, `spine`, `chest`, `neck`, `head`, `upper_arm/forearm/hand.L/R`,
+  `thigh/shin/foot.L/R`), pose A, regarde vers +Z dans Godot, et les 16 animations Mixamo.
+- Mise à jour du jeu : `build_all()`, `build_rig()`, `texture_all(4096, 8)` dans Blender, enregistrer
+  `art/riffald/riffald.blend`, puis `blender --background art/riffald/riffald.blend --python
+  art/riffald/retarget_mixamo.py -- export` (transfert des animations et export du glb).
 - Dans le jeu (v0.1.12) : choisi avec « Héros : Riffald (prédéfini) ». `RiggedSkin` (scripts/actors/rigged_skin.gd)
   fait suivre ce squelette au squelette procédural invisible de HeroModel : buste et tête en rotation relative,
   bras et jambes en IK à deux os avec les longueurs du modèle (mains sur la guitare, pieds au sol). Côtés :
-  « _l » de HeroModel (côté -X) = os « .R ». Matières mates sans reflet toon, peau et cheveux un peu assombris.
+  « _l » de HeroModel (côté -X) = os « .R ». Matières mates sans reflet toon (dont l'acier sombre, `MB_metal` étant
+  presque non métallique) ; peau et cheveux un peu assombris, cuir et acier davantage (les projecteurs du jeu
+  les délavaient en gris).
 - Reste à faire : os des doigts, cape et mèches animées (os secondaires).
+
+## Version 3 (dans le jeu depuis la v0.1.17)
+- `art/riffald/build_riffald.py` construit la v3 (~40 k faces, 21 matériaux, mêmes 17 os que la v2).
+- Mains : gauche et droite remises à l'endroit (pouce côté intérieur, doigts repliés vers la paume).
+- Épaulières : dôme découpé en chevron vu de face (bord intérieur vertical le long du col, biais puis bord
+  horizontal), rebord clair biseauté, lame basse évasée, quatre pointes (dressée, extérieure, avant, arrière).
+- Genouillères en écusson à facettes ; bottes : revers clouté (pyramides et clous) à boucle, sangle à mi-tige,
+  sangle de cheville inclinée, bout ferré à trois pointes, semelle épaisse et talon.
+- Crinière : mèches en relief jointives ondulées en S dans le dos (deux couches), pointes recourbées ;
+  mèches autour du visage et houppe balayée vers la gauche du personnage.
+- Acier bleuté sombre (`MB_metal`), bords clairs (`MB_metal_bord`), semelles `MB_semelle`.
+- Devant de la crinière : raie un peu à gauche du personnage, trois mèches de chaque côté qui encadrent le front
+  et tombent le long des joues ; visage un peu affiné (pommettes à ±8,7 cm), sourcils plus sombres.
+- Textures peintes : `art/riffald/texture_riffald.py` (après `build_all()` et `build_rig()` :
+  `texture_all(4096, 8)`, puis `export_textured(chemin)`). Chaque matière a un shader procédural (cuir froissé
+  et rayé, sangles grainées, acier brossé et rayé, tissu plissé, peau, mèches striées) avec ombres : occlusion
+  ambiante, lumière douce venant du haut à droite du personnage, ombres colorées, arêtes usées claires, reflets
+  peints. Le tout est cuit (Cycles, passe EMIT, ~30 s en 4096) dans un atlas unique
+  `art/riffald/textures/riffald_v3_couleur.png` ; les matériaux gardent leurs noms `MB_*` et lisent l'atlas
+  en couleur de base (JPEG dans le glb, ~6 Mo). Les ombres étant peintes, un rendu mat ou toon suffit dans Godot.
+- Aperçu : `compare.py`, `shading("TEXTURE", "FLAT")` montre l'atlas seul.

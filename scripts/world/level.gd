@@ -51,6 +51,20 @@ func _exit_tree() -> void:
 	GameState.infinite_mana = false
 
 
+## Peut-on jouer (sorts, coups de guitare) à cet endroit ? Oui par défaut ; ailleurs, la guitare
+## est portée dans le dos (voir HeroModel.set_guitar_slung).
+func spells_allowed_at(_pos: Vector3) -> bool:
+	return true
+
+
+## Niveau qui contient `node`, ou null (écran de création de personnage...).
+static func of(node: Node) -> Level:
+	var n := node.get_parent()
+	while n != null and not (n is Level):
+		n = n.get_parent()
+	return n as Level
+
+
 ## Lieu et position à enregistrer dans une sauvegarde manuelle.
 func save_location() -> Dictionary:
 	var loc := {"scene": scene_file_path}

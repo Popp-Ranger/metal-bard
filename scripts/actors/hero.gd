@@ -28,6 +28,10 @@ var cooldowns := {"attack": 0.0, "dash": 0.0, "tuning": 0.0, "riff": 0.0, "wave"
 var riff_stack := 0
 var _riff_last := -100.0
 var radius := 0.35
+## Peut-on jouer ici ? Non dans la taverne hors du sous-sol : ni sorts ni coups de guitare,
+## guitare portée dans le dos (voir Level.spells_allowed_at).
+var spells_allowed := true
+var _blocked_notice := 0.0
 
 var _invuln := 0.0
 var _interact_target: Node3D
@@ -65,12 +69,33 @@ func _ready() -> void:
 	halo.shadow_enabled = false # ombres courtes : seule la lumière du dessus en projette
 	add_child(halo)
 	Events.solo_finished.connect(_on_solo_finished)
+	_update_zone()
+
+
+## Zone où l'on ne joue pas : guitare dans le dos (mise à jour à chaque image, escaliers compris).
+func _update_zone() -> void:
+	var level := Level.of(self)
+	spells_allowed = level == null or level.spells_allowed_at(global_position)
+	model.set_guitar_slung(not spells_allowed)
+
+
+## Sorts et coups de guitare : refusés (avec un message, pas plus d'une fois par seconde et demie)
+## là où l'on ne joue pas.
+func can_cast() -> bool:
+	if spells_allowed:
+		return true
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _blocked_notice > 1.5:
+		_blocked_notice = now
+		Events.notify("Pas de musique dans la taverne : descendez au sous-sol pour vous entraîner.", Events.COLOR_BAD)
+	return false
 
 
 func _physics_process(delta: float) -> void:
 	for k: String in cooldowns:
 		cooldowns[k] = maxf(0.0, float(cooldowns[k]) - delta)
 	_invuln = maxf(0.0, _invuln - delta)
+	_update_zone()
 	if dead:
 		velocity = Vector3.ZERO
 		return
@@ -353,7 +378,7 @@ func hit_enemy(e: Enemy, dmg: int, knockback: float, kind: String, from: Vector3
 
 ## Coup de luth au corps-à-corps : jet d'attaque d20 + maîtrise + FOR contre la CA.
 func melee() -> void:
-	if not _ready_skill("attack"):
+	if not _ready_skill("attack") or not can_cast():
 		return
 	_cooldown("attack", Balance.MELEE_COOLDOWN)
 	SpellFx.cast(self, "swing") # visible aussi chez les autres joueurs
@@ -382,7 +407,7 @@ func melee() -> void:
 
 ## Accordage de cordes (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis.
 func cast_tuning() -> void:
-	if not _ready_skill("tuning"):
+	if not _ready_skill("tuning") or not can_cast():
 		return
 	var targets := _arc_targets()
 	if targets.is_empty():
@@ -407,7 +432,7 @@ func cast_tuning() -> void:
 ## (dès la fin de la recharge de 3 s, dans les 0,4 s) fait monter le combo : ×1 → ×1,67 → ×2,33 → ×3.
 ## Au maximum, le riff reste à ×3 tant qu'on garde le rythme ; un contretemps remet à ×1.
 func cast_riff() -> void:
-	if not _ready_skill("riff"):
+	if not _ready_skill("riff") or not can_cast():
 		return
 	var target := _riff_target()
 	if target == null:
@@ -502,7 +527,7 @@ func _arc_targets() -> Array[Enemy]:
 
 ## Sort 2 — Onde de choc sonore : tous les ennemis dans un rayon (jet de sauvegarde CON pour moitié).
 func cast_wave() -> void:
-	if not _ready_skill("wave"):
+	if not _ready_skill("wave") or not can_cast():
 		return
 	if not GameState.spend_mana(Balance.WAVE_COST):
 		_no_mana()
@@ -524,7 +549,7 @@ func cast_wave() -> void:
 
 ## Sort 3 — Solo de la Foudre : lance le mini-jeu ; le résultat arrive via Events.solo_finished.
 func cast_solo() -> void:
-	if not _ready_skill("solo"):
+	if not _ready_skill("solo") or not can_cast():
 		return
 	if GameState.mana < Balance.SOLO_COST:
 		_no_mana()
