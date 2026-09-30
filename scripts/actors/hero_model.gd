@@ -24,6 +24,11 @@ const GUITAR_REST_POS := Vector3(0.04, 0.06, 0.26)
 const GUITAR_SOLO := Vector3(-0.5, 0.0, 0.5) # manche dressé vers le ciel pour le solo
 const GUITAR_WINDUP := Vector3(-0.6, 0.0, 2.9) # guitare levée au-dessus de l'épaule, tenue par le manche
 const GUITAR_STRIKE := Vector3(1.2, 0.0, 2.9) # abattue vers l'avant
+## Modèles importés de Blender (voir docs/RIFFALD.md et docs/GUITARE.md).
+const RIFFALD_MODEL := "res://assets/models/riffald/riffald.glb"
+const GUITAR_MODEL := "res://assets/models/guitare/guitare_heros.glb"
+## Longueur du manche de la Flying V procédurale (sillet), pour placer la main gauche.
+const PROC_NUT := 0.64
 
 ## Apparence à afficher (clés de RaceDB.DEFAULT_APPEARANCE). Vide = celle de GameState.
 var appearance := {}
@@ -54,6 +59,10 @@ var _aura: Node3D
 var _aura_light: OmniLight3D
 var _strings_mat: StandardMaterial3D
 var _flash_mats: Array[StandardMaterial3D] = []
+## Modèle importé piloté par le squelette procédural (héros prédéfini Riffald), ou null.
+var _skin: RiggedSkin
+## Rapport de longueur du manche de la guitare utilisée / Flying V procédurale.
+var _neck_scale := 1.0
 
 var _t := 0.0
 var _walk := 0.0 # 0 = immobile, 1 = marche (lissé)
@@ -99,6 +108,8 @@ func height() -> float:
 
 
 func _build() -> void:
+	_skin = null
+	_neck_scale = 1.0
 	var race_id := str(appearance.get("race", "humain"))
 	var race := RaceDB.get_race(race_id)
 	var female: bool = appearance.get("sex", "m") == "f"
@@ -201,6 +212,8 @@ func _build() -> void:
 	_aura.add_child(_aura_light)
 	_aura.visible = _soloing
 	_update_arms()
+	if str(appearance.get("preset", "")) == "riffald" and ResourceLoader.exists(RIFFALD_MODEL):
+		_use_skin(RIFFALD_MODEL)
 
 
 # --- Tête : visage, oreilles, cornes, défenses, barbe, coiffure ------------------
@@ -345,7 +358,7 @@ func _build_leg(hip: Node3D, leather: Material, coat: Material) -> Node3D:
 
 
 ## Bras : haut du bras fuselé, coude, avant-bras (la main est ajoutée par _build_hand).
-func _build_arm(upper: Node3D, sleeve: Material, _skin: Material) -> Node3D:
+func _build_arm(upper: Node3D, sleeve: Material, _skin_mat: Material) -> Node3D:
 	Visuals.cylinder(upper, 0.05, 0.042, UPPER_ARM, Vector3(0, -UPPER_ARM * 0.5, 0), sleeve, Vector3.ZERO, 10)
 	var fore := _pivot(upper, Vector3(0, -UPPER_ARM, 0))
 	Visuals.sphere(fore, 0.043, Vector3.ZERO, sleeve)
@@ -410,6 +423,9 @@ func _curl_fingers(fingers: Array, curls: Array) -> void:
 ## deux micros double bobinage, chevalet Tune-o-matic, cordier en V, 3 boutons en ligne).
 ## Repère local : manche vers +Y, face avant vers +Z, pointe du V à l'origine.
 func _build_flying_v(g: Node3D, chrome: Material) -> void:
+	if ResourceLoader.exists(GUITAR_MODEL):
+		_build_imported_guitar(g)
+		return
 	var cherry := Visuals.mat(Color(0.5, 0.04, 0.05), 0.22, 0.1)
 	var pickguard := Visuals.mat(Color(0.92, 0.9, 0.85), 0.4)
 	var mahogany := Visuals.mat(Color(0.33, 0.14, 0.06), 0.5)
@@ -453,6 +469,56 @@ func _build_flying_v(g: Node3D, chrome: Material) -> void:
 	# Cordes (légère lueur magique).
 	_strings_mat = Visuals.glow_mat(Color(0.55, 0.85, 1.0), 0.8)
 	Visuals.box(g, Vector3(0.03, 0.84, 0.003), Vector3(0, 0.23, 0.036), _strings_mat)
+
+
+# --- Modèles importés de Blender ---------------------------------------------------------
+
+## Héros prédéfini : le modèle Blender remplace le corps procédural, qui reste en place mais
+## invisible et continue de calculer toutes les animations (voir RiggedSkin).
+func _use_skin(path: String) -> void:
+	var skin := RiggedSkin.create(self, path)
+	if skin == null:
+		return
+	for mi in find_children("*", "MeshInstance3D", true, false):
+		var n := mi as Node3D
+		if (_guitar != null and _guitar.is_ancestor_of(n)) or _aura.is_ancestor_of(n):
+			continue
+		n.visible = false
+	add_child(skin)
+	_skin = skin
+	_skin.capture_rest()
+	_flash_mats.append_array(_skin.flash_materials)
+	_skin.drive()
+
+
+## Guitare des héros modélisée dans Blender (même repère que la Flying V procédurale :
+## manche vers +Y, face vers +Z, pointe du V à l'origine).
+func _build_imported_guitar(g: Node3D) -> void:
+	var inst := (load(GUITAR_MODEL) as PackedScene).instantiate()
+	g.add_child(inst)
+	g.scale = Vector3.ONE
+	_neck_scale = 0.385 / PROC_NUT # sillet de la nouvelle guitare
+	for node in inst.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(i) as StandardMaterial3D
+			if src == null:
+				continue
+			var m := Visuals.toon(src.duplicate() as StandardMaterial3D)
+			match src.resource_name:
+				"MB_g_cordes":
+					# Cordes : légère lueur magique, plus vive pendant le solo (solo_pose).
+					m.emission_enabled = true
+					m.emission = Color(0.55, 0.85, 1.0)
+					m.emission_energy_multiplier = 0.8
+					_strings_mat = m
+				"MB_g_gemme":
+					m.emission_enabled = true
+					m.emission = Color(1.0, 0.1, 0.08)
+					m.emission_energy_multiplier = 1.6
+			mi.set_surface_override_material(i, m)
+	if _strings_mat == null:
+		_strings_mat = Visuals.glow_mat(Color(0.55, 0.85, 1.0), 0.8)
 
 
 func _own_mat(color: Color, roughness: float) -> StandardMaterial3D:
@@ -561,6 +627,8 @@ func _process(delta: float) -> void:
 		_aura.rotation.y += delta * 2.0
 		_aura_light.light_energy = 2.2 + sin(_t * 10.0) * 0.5
 	_update_arms()
+	if _skin != null:
+		_skin.drive()
 
 
 # --- IK des bras et des mains ------------------------------------------------------------
@@ -585,13 +653,13 @@ func _update_arms() -> void:
 		_curl_fingers(_fingers_r, relaxed)
 		return
 	var gt := _guitar.transform
-	var fret := 0.42
+	var fret := 0.42 * _neck_scale
 	if _soloing:
-		fret = 0.3 + 0.18 * (0.5 + 0.5 * sin(_t * 5.0)) # la main gauche court sur le manche
+		fret = (0.3 + 0.18 * (0.5 + 0.5 * sin(_t * 5.0))) * _neck_scale # la main gauche court sur le manche
 	# Main gauche derrière le manche (pouce dessous, doigts qui passent par-dessus la touche).
 	var left_target := gt * Vector3(-0.02, fret, -0.025)
 	var pick := gt * Vector3(0.0, -0.1 + _strum * 0.06, 0.08 + _strum * 0.03)
-	var right_target := pick.lerp(gt * Vector3(0, 0.3, -0.02), _smash)
+	var right_target := pick.lerp(gt * Vector3(0, 0.3 * _neck_scale, -0.02), _smash)
 	_solve_arm(_upper_l, _fore_l, left_target, Vector3(-1.0, -0.4, -0.3))
 	_solve_arm(_upper_r, _fore_r, right_target, Vector3(1.0, -0.6, -0.4))
 	var neck_front := gt.basis.z.normalized()

@@ -86,7 +86,8 @@
 
 ## ✅ v0.1.11 — Héros prédéfini
 - [x] Création : choix « Riffald (prédéfini) » ou « Personnalisé » ; planche de référence et fiche dans docs/RIFFALD.md
-- [ ] Modèle Blender de Riffald d'après la planche (à venir)
+- [x] Modèle Blender de Riffald d'après la planche, piloté par le squelette procédural (v0.1.12)
+- [x] Guitare des héros modélisée dans Blender (v0.1.12)
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau

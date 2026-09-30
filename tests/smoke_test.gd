@@ -657,6 +657,21 @@ func _test_characters() -> void:
 	_check(str(creation.appearance.get("preset", "")) == "riffald" and creation._name_edit.text == "Riffald"
 		and not creation._name_edit.editable and int(creation.appearance["hair_color"]) == 5 and int(creation.appearance["beard"]) == 3,
 		"création : Riffald prédéfini proposé par défaut (roux flamboyant, rasé, nom verrouillé)")
+	var rig: HeroModel = creation._model
+	_check(rig._skin != null and rig._skin.skeleton != null and rig._skin.skeleton.get_bone_count() == 17,
+		"Riffald : modèle Blender à squelette (17 os) piloté par le squelette procédural")
+	_check(rig._neck_scale < 1.0 and rig._strings_mat != null and rig._guitar.find_children("*", "MeshInstance3D", true, false).size() >= 1,
+		"guitare des héros importée de Blender (cordes lumineuses)")
+	var sk := rig._skin.skeleton
+	var knee_before := sk.get_bone_global_pose(sk.find_bone("shin.L")).origin
+	rig.move_speed = 5.5
+	rig.set_moving(true)
+	for f in 20:
+		await get_tree().process_frame
+	_check(sk.get_bone_global_pose(sk.find_bone("shin.L")).origin.distance_to(knee_before) > 0.03, "Riffald : les jambes du modèle suivent la foulée")
+	var hand_err := (rig._skin.skeleton.get_bone_global_pose(sk.find_bone("hand.R")).origin - rig._skin._rel(rig._hand_l).origin).length()
+	_check(hand_err < 0.02, "Riffald : la main du manche reste sur la guitare (écart %.3f m)" % hand_err)
+	rig.set_moving(false)
 	creation._set_hero_mode(1)
 	creation._refresh()
 	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")
