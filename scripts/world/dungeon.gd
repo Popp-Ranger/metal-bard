@@ -252,7 +252,7 @@ func _place_torches() -> void:
 			if too_close:
 				continue
 			placed.append(p)
-			_torch(p, Vector3(d.x, 0, d.y), placed.size() <= 4)
+			_torch(p, Vector3(d.x, 0, d.y), false)
 
 
 func _torch(wall_pos: Vector3, wall_dir: Vector3, shadows: bool) -> void:

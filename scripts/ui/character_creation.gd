@@ -60,7 +60,6 @@ func _build_stage() -> void:
 	_camera.fov = 32.0
 	add_child(_camera)
 	_camera.current = true
-	add_child(PostFx.new())
 
 
 func _place_camera() -> void:

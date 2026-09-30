@@ -119,12 +119,10 @@ func _build_ground_floor() -> void:
 	for i in TABLES.size():
 		_build_table(TABLES[i], i)
 	# Piliers avec lanternes + lanternes murales.
-	var first := true
 	for p: Vector3 in [Vector3(-6.0, 0, -1.5), Vector3(6.5, 0, -2.5), Vector3(0.5, 0, 5.0)]:
 		Visuals.box(self, Vector3(0.35, WALL_H + 0.4, 0.35), p + Vector3(0, (WALL_H + 0.4) * 0.5, 0), _wood_dark)
 		_solid(self, Vector3(0.4, 3.0, 0.4), p + Vector3(0, 1.5, 0))
-		_lantern(self, p + Vector3(0.4, 2.35, 0.4), first)
-		first = false
+		_lantern(self, p + Vector3(0.4, 2.35, 0.4), false)
 	_lantern(self, Vector3(-4.5, 2.8, -HALF_Z + 0.45), false)
 	_lantern(self, Vector3(-HALF_X + 0.45, 2.8, -3.0), false)
 	_lantern(self, Vector3(-HALF_X + 0.45, 2.8, 3.0), false)
@@ -183,7 +181,7 @@ func _build_fireplace() -> void:
 		Visuals.cylinder(self, 0.08, 0.08, 1.0, Vector3(x + 0.55, 0.12 + k * 0.05, -0.2 + k * 0.2), _wood_dark, Vector3(90, 20 * k, 0))
 	Visuals.sphere(self, 0.25, Vector3(x + 0.6, 0.35, 0), Visuals.glow_mat(Color(1.0, 0.45, 0.1), 5.0), Vector3(1.4, 1.2, 1.8))
 	Visuals.sphere(self, 0.15, Vector3(x + 0.62, 0.6, 0.1), Visuals.glow_mat(Color(1.0, 0.75, 0.3), 6.0))
-	var light := Visuals.flicker_light(self, Vector3(x + 1.6, 1.0, 0), Color(1.0, 0.5, 0.2), 3.5, 11.0, true)
+	var light := Visuals.flicker_light(self, Vector3(x + 1.6, 1.0, 0), Color(1.0, 0.5, 0.2), 3.5, 11.0)
 	light.flicker_amount = 0.35
 	_solid(self, Vector3(1.2, 3.0, 3.0), Vector3(x, 1.5, 0))
 	Visuals.box(self, Vector3(3.0, 0.02, 4.0), Vector3(x + 2.6, 0.01, 0), Visuals.mat(Color(0.22, 0.08, 0.06), 0.95))
@@ -500,7 +498,7 @@ func _window(parent: Node3D, center: Vector3, size: Vector3, inward: Vector3) ->
 	moon.light_energy = 3.0
 	moon.spot_range = 9.0
 	moon.spot_angle = 28.0
-	moon.shadow_enabled = true
+	moon.shadow_enabled = false
 	moon.position = center + Vector3(0, 3.4, 0) - inward * 0.8
 	parent.add_child(moon)
 	moon.look_at(center + inward * 3.5, Vector3.UP)

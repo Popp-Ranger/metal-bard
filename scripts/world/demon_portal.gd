@@ -53,7 +53,7 @@ func _ready() -> void:
 	Visuals.cylinder(self, 0.6, 0.7, 0.02, Vector3(1.8, 0.02, 2.6), Visuals.mat(Color(0.3, 0.01, 0.02), 0.1), Vector3.ZERO, 14)
 	_build_tentacles(center)
 	_build_fog()
-	var light := Visuals.flicker_light(self, center + Vector3(0, 0, 1.4), Color(1.0, 0.08, 0.04), 4.0, 9.0, true)
+	var light := Visuals.flicker_light(self, center + Vector3(0, 0, 1.4), Color(1.0, 0.08, 0.04), 4.0, 9.0)
 	light.flicker_amount = 0.45
 	var under := OmniLight3D.new()
 	under.position = Vector3(0, 0.3, 1.5)

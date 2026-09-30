@@ -12,7 +12,7 @@
 - [x] Règles D&D 5e : 6 caractéristiques, modificateurs, jets d'attaque, CA, sauvegardes, table d'XP, points à répartir
 - [x] Butin : or, potions, 7 reliques
 - [x] HUD, fiche de personnage, pause, mort et réveil à la taverne, sauvegarde / chargement
-- [x] Ambiance sombre : éclairage dynamique, post-traitement encré, murs qui s'effacent devant le héros
+- [x] Éclairage dynamique, murs qui s'effacent devant le héros
 - [x] Sons synthétisés (dont décharge électrique à volume moyen)
 - [x] Test automatisé de toute la boucle de jeu
 
@@ -103,6 +103,12 @@
 - [x] IK après l'animation (SkeletonModifier3D) : guitare à la sangle, mains sur le manche et les cordes
 - [ ] Doigts, cape et cheveux animés (os supplémentaires + SpringBoneSimulator3D)
 - [ ] Animations des héros personnalisés et des PNJ (reciblage)
+
+## ✅ v0.1.15 — Lumière
+- [x] Filtre plein écran retiré (contours encrés, sépia, désaturation, vignette, grain)
+- [x] Environnement plus lumineux, sans occlusion ambiante ni filtre de contraste
+- [x] Ombres courtes : seule une lumière presque au zénith en projette (plus les lampes basses)
+- [x] Export Windows (.pck) pour tester le multijoueur entre amis
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau

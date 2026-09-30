@@ -128,8 +128,8 @@ func dist_to_road(p: Vector3) -> float:
 func _build_sky_and_light() -> void:
 	_moon_light = DirectionalLight3D.new()
 	_moon_light.light_color = Color(0.9, 0.62, 0.62)
-	_moon_light.light_energy = 1.1
-	_moon_light.rotation_degrees = Vector3(-50, 150, 0)
+	_moon_light.light_energy = 1.4
+	_moon_light.rotation_degrees = Vector3(-70, 150, 0) # haute dans le ciel : ombres courtes
 	_moon_light.shadow_enabled = true
 	add_child(_moon_light)
 	# La lune de sang, très loin au-dessus du bout de la route (vue pendant la cinématique).
@@ -382,7 +382,7 @@ func _build_cemetery() -> void:
 		var s := _rng.randf_range(11.0, 22.0)
 		_corpse(road_point(s) + road_right(s) * _rng.randf_range(-6.0, 6.0))
 	# Lanterne vacillante au portail.
-	var l := Visuals.flicker_light(self, gate + right * 2.0 + Vector3(0, 2.2, 0), Color(1.0, 0.6, 0.3), 2.0, 9.0, true)
+	var l := Visuals.flicker_light(self, gate + right * 2.0 + Vector3(0, 2.2, 0), Color(1.0, 0.6, 0.3), 2.0, 9.0)
 	l.flicker_amount = 0.5
 
 
@@ -494,7 +494,7 @@ func _build_tavern_exterior() -> void:
 	warm.light_color = Color(1.0, 0.65, 0.3)
 	warm.light_energy = 3.0
 	warm.omni_range = 12.0
-	warm.shadow_enabled = true
+	warm.shadow_enabled = false
 	inn.add_child(warm)
 	# Enseigne : un crâne qui hurle.
 	Visuals.box(inn, Vector3(0.1, 0.1, 1.6), Vector3(2.0, 3.6, 5.3), timber)
@@ -584,7 +584,7 @@ func _lightning() -> void:
 	Events.screen_flash.emit(Color(0.85, 0.88, 1.0, 0.5 if dist < 20.0 else 0.3), 0.35)
 	Events.camera_shake.emit(0.12 if dist < 20.0 else 0.06, 0.3)
 	_moon_light.light_energy = 3.0
-	_moon_light.create_tween().tween_property(_moon_light, "light_energy", 1.1, 0.4)
+	_moon_light.create_tween().tween_property(_moon_light, "light_energy", 1.4, 0.4)
 	await get_tree().create_timer(minf(1.2, dist / 60.0), false).timeout
 	Sfx.play("thunder", -2.0 if dist < 20.0 else -8.0, 0.15)
 

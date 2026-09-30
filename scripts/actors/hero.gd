@@ -62,7 +62,7 @@ func _ready() -> void:
 	halo.light_energy = 2.0
 	halo.omni_range = 11.0
 	halo.omni_attenuation = 1.2
-	halo.shadow_enabled = true
+	halo.shadow_enabled = false # ombres courtes : seule la lumière du dessus en projette
 	add_child(halo)
 	Events.solo_finished.connect(_on_solo_finished)
 

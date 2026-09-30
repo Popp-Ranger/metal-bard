@@ -10,9 +10,10 @@ var hud: Hud
 func setup_level(env_kind: String, area_name: String) -> void:
 	Net.reset_level()
 	add_child(Visuals.make_environment(env_kind))
+	if env_kind != "night": # l'intro a déjà sa lune
+		add_child(Visuals.make_key_light(env_kind))
 	camera = IsoCamera.new()
 	add_child(camera)
-	add_child(PostFx.new())
 	hud = Hud.new()
 	add_child(hud)
 	hud.show_area_name(area_name)
