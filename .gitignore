@@ -18,3 +18,7 @@ desktop.ini
 
 # Blender (sauvegardes automatiques)
 *.blend1
+
+# Animations Mixamo brutes (licence : pas de redistribution des fichiers seuls).
+# Elles sont converties dans Blender puis intégrées au modèle du héros.
+assets/animations/mixamo/*.fbx
