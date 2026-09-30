@@ -18,7 +18,6 @@ var _encore_cd := 0.0
 var _zone_time := 0.0
 var _zone_tick := 0.0
 var _zone_pos := Vector3.ZERO
-var _zone_node: Node3D
 var _shield_time := 0.0
 var _shield_node: MeshInstance3D
 var _amps_time := 0.0
@@ -53,8 +52,6 @@ func _physics_process(delta: float) -> void:
 		if _zone_tick <= 0.0:
 			_zone_tick = 1.0
 			_heal_group(_zone_pos, 4.0, 0.06)
-		if _zone_time <= 0.0 and is_instance_valid(_zone_node):
-			_zone_node.queue_free()
 	# Mur de Larsen.
 	if _shield_time > 0.0:
 		_shield_time -= delta
@@ -126,24 +123,10 @@ func _cast_ballade_reparatrice() -> bool:
 
 
 func _cast_hymne_phenix() -> bool:
-	hero.model.strum()
 	_zone_pos = hero.global_position
-	_zone_time = 8.0
+	_zone_time = SpellFx.PHOENIX_TIME
 	_zone_tick = 0.0
-	if is_instance_valid(_zone_node):
-		_zone_node.queue_free()
-	_zone_node = Node3D.new()
-	_zone_node.position = _zone_pos
-	hero.get_parent().add_child(_zone_node)
-	Visuals.torus(_zone_node, 3.8, 4.0, Vector3(0, 0.05, 0), Visuals.glow_mat(Color(1.0, 0.7, 0.2), 3.0))
-	Visuals.torus(_zone_node, 1.8, 1.9, Vector3(0, 0.05, 0), Visuals.glow_mat(Color(1.0, 0.5, 0.1), 2.0))
-	var flames := _particles(Color(1.0, 0.6, 0.15), 60, 1.2, 3.8)
-	flames.one_shot = false
-	flames.emitting = true
-	_zone_node.add_child(flames)
-	var light := Visuals.flicker_light(_zone_node, Vector3(0, 1.5, 0), Color(1.0, 0.65, 0.3), 3.0, 8.0)
-	light.flicker_amount = 0.3
-	Sfx.play("portal", -6.0)
+	SpellFx.cast(hero, "phoenix", {"pos": _zone_pos}) # cercle de flammes visible par tous (8 s)
 	Events.notify("Hymne du Phénix : restez dans le cercle !", Color(1.0, 0.75, 0.3))
 	return true
 
@@ -162,7 +145,7 @@ func try_encore() -> bool:
 	_encore_cd = ENCORE_COOLDOWN
 	GameState.hp = 1
 	_heal(roundi(GameState.max_hp() * 0.5))
-	_burst(hero.global_position, Color(1.0, 0.85, 0.3), 30)
+	_burst(PackedVector3Array([hero.global_position]), Color(1.0, 0.85, 0.3), 30)
 	Sfx.play("levelup", 0.0, 0.0)
 	Events.screen_flash.emit(Color(1.0, 0.85, 0.4, 0.4), 0.5)
 	Events.notify("ENCORE ! Le public refuse que vous quittiez la scène !", Events.COLOR_GOLD)
@@ -172,17 +155,18 @@ func try_encore() -> bool:
 # --- Mur du Son (protection) --------------------------------------------------------
 
 func _cast_mur_larsen() -> bool:
-	hero.model.strum()
 	set_shield(10 + 3 * GameState.mod("CHA") + 2 * GameState.stats.level)
 	_shield_time = 8.0
-	Sfx.play("zap", -10.0)
-	Sfx.play("boom", -14.0)
+	SpellFx.cast(hero, "shield", {"on": true}) # bulle visible par tous
 	return true
 
 
 func set_shield(amount: int) -> void:
+	var was_visible := _shield_node.visible
 	GameState.shield = maxi(0, amount)
 	_shield_node.visible = GameState.shield > 0
+	if was_visible and not _shield_node.visible:
+		SpellFx.broadcast("shield", {"on": false}) # la bulle éclate aussi chez les autres
 	Events.shield_changed.emit(GameState.shield)
 
 
@@ -198,7 +182,7 @@ func absorb(amount: int) -> int:
 		Sfx.play("dud", -8.0)
 		if GameState.has_talent("sustain"):
 			# Le larsen explose : onde qui repousse.
-			Shockwave.spawn(hero.get_parent(), hero.global_position, 4.0)
+			SpellFx.cast(hero, "shockwave", {"pos": hero.global_position, "radius": 4.0})
 			for e in hero.enemies():
 				if _flat(e.global_position, hero.global_position) <= 4.0 + e.radius:
 					hero.hit_enemy(e, Dice.roll(1, 8, GameState.mod("CHA")), 6.0, "sound")
@@ -206,25 +190,11 @@ func absorb(amount: int) -> int:
 
 
 func _cast_pile_amplis() -> bool:
-	hero.model.strum()
-	_amps_time = 6.0
+	_amps_time = SpellFx.AMPS_TIME
 	if is_instance_valid(_amps_node):
 		_amps_node.queue_free()
-	_amps_node = Node3D.new()
-	hero.add_child(_amps_node)
-	var cab := Visuals.mat(Color(0.06, 0.06, 0.06), 0.6)
-	var grill := Visuals.mat(Color(0.18, 0.16, 0.14), 0.9)
-	for side: float in [-1.0, 1.0]:
-		var amp := Node3D.new()
-		amp.position = Vector3(0.9 * side, 0, -0.3)
-		_amps_node.add_child(amp)
-		Visuals.box(amp, Vector3(0.6, 1.1, 0.4), Vector3(0, 0.55, 0), cab)
-		for k in 2:
-			Visuals.cylinder(amp, 0.13, 0.13, 0.02, Vector3(0, 0.33 + k * 0.42, 0.2), grill, Vector3(90, 0, 0), 16)
-		Visuals.box(amp, Vector3(0.62, 0.12, 0.42), Vector3(0, 1.15, 0), Visuals.glow_mat(Color(0.9, 0.2, 0.1), 1.2))
-		amp.scale = Vector3.ONE * 0.05
-		amp.create_tween().tween_property(amp, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK)
-	Sfx.play("thud", -2.0)
+	_amps_node = SpellFx.build_amps(hero)
+	SpellFx.cast(hero, "amps") # les autres joueurs voient aussi les amplis
 	return true
 
 
@@ -237,18 +207,16 @@ func retaliate(attacker: Node3D) -> void:
 	var e := attacker as Enemy
 	if e == null or not e.is_alive():
 		return
-	ArcBolt.spawn(hero.get_parent(), hero.global_position + Vector3(0, 1.2, 0), e.global_position + Vector3(0, 1.0, 0), 0.1, 0.2, Color(1.0, 0.4, 0.3))
+	SpellFx.cast(hero, "bolt", {"from": hero.global_position + Vector3(0, 1.2, 0), "to": e.global_position + Vector3(0, 1.0, 0),
+		"width": 0.1, "life": 0.2, "color": Color(1.0, 0.4, 0.3)})
 	hero.hit_enemy(e, Dice.roll(1, 6, GameState.mod("CHA")), 1.5, "sound")
 
 
 # --- Mosh Pit (repoussement) -----------------------------------------------------------
 
 func _cast_wall_of_death() -> bool:
-	hero.model.swing()
 	var origin := hero.global_position
-	for k in 3:
-		Shockwave.spawn(hero.get_parent(), origin + hero.facing * (1.5 + k * 2.0), 1.6 + k * 0.9)
-	Sfx.play("boom", 0.0)
+	SpellFx.cast(hero, "wall_of_death", {"pos": origin, "dir": hero.facing})
 	Events.camera_shake.emit(0.3, 0.3)
 	for e in hero.enemies():
 		var to := e.global_position - origin
@@ -279,7 +247,7 @@ func _cast_stage_diving() -> bool:
 		target = Vector3(p.x, 0, p.z) - dir.normalized() * 0.8
 	hero.leaping = true
 	hero.model.solo_pose(true)
-	Sfx.play("swoosh", -2.0)
+	SpellFx.cast(hero, "stage_dive", {"from": from, "to": target}) # vol et atterrissage visibles par tous
 	var tw := hero.create_tween()
 	var hop := func(k: float) -> void:
 		hero.global_position = from.lerp(target, k)
@@ -318,9 +286,10 @@ func _on_solo_note_hit(mode: String, _hits: int) -> void:
 		var chart := SoloMinigame.ballade_chart()
 		var total := maxi(1, (chart.get("notes", []) as Array).size())
 		_heal_group(hero.global_position, GROUP_HEAL_RADIUS, Balance.BALLADE_HEAL_PER_SECOND * float(chart.get("duration", 10.0)) / total)
-		_burst(hero.global_position, Color(0.45, 1.0, 0.5), 4)
+		var points := PackedVector3Array([hero.global_position])
 		for ally in _allies_near(hero.global_position, GROUP_HEAL_RADIUS):
-			_burst(ally.global_position, Color(0.45, 1.0, 0.5), 3)
+			points.append(ally.global_position)
+		_burst(points, Color(0.45, 1.0, 0.5), 4)
 		return
 	if mode != "endiable" or not in_frenzy:
 		return
@@ -360,13 +329,7 @@ func _on_solo_finished(mode: String, hits: int, total: int) -> void:
 
 
 func _cast_growl() -> bool:
-	hero.model.strum()
-	var ring := Shockwave.new()
-	ring.position = hero.global_position + Vector3(0, 0.4, 0)
-	ring.radius = 6.0
-	hero.get_parent().add_child(ring)
-	Sfx.play("croak", 2.0, 0.0)
-	Sfx.play("boom", -4.0)
+	SpellFx.cast(hero, "growl", {"pos": hero.global_position})
 	Events.camera_shake.emit(0.25, 0.5)
 	Events.screen_flash.emit(Color(0.4, 0.0, 0.1, 0.25), 0.4)
 	for e in hero.enemies():
@@ -384,89 +347,42 @@ func _cast_enceinte() -> bool:
 	if dir.length() > 8.0:
 		pos = hero.global_position + dir.normalized() * 8.0
 	pos.y = 0.0
-	hero.model.strum()
-	_run_speaker(pos)
+	var yaw := atan2(hero.global_position.x - pos.x, hero.global_position.z - pos.z) + PI
+	# Enceinte visible par tous (SpellFx.SpeakerFx) ; les dégâts sont calculés ici.
+	SpellFx.cast(hero, "speaker", {"pos": pos, "yaw": yaw})
+	_speaker_damage(pos)
 	return true
 
 
-func _run_speaker(pos: Vector3) -> void:
-	var level := hero.get_parent()
-	var speaker := Node3D.new()
-	speaker.position = pos
-	level.add_child(speaker)
-	var cab := Visuals.mat(Color(0.05, 0.05, 0.05), 0.5)
-	Visuals.box(speaker, Vector3(1.0, 1.4, 0.7), Vector3(0, 0.7, 0), cab)
-	var cone_mat := Visuals.mat(Color(0.15, 0.13, 0.12), 0.8)
-	var cones: Array[MeshInstance3D] = []
-	for k in 2:
-		cones.append(Visuals.cylinder(speaker, 0.28, 0.28, 0.04, Vector3(0, 0.4 + k * 0.6, 0.36), cone_mat, Vector3(90, 0, 0), 20))
-	Visuals.box(speaker, Vector3(1.02, 0.1, 0.72), Vector3(0, 1.42, 0), Visuals.glow_mat(Color(1.0, 0.3, 0.1), 2.0))
-	speaker.rotation.y = atan2(hero.global_position.x - pos.x, hero.global_position.z - pos.z) + PI
-	speaker.scale = Vector3.ONE * 0.05
-	speaker.create_tween().tween_property(speaker, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK)
-	Sfx.play("thud", -2.0)
-	for pulse in 6:
+## Dégâts de l'enceinte : une impulsion par seconde (au rythme de son animation).
+func _speaker_damage(pos: Vector3) -> void:
+	for pulse in SpellFx.SPEAKER_PULSES:
 		await get_tree().create_timer(1.0, false).timeout
-		if not is_instance_valid(speaker) or not is_instance_valid(hero):
+		if not is_instance_valid(hero):
 			return
-		for c in cones:
-			c.scale = Vector3(1.3, 1.3, 1.3)
-			c.create_tween().tween_property(c, "scale", Vector3.ONE, 0.25)
-		Shockwave.spawn(level, pos, 4.0)
-		Sfx.play("boom", -8.0, 0.1)
 		for e in hero.enemies():
 			if _flat(e.global_position, pos) <= 4.0 + e.radius:
 				hero.hit_enemy(e, Dice.roll(1, 8, GameState.mod("CHA")), 2.0, "sound", pos)
-	var tw := speaker.create_tween()
-	tw.tween_property(speaker, "scale", Vector3(1.0, 0.02, 1.0), 0.3)
-	tw.tween_callback(speaker.queue_free)
 
 
 func _cast_pyrotechnie() -> bool:
-	hero.model.strum()
-	_run_pyro(hero.global_position)
+	var center := hero.global_position
+	var yaw := hero.model.rotation.y
+	# Zones marquées puis colonnes de feu, visibles par tous (SpellFx.PyroFx).
+	SpellFx.cast(hero, "pyro", {"pos": center, "yaw": yaw})
+	_pyro_damage(center, yaw)
 	return true
 
 
-func _run_pyro(center: Vector3) -> void:
-	var level := hero.get_parent()
-	var spots: Array[Vector3] = []
-	for k in 6:
-		var a := TAU * k / 6.0 + hero.model.rotation.y
-		spots.append(center + Vector3(cos(a), 0, sin(a)) * 3.0)
-	for p in spots:
-		Telegraph.spawn(level, p, 1.6, 0.8)
-	Sfx.play("portal", -10.0, 0.0)
-	await get_tree().create_timer(0.8, false).timeout
+func _pyro_damage(center: Vector3, yaw: float) -> void:
+	await get_tree().create_timer(SpellFx.PyroFx.DELAY, false).timeout
 	if not is_instance_valid(hero):
 		return
-	Sfx.play("thunder", -4.0)
 	Events.camera_shake.emit(0.35, 0.5)
-	for p in spots:
-		_fire_column(level, p)
+	for p in SpellFx.pyro_spots(center, yaw):
 		for e in hero.enemies():
 			if _flat(e.global_position, p) <= 1.6 + e.radius:
 				hero.hit_enemy(e, Dice.roll(4, 6, 0), 1.5, "fire", p)
-
-
-func _fire_column(level: Node, pos: Vector3) -> void:
-	var col := Node3D.new()
-	col.position = pos
-	level.add_child(col)
-	var flame := Visuals.cylinder(col, 0.35, 0.6, 4.0, Vector3(0, 2.0, 0), Visuals.glow_mat(Color(1.0, 0.45, 0.1), 5.0), Vector3.ZERO, 12)
-	flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var light := OmniLight3D.new()
-	light.position.y = 1.5
-	light.light_color = Color(1.0, 0.55, 0.2)
-	light.light_energy = 5.0
-	light.omni_range = 6.0
-	col.add_child(light)
-	col.scale = Vector3(1.0, 0.05, 1.0)
-	var tw := col.create_tween()
-	tw.tween_property(col, "scale", Vector3.ONE, 0.12)
-	tw.tween_interval(0.35)
-	tw.tween_property(col, "scale", Vector3(0.1, 1.2, 0.1), 0.35)
-	tw.tween_callback(col.queue_free)
 
 
 # --- Utilitaires ---------------------------------------------------------------------
@@ -483,31 +399,9 @@ func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
-func _particles(color: Color, amount: int, lifetime: float, radius: float) -> CPUParticles3D:
-	var p := CPUParticles3D.new()
-	p.amount = amount
-	p.lifetime = lifetime
-	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	p.emission_sphere_radius = radius
-	p.gravity = Vector3(0, 2.0, 0)
-	p.initial_velocity_min = 0.2
-	p.initial_velocity_max = 0.8
-	var m := SphereMesh.new()
-	m.radius = 0.05
-	m.height = 0.1
-	m.material = Visuals.glow_mat(color, 3.0)
-	p.mesh = m
-	return p
-
-
-func _burst(pos: Vector3, color: Color, amount: int) -> void:
-	var p := _particles(color, amount, 1.2, 0.6)
-	p.position = pos + Vector3(0, 1.0, 0)
-	p.one_shot = true
-	p.explosiveness = 0.7
-	hero.get_parent().add_child(p)
-	p.emitting = true
-	get_tree().create_timer(2.0).timeout.connect(p.queue_free)
+## Gerbes d'étincelles (soins, Encore !) aux positions données, visibles par tous.
+func _burst(points: PackedVector3Array, color: Color, amount: int) -> void:
+	SpellFx.cast(hero, "burst", {"points": points, "color": color, "amount": amount})
 
 
 ## Autres membres du groupe à portée (hors héros) : cible amicale, et plus tard les

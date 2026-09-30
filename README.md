@@ -88,11 +88,11 @@ Tout mini-jeu raté (Solo de la Foudre, Solo endiablé, Ballade) rend la recharg
 
 1. L'hôte lance sa partie, puis **Échap → Coopération (inviter des amis) → Ouvrir ma partie**. Un code du type **`3F7QK-2M9XA`** s'affiche, avec un bouton « Copier le code ».
 2. Les amis choisissent **Rejoindre une partie (coop)** sur l'écran titre et collent le code. Ils arrivent avec **leur propre personnage** (celui de leur dernière sauvegarde), quel que soit leur niveau.
-3. L'hôte fait autorité (ennemis, boss). Chacun voit les autres joueurs, gagne l'XP et ramasse son propre butin ; les soins de groupe soignent tout le monde ; quand l'hôte change de lieu, le groupe le suit.
+. **Les sorts de chacun sont visibles et audibles par tous** : coups de guitare, éclairs, ondes de choc, pluie d'éclairs du Solo, cercle de l'Hymne du Phénix, bulle du Mur de Larsen, amplis, enceinte, pyrotechnie, Stage Diving, étincelles de soin... Les sorts lointains s'entendent moins fort, et seuls leurs effets sont transmis : les dégâts restent comptés une seule fois.
 
 Le jeu ouvre le port **UDP 24565** sur la box par UPnP. Si la box refuse, le code fonctionne en réseau local ou via un VPN (Tailscale, ZeroTier) ; sinon, il faut ouvrir ce port à la main.
 
-*Première version :* les dialogues de quête, la clé et la cage de Gloubah sont gérés chez l'hôte.
+*Première version :* les dialogues de quête, la clé et la cage de Gloubah, les portes du donjon et le portail bleu sont gérés chez l'hôte.
 
 ## Objets
 
@@ -144,11 +144,21 @@ Toutes les valeurs (vitesses, dégâts, recharges, rayon de détection, prix…)
 ```bash
 Godot_v4.7.2-stable_win64_console.exe --headless --path . res://tests/smoke_test.tscn
 ```
-Le test (107 vérifications) contrôle :
+Le test (plus de 140 vérifications) contrôle :
 - les règles D&D et la génération de 50 donjons ;
 - toute la quête, avec les trois issues du dialogue de Gloubah ;
 - la Ballade, la glissade, la taverne (clients, portes, sous-sol) ;
 - les sauvegardes, le code de coop et l'intro.
+
+Test réseau réel à deux instances (hôte + client sur la même machine, sans toucher à la box) :
+
+```bash
+Godot_v4.7.2-stable_win64_console.exe --headless --path . res://tests/coop_net_test.tscn -- host
+```
+```bash
+Godot_v4.7.2-stable_win64_console.exe --headless --path . res://tests/coop_net_test.tscn -- client
+```
+Chacun lance des sorts et vérifie qu'il voit ceux de l'autre ; le client vérifie aussi la synchronisation des ennemis.
 
 ## État du projet
 

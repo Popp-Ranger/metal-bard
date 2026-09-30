@@ -355,7 +355,7 @@ func melee() -> void:
 	if not _ready_skill("attack"):
 		return
 	_cooldown("attack", Balance.MELEE_COOLDOWN)
-	model.swing()
+	SpellFx.cast(self, "swing") # visible aussi chez les autres joueurs
 	await get_tree().create_timer(0.15, false).timeout
 	if dead:
 		return
@@ -391,18 +391,15 @@ func cast_tuning() -> void:
 		_no_mana()
 		return
 	_cooldown("tuning", Balance.TUNING_COOLDOWN)
-	model.strum()
-	Sfx.play("zap", Balance.ZAP_VOLUME_DB)
-	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
+	var points := PackedVector3Array([global_position + Vector3(0, 1.1, 0) + facing * 0.4])
+	for e in targets:
+		points.append(e.global_position + Vector3(0, 0.9, 0))
+	SpellFx.cast(self, "tuning", {"points": points}) # arc électrique visible par tous
 	var cha := GameState.mod("CHA")
 	var bonus := 1.15 if GameState.has_talent("distorsion") else 1.0
 	for i in targets.size():
-		var e := targets[i]
-		var to := e.global_position + Vector3(0, 0.9, 0)
-		ArcBolt.spawn(get_parent(), from, to)
 		var dmg := roundi(Dice.roll(2, 6, cha) * (1.0 - Balance.TUNING_FALLOFF * i) * bonus)
-		hit_enemy(e, dmg, 0.8, "shock")
-		from = to
+		hit_enemy(targets[i], dmg, 0.8, "shock")
 
 
 ## Riff électrique (touche 1) : éclair sur UNE cible. Chaque appui en rythme
@@ -428,12 +425,11 @@ func cast_riff() -> void:
 	cooldowns["riff"] = Balance.RIFF_MIN_INTERVAL
 	Events.cooldown_started.emit("riff", Balance.RIFF_MIN_INTERVAL)
 	Events.riff_combo.emit(riff_stack, mult)
-	model.strum()
 	var k := float(riff_stack - 1) / float(max_stacks - 1)
 	var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
-	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
-	ArcBolt.spawn(get_parent(), from, target.global_position + Vector3(0, 0.9, 0), 0.1 + 0.06 * riff_stack, 0.25, color)
-	Sfx.play("riff", -3.0 + riff_stack * 0.5, 0.0) # riff electrique.wav
+	# Éclair et son riff electrique.wav, visibles et audibles par tous les joueurs.
+	SpellFx.cast(self, "riff", {"from": global_position + Vector3(0, 1.1, 0) + facing * 0.4,
+		"to": target.global_position + Vector3(0, 0.9, 0), "stack": riff_stack, "color": color})
 	var dmg := roundi(Dice.roll(1, 10, GameState.mod("CHA")) * mult)
 	target.take_damage(maxi(1, roundi(dmg * GameState.spell_power())), global_position, 0.4, riff_stack >= max_stacks, "shock")
 	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
@@ -511,11 +507,9 @@ func cast_wave() -> void:
 		_no_mana()
 		return
 	_cooldown("wave", Balance.WAVE_COOLDOWN)
-	model.strum()
 	var wave_radius := Balance.WAVE_RADIUS + (2.0 if GameState.has_talent("larsen_persistant") else 0.0)
 	var wave_knock := Balance.WAVE_KNOCKBACK * (1.5 if GameState.has_talent("larsen_persistant") else 1.0)
-	Shockwave.spawn(get_parent(), global_position, wave_radius)
-	Sfx.play("wave", -2.0, 0.0) # ondes de chocs.wav
+	SpellFx.cast(self, "wave", {"pos": global_position, "radius": wave_radius}) # ondes de chocs.wav
 	Events.camera_shake.emit(0.2, 0.25)
 	var dc := GameState.spell_dc()
 	for e in enemies():
@@ -569,6 +563,11 @@ func _on_solo_finished(mode: String, hits: int, total: int) -> void:
 		if _flat_dist(e.global_position, global_position) <= Balance.SOLO_SCREEN_RADIUS:
 			targets.append(e)
 	LightningStorm.spawn(get_parent(), global_position, targets, power * GameState.spell_power())
+	# Les autres joueurs voient la même pluie d'éclairs, sur les mêmes ennemis.
+	var ids := PackedInt32Array()
+	for e in targets:
+		ids.append(e.net_id)
+	SpellFx.broadcast("storm", {"center": global_position, "ids": ids})
 
 
 func drink_potion() -> void:

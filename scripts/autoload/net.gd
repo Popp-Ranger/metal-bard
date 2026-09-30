@@ -9,8 +9,9 @@ extends Node
 ##   quels que soient les niveaux de chacun.
 ## • L'hôte fait autorité : il simule les ennemis et envoie leur état ~10 fois par seconde ;
 ##   les clients lui transmettent leurs coups. Chacun voit les autres joueurs se déplacer,
-##   gagne l'XP et ramasse son propre butin. Quand l'hôte change de lieu (portail, escalier
-##   de scène...), tout le groupe le suit.
+##   gagne l'XP et ramasse son propre butin. Les sorts de chacun (éclairs, ondes, enceintes,
+##   amplis, bouclier, pyrotechnie...) sont visibles et audibles par tous (SpellFx).
+##   Quand l'hôte change de lieu (portail, escalier de scène...), tout le groupe le suit.
 ## Si l'UPnP est indisponible, le code contient l'adresse locale : il marche alors en
 ## réseau local (ou via un VPN type Tailscale / ZeroTier), sinon il faut ouvrir le port
 ## 24565 (UDP) sur la box.
@@ -18,16 +19,22 @@ extends Node
 signal status_changed(text: String)
 signal code_ready(code: String, note: String)
 signal roster_changed
+## Effet de sort reçu d'un autre joueur (type, identifiant du joueur).
+signal spell_fx_received(kind: String, peer_id: int)
 
 const PORT := 24565
 const MAX_PLAYERS := Balance.COOP_MAX_PLAYERS
 const STATE_RATE := 1.0 / 15.0
 const ENEMY_RATE := 0.1
+## Ennemis par paquet de synchronisation (6 nombres de 4 octets chacun, sous le MTU d'ENet).
+const ENEMIES_PER_PACKET := 50
 const CODE_ALPHABET := "0123456789ABCDEFGHJKMNPQRSTVWXYZ" # base 32 de Crockford (pas de I, L, O, U)
 
 ## peer_id -> {"name", "appearance", "level"} (tous les joueurs, hôte compris).
 var players := {}
 var code := ""
+## false : pas d'ouverture automatique du port sur la box (tests automatiques).
+var upnp_enabled := true
 
 var _upnp: UPNP
 var _thread: Thread
@@ -37,6 +44,10 @@ var _enemy_counter := 0
 var _enemies := {} # net_id -> WeakRef(Enemy)
 var _remotes := {} # peer_id -> RemoteHero (dans le niveau courant)
 var _following := false # changement de scène demandé par l'hôte
+var _enemy_seq := 0 # numéro de l'envoi en cours (hôte)
+var _recv_seq := -1 # envoi en cours de réception (client)
+var _recv_seen := {}
+var _recv_parts := 0
 
 
 func _ready() -> void:
@@ -128,8 +139,11 @@ func host() -> String:
 	multiplayer.multiplayer_peer = peer
 	players = {1: my_profile()}
 	roster_changed.emit()
-	status_changed.emit("Recherche de la box (UPnP)...")
 	code = encode_code(local_ip(), PORT)
+	if not upnp_enabled:
+		_on_upnp_done.call_deferred(null, "")
+		return ""
+	status_changed.emit("Recherche de la box (UPnP)...")
 	_thread = Thread.new()
 	_thread.start(_upnp_setup)
 	return ""
@@ -288,6 +302,7 @@ func take_following_flag() -> bool:
 ## Nouveau niveau : on oublie les ennemis et les joueurs distants de l'ancien.
 func reset_level() -> void:
 	_enemy_counter = 0
+	_recv_seq = -1
 	_enemies.clear()
 	_clear_remotes()
 
@@ -376,22 +391,32 @@ func _send_enemy_states() -> void:
 		if e is TrainingDummy:
 			continue
 		data.append_array(PackedFloat32Array([id, e.global_position.x, e.global_position.z, e.model.rotation.y, e.hp, e.state]))
-	if not data.is_empty():
-		_enemy_states.rpc(_current_scene(), data)
+	if data.is_empty():
+		return
+	# Découpage en paquets plus petits que la taille maximale d'un paquet réseau (MTU) :
+	# un grand donjon dépasse sinon 1 392 octets et le paquet se perd plus souvent.
+	var per_packet := ENEMIES_PER_PACKET * 6
+	var parts := ceili(float(data.size()) / per_packet)
+	_enemy_seq += 1
+	for part in parts:
+		_enemy_states.rpc(_current_scene(), data.slice(part * per_packet, (part + 1) * per_packet), _enemy_seq, part, parts)
 
 
 @rpc("authority", "unreliable_ordered")
-func _enemy_states(scene: String, data: PackedFloat32Array) -> void:
+func _enemy_states(scene: String, data: PackedFloat32Array, seq: int, _part: int, parts: int) -> void:
 	if scene != _current_scene():
 		return
 	var level := get_tree().current_scene as Level
 	if level == null:
 		return
-	var seen := {}
+	if seq != _recv_seq:
+		_recv_seq = seq
+		_recv_seen = {}
+		_recv_parts = 0
 	var i := 0
 	while i + 5 < data.size():
 		var id := int(data[i])
-		seen[id] = true
+		_recv_seen[id] = true
 		var pos := Vector3(data[i + 1], 0.0, data[i + 2])
 		var ref: WeakRef = _enemies.get(id)
 		var e: Enemy = ref.get_ref() as Enemy if ref != null else null
@@ -403,9 +428,12 @@ func _enemy_states(scene: String, data: PackedFloat32Array) -> void:
 			level.add_child(e)
 		e.apply_net_state(pos, data[i + 3], int(data[i + 4]), int(data[i + 5]))
 		i += 6
+	_recv_parts += 1
+	if _recv_parts < parts:
+		return # la liste complète n'est connue qu'à la réception de tous les morceaux
 	# Ennemis déjà éliminés chez l'hôte (on a rejoint en cours de route) : ils disparaissent.
 	for id: int in _enemies.keys():
-		if seen.has(id):
+		if _recv_seen.has(id):
 			continue
 		var e := (_enemies[id] as WeakRef).get_ref() as Enemy
 		if e != null and not (e is TrainingDummy) and e.is_alive():
@@ -451,3 +479,31 @@ func _heal_player(amount: int) -> void:
 	if h != null and not h.dead:
 		GameState.heal_hero(amount)
 		DamageNumber.spawn(h.get_parent(), h.global_position + Vector3(0, 2.3, 0), "+%d" % amount, Events.COLOR_GOOD)
+
+
+# --- Sorts visibles par tous les joueurs ------------------------------------------------------
+
+## Envoie l'effet d'un sort (apparence seulement) aux autres joueurs du même lieu.
+func send_spell_fx(kind: String, data: Dictionary) -> void:
+	if is_online():
+		_spell_fx.rpc(_current_scene(), kind, data)
+
+
+@rpc("any_peer", "reliable")
+func _spell_fx(scene: String, kind: String, data: Dictionary) -> void:
+	if scene != _current_scene():
+		return
+	var level := get_tree().current_scene as Level
+	if level == null:
+		return
+	var existing: Variant = _remotes.get(multiplayer.get_remote_sender_id())
+	var caster: Node3D = existing as Node3D if existing != null and is_instance_valid(existing) else null
+	SpellFx.play(level, caster, kind, data, true)
+	spell_fx_received.emit(kind, multiplayer.get_remote_sender_id())
+
+
+## Ennemi du niveau courant par son identifiant réseau (le même chez tous les joueurs).
+func enemy_by_id(id: int) -> Enemy:
+	var ref: WeakRef = _enemies.get(id)
+	var e: Enemy = ref.get_ref() as Enemy if ref != null else null
+	return e if e != null and e.is_alive() else null

@@ -16,6 +16,7 @@ func _ready() -> void:
 	await _test_new_features()
 	await _test_town_portal()
 	await _test_click_move()
+	await _test_remote_spell_fx()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
 	else:
@@ -562,6 +563,7 @@ func _test_new_features() -> void:
 	_check(code.length() == 11 and back.get("ip", "") == "86.201.14.7" and int(back.get("port", 0)) == Net.PORT,
 		"code d'invitation %s ↔ 86.201.14.7:%d" % [code, Net.PORT])
 	_check(Net.decode_code("pas-un-code").is_empty(), "code invalide refusé")
+	Net.upnp_enabled = false # les tests ne touchent pas à la box
 	var err := Net.host()
 	_check(err.is_empty() and Net.is_host() and Net.player_count() == 1, "partie ouverte en coop (hôte)")
 	Net.leave()
@@ -812,3 +814,65 @@ func _test_click_move() -> void:
 func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
+
+
+## Coop : chaque sort d'un autre joueur est rejoué chez soi (SpellFx), sans dégâts.
+func _test_remote_spell_fx() -> void:
+	print("[Sorts visibles par tous les joueurs]")
+	GameState.dungeon_seed = 777
+	GameState.dungeon_state = {}
+	var d: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(d)
+	await _frames(10)
+	for i in d.get("gen").rooms.size():
+		d.call("_reveal_room", i)
+	var hero := get_tree().get_first_node_in_group("hero") as Hero
+	var other := RemoteHero.new()
+	other.peer_id = 42
+	other.profile = {"name": "Lemmy", "appearance": RaceDB.preset_appearance("riffald"), "level": 3}
+	other.position = hero.global_position + Vector3(3, 0, 0)
+	d.add_child(other)
+	await _frames(2)
+	var target: Enemy = null
+	for e in hero.enemies():
+		if not e.is_boss:
+			target = e
+			break
+	target.global_position = other.global_position + Vector3(2, 0, 2)
+	var hp_before := target.hp
+	var p := other.global_position
+	var q := target.global_position
+	var fx := [
+		["swing", {}], ["tuning", {"points": PackedVector3Array([p, q])}],
+		["riff", {"from": p, "to": q, "stack": 3, "color": Color.GOLD}],
+		["bolt", {"from": p, "to": q}], ["wave", {"pos": p, "radius": 5.0}],
+		["shockwave", {"pos": p, "radius": 4.0, "sound": "boom"}],
+		["storm", {"center": p, "ids": PackedInt32Array([target.net_id])}],
+		["burst", {"points": PackedVector3Array([p]), "color": Color.GREEN, "amount": 4}],
+		["phoenix", {"pos": p}], ["shield", {"on": true}], ["amps", {}],
+		["wall_of_death", {"pos": p, "dir": Vector3.FORWARD}], ["stage_dive", {"from": p, "to": p + Vector3(3, 0, 0)}],
+		["growl", {"pos": p}], ["speaker", {"pos": q, "yaw": 0.5}], ["pyro", {"pos": p, "yaw": 0.0}],
+	]
+	for entry: Array in fx:
+		SpellFx.play(d, other, str(entry[0]), entry[1], true)
+	await _frames(3)
+	var kinds := {}
+	for c in d.get_children():
+		kinds[c.get_class() if c.get_script() == null else str(c.get_script().get_global_name())] = true
+	var speaker_ok := false
+	var pyro_ok := false
+	for c in d.get_children():
+		speaker_ok = speaker_ok or c is SpellFx.SpeakerFx
+		pyro_ok = pyro_ok or c is SpellFx.PyroFx
+	_check(kinds.has("ArcBolt") and kinds.has("Shockwave") and kinds.has("LightningStorm") and speaker_ok and pyro_ok,
+		"sorts d'un autre joueur rejoués : éclairs, ondes, pluie d'éclairs, enceinte, pyrotechnie")
+	_check(other._shield != null and other._shield.visible and other.find_children("*", "MeshInstance3D", true, false).size() > 20,
+		"bouclier et amplis affichés sur le personnage de l'autre joueur")
+	await get_tree().create_timer(1.5).timeout
+	_check(target.hp == hp_before, "effets des autres joueurs purement visuels (aucun dégât en double)")
+	SpellFx.play(d, other, "shield", {"on": false}, true)
+	_check(not other._shield.visible, "la bulle de l'autre joueur disparaît quand elle éclate")
+	d.queue_free()
+	GameState.dungeon_state = {}
+	GameState.dungeon_seed = 0
+	await _frames(3)

@@ -89,6 +89,11 @@
 - [x] Modèle Blender de Riffald d'après la planche, piloté par le squelette procédural (v0.1.12)
 - [x] Guitare des héros modélisée dans Blender (v0.1.12)
 
+## ✅ v0.1.13 — Coop : sorts visibles par tous
+- [x] Tous les sorts et coups de chaque joueur sont rejoués chez les autres (SpellFx), son atténué avec la distance
+- [x] Synchronisation des ennemis découpée en paquets sous le MTU (grands donjons)
+- [x] Test réseau réel à deux instances (tests/coop_net_test.tscn)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
@@ -108,7 +113,8 @@
 ## v0.4 — Multijoueur
 - [x] Hébergement / connexion ENet par code d'invitation, chacun avec son personnage (v0.1.5)
 - [x] Synchronisation des héros et des ennemis ; coups des clients validés par l'hôte (v0.1.5)
-- [ ] Effets visuels des sorts des autres joueurs, dialogues et coffres partagés
+- [x] Effets visuels et sons des sorts des autres joueurs (v0.1.13)
+- [ ] Dialogues, coffres, portes et portail bleu partagés
 - [ ] Relais en ligne (sans ouverture de port), lobby dans la taverne
 - [ ] 2 nouvelles classes (Batteur-guerrier, Chanteur-clerc)
 

@@ -4,6 +4,7 @@ extends Node3D
 ## (apparence, nom, niveau), déplacé d'après l'état qu'il envoie ~15 fois par seconde.
 ## Chez l'hôte, les ennemis peuvent le prendre pour cible : les coups sont transmis à
 ## son propriétaire. Les soins de groupe le soignent aussi (groupe « allies »).
+## Ses sorts (éclairs, ondes, bouclier, amplis...) sont rejoués ici par SpellFx.
 
 var peer_id := 0
 var profile := {}
@@ -18,6 +19,7 @@ var _target_yaw := 0.0
 var _flags := 0
 var _label: Label3D
 var _hp_label: Label3D
+var _shield: MeshInstance3D
 
 
 func _ready() -> void:
@@ -68,6 +70,15 @@ func _process(delta: float) -> void:
 	global_position = global_position.lerp(_target_pos, 1.0 - exp(-14.0 * delta))
 	model.rotation.y = lerp_angle(model.rotation.y, _target_yaw, 1.0 - exp(-14.0 * delta))
 	model.set_moving((_flags & 1) != 0)
+
+
+## Mur de Larsen de ce joueur (SpellFx « shield ») : bulle affichée chez les autres joueurs.
+func set_shield_visible(on: bool) -> void:
+	if _shield == null:
+		if not on:
+			return
+		_shield = SpellFx.shield_bubble(self, model.scale.y)
+	_shield.visible = on
 
 
 ## Appelé par les ennemis de l'hôte : le propriétaire encaisse le coup chez lui.
