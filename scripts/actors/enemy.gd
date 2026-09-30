@@ -72,6 +72,9 @@ func _ready() -> void:
 	collision_mask = 1 | 2 | 4
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	_configure()
+	# Coop : les ennemis sont plus résistants quand il y a plus de joueurs.
+	if not (self is TrainingDummy):
+		max_hp = roundi(max_hp * Balance.coop_enemy_hp_mult(Net.player_count()))
 	hp = max_hp
 	var col := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
@@ -110,9 +113,7 @@ func _attack_anim(_windup: float) -> void:
 
 ## Matériau « flashable » (clignote en blanc quand l'ennemi est touché).
 func own_mat(color: Color, roughness: float = 0.8) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
-	m.roughness = roughness
+	var m := Visuals.char_mat(color, roughness) # cel shading + contour encré
 	m.emission_enabled = true
 	m.emission = Color.BLACK
 	_flash_mats.append(m)

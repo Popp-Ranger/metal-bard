@@ -10,9 +10,15 @@ extends Node3D
 ## Les bras sont pilotés par une petite IK à deux os : la main gauche reste sur le manche,
 ## la main droite gratte les cordes (ou empoigne le manche pour frapper).
 
-const UPPER_ARM := 0.3
-const FOREARM := 0.3
-const TORSO_LEAN := 0.32 # dos voûté vers l'avant
+const UPPER_ARM := 0.29
+const FOREARM := 0.26
+const THIGH := 0.45
+const SHIN := 0.43
+const HIP_Y := 0.93 # hauteur du bassin pour un personnage de 1,8 m
+const HEAD_SCALE := 0.78 # tête ≈ 1/7,5 de la taille (proportions réalistes)
+const TORSO_LEAN := 0.12 # dos légèrement voûté (attitude metal)
+## Doigts : longueur des phalanges (proximale, moyenne, distale) ; le pouce en a deux.
+const PHALANGES := [0.034, 0.024, 0.019]
 const GUITAR_REST := Vector3(-0.38, 0.0, 0.8) # manche vers le haut-gauche, caisse sur la hanche droite, table face au public
 const GUITAR_REST_POS := Vector3(0.04, 0.06, 0.26)
 const GUITAR_SOLO := Vector3(-0.5, 0.0, 0.5) # manche dressé vers le ciel pour le solo
@@ -32,6 +38,16 @@ var _upper_l: Node3D
 var _upper_r: Node3D
 var _fore_l: Node3D
 var _fore_r: Node3D
+var _ankle_l: Node3D
+var _ankle_r: Node3D
+var _hand_l: Node3D
+var _hand_r: Node3D
+## Doigts de chaque main : 5 listes de pivots (pouce, index, majeur, annulaire, auriculaire).
+var _fingers_l: Array = []
+var _fingers_r: Array = []
+var _pick: MeshInstance3D
+var _fret_finger := 0 # doigt qui appuie sur une case pendant le jeu
+var _fret_timer := 0.0
 var _guitar: Node3D
 var _hair_back: Node3D
 var _aura: Node3D
@@ -46,8 +62,9 @@ var _busy := false
 var _soloing := false
 var _strum := 0.0 # animation du grattage (0..1)
 var _smash := 0.0 # 1 = les deux mains sur le manche (coup de guitare)
-var _twitch := 0.0
-var _twitch_timer := 2.0
+## Vitesse de déplacement (m/s) : règle la cadence et l'amplitude de la foulée.
+var move_speed := 1.4
+var _phase := 0.0
 ## Assis (PNJ attablés, fauteuil roulant).
 var seated := false
 var _seat_height := 0.49
@@ -91,50 +108,63 @@ func _build() -> void:
 	var w := float(race.get("width", 1.0)) * (0.9 if female else 1.0) * float(appearance.get("width_mult", 1.0))
 	scale = Vector3(w * sqrt(h), h, w * sqrt(h))
 
-	var leather := _own_mat(Color(0.09, 0.07, 0.07), 0.6)
-	var coat := _own_mat(Color(0.05, 0.045, 0.055), 0.8)
+	var leather := _own_mat(Color(0.2, 0.15, 0.13), 0.6)
+	var coat := _own_mat(Color(0.13, 0.1, 0.11), 0.8)
 	var skin := _own_mat(race.get("skin", Color(0.8, 0.63, 0.52)), 0.55 if skeleton else 0.65)
 	var hair_colors: Array = RaceDB.HAIR_COLORS
 	var hair := _own_mat(hair_colors[clampi(int(appearance.get("hair_color", 0)), 0, hair_colors.size() - 1)], 0.75)
 	var metal := Visuals.mat(Color(0.78, 0.78, 0.82), 0.25, 0.9)
 
-	# --- Jambes : hanche → genou → pied, genoux fléchis en permanence.
-	_hip_l = _pivot(self, Vector3(-0.13, 0.86, 0))
-	_hip_r = _pivot(self, Vector3(0.13, 0.86, 0))
+	# Proportions réalistes (modèle de base de 1,8 m) : jambes ≈ 52 % de la taille,
+	# tête ≈ 1/7,5 de la taille, épaules ≈ 2 têtes de large.
+	# --- Jambes : hanche → genou → cheville → pied.
+	_hip_l = _pivot(self, Vector3(-0.1, HIP_Y, 0))
+	_hip_r = _pivot(self, Vector3(0.1, HIP_Y, 0))
 	_knee_l = _build_leg(_hip_l, leather, coat)
 	_knee_r = _build_leg(_hip_r, leather, coat)
+	_ankle_l = _knee_l.get_child(_knee_l.get_child_count() - 1) as Node3D
+	_ankle_r = _knee_r.get_child(_knee_r.get_child_count() - 1) as Node3D
 
-	# --- Torse (pivot au bassin, penché en avant).
-	_torso = _pivot(self, Vector3(0, 0.86, 0))
+	# --- Torse (pivot au bassin) : bassin, taille, cage thoracique, cou.
+	_torso = _pivot(self, Vector3(0, HIP_Y, 0))
 	_torso.rotation.x = TORSO_LEAN
-	var chest_w := 0.38 if female else 0.44
-	Visuals.box(_torso, Vector3(chest_w, 0.6, 0.26), Vector3(0, 0.32, 0), leather)
+	var chest := 0.17 if female else 0.19
+	Visuals.sphere(_torso, 0.16, Vector3(0, 0.02, 0), leather, Vector3(1.05 if female else 0.95, 0.7, 0.75)) # bassin
+	Visuals.cylinder(_torso, chest * 0.8, 0.14 if female else 0.15, 0.26, Vector3(0, 0.15, 0), leather, Vector3.ZERO, 14).scale = Vector3(1, 1, 0.72) # taille
+	Visuals.cylinder(_torso, chest, chest * 0.8, 0.26, Vector3(0, 0.39, 0), leather, Vector3.ZERO, 14).scale = Vector3(1, 1, 0.66) # thorax
+	Visuals.sphere(_torso, chest, Vector3(0, 0.5, 0), leather, Vector3(1.08, 0.42, 0.66)) # haut des épaules
 	if female:
 		for side: float in [-1.0, 1.0]:
-			Visuals.sphere(_torso, 0.085, Vector3(0.085 * side, 0.4, 0.12), leather, Vector3(1.0, 0.9, 0.8))
+			Visuals.sphere(_torso, 0.065, Vector3(0.07 * side, 0.4, 0.09), leather, Vector3(1.0, 0.9, 0.85))
 	if skeleton:
 		# Côtes apparentes entre les pans du manteau.
 		for i in 4:
-			Visuals.box(_torso, Vector3(0.2 - i * 0.02, 0.03, 0.02), Vector3(0, 0.5 - i * 0.08, 0.135), skin)
-	Visuals.box(_torso, Vector3(0.2, 0.95, 0.3), Vector3(-0.18, 0.08, -0.02), coat) # pans du manteau
-	Visuals.box(_torso, Vector3(0.2, 0.95, 0.3), Vector3(0.18, 0.08, -0.02), coat)
-	Visuals.box(_torso, Vector3(0.52, 0.11, 0.3), Vector3(0, 0.02, 0), coat) # ceinture
-	for i in 5:
-		Visuals.sphere(_torso, 0.022, Vector3(-0.2 + i * 0.1, 0.02, 0.16), metal)
-	Visuals.sphere(_torso, 0.045, Vector3(0, 0.46, 0.14), Visuals.glow_mat(Color(1.0, 0.2, 0.1), 2.5)) # médaillon
-	# Épaules haussées et épaulières à pointes.
-	var shoulder := 0.24 if female else 0.27
+			Visuals.box(_torso, Vector3(0.16 - i * 0.015, 0.025, 0.02), Vector3(0, 0.46 - i * 0.065, 0.12), skin)
+	Visuals.cylinder(_torso, 0.05, 0.055, 0.12, Vector3(0, 0.58, 0.01), skin, Vector3.ZERO, 10) # cou
+	# Long manteau de cuir : deux pans qui tombent jusqu'aux genoux, col relevé.
 	for side: float in [-1.0, 1.0]:
-		Visuals.sphere(_torso, 0.13, Vector3(shoulder * side, 0.62, 0.02), coat, Vector3(1.2, 0.85, 1.1))
-		Visuals.cylinder(_torso, 0.0, 0.035, 0.14, Vector3((shoulder + 0.06) * side, 0.72, 0.0), metal, Vector3(0, 0, -30 * side))
+		Visuals.box(_torso, Vector3(0.17, 0.78, 0.03), Vector3(0.1 * side, 0.02, -0.12), coat, Vector3(-6, 0, 3 * side))
+		Visuals.box(_torso, Vector3(0.05, 0.62, 0.2), Vector3(0.17 * side, 0.2, -0.02), coat, Vector3(0, 0, 4 * side))
+		Visuals.box(_torso, Vector3(0.1, 0.1, 0.03), Vector3(0.09 * side, 0.6, -0.06), coat, Vector3(-20, 0, 18 * side)) # col
+	Visuals.cylinder(_torso, 0.16, 0.16, 0.06, Vector3(0, 0.03, 0), coat, Vector3.ZERO, 14).scale = Vector3(1, 1, 0.75) # ceinture
+	for i in 5:
+		var a := -0.9 + i * 0.45
+		Visuals.sphere(_torso, 0.016, Vector3(sin(a) * 0.155, 0.03, cos(a) * 0.12), metal)
+	Visuals.sphere(_torso, 0.03, Vector3(0, 0.44, 0.13), Visuals.glow_mat(Color(1.0, 0.2, 0.1), 2.5)) # médaillon
+	# Épaules et épaulières à pointes.
+	var shoulder := 0.18 if female else 0.2
+	for side: float in [-1.0, 1.0]:
+		Visuals.sphere(_torso, 0.075, Vector3(shoulder * side, 0.5, 0.0), coat, Vector3(1.2, 0.8, 1.1))
+		Visuals.cylinder(_torso, 0.0, 0.025, 0.1, Vector3((shoulder + 0.04) * side, 0.57, 0.0), metal, Vector3(0, 0, -30 * side))
 	# Sangle de guitare en travers du torse.
 	if appearance.get("guitar", true):
-		Visuals.box(_torso, Vector3(0.05, 0.72, 0.02), Vector3(-0.01, 0.32, 0.15), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, 33))
+		Visuals.box(_torso, Vector3(0.04, 0.6, 0.015), Vector3(-0.01, 0.3, 0.125), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, 33))
 
-	# --- Tête projetée en avant (cou tendu).
-	_head = _pivot(_torso, Vector3(0, 0.64, 0.1))
-	_head.rotation.x = -0.2
+	# --- Tête (à l'échelle réaliste) légèrement projetée en avant.
+	_head = _pivot(_torso, Vector3(0, 0.6, 0.03))
+	_head.rotation.x = -0.1
 	_build_head(race_id, race, female, skin, hair)
+	_head.scale = Vector3.ONE * HEAD_SCALE
 
 	# --- Guitare Flying V (seulement pour le héros ; les PNJ n'en ont pas).
 	_guitar = null
@@ -142,14 +172,21 @@ func _build() -> void:
 	if appearance.get("guitar", true):
 		_guitar = _pivot(_torso, GUITAR_REST_POS)
 		_guitar.rotation = GUITAR_REST
-		_guitar.scale = Vector3.ONE * 1.15 # légèrement surdimensionnée pour rester lisible en vue iso
+		_guitar.scale = Vector3.ONE * 1.05
 		_build_flying_v(_guitar, metal)
 
-	# --- Bras (IK à deux os).
-	_upper_l = _pivot(_torso, Vector3(-shoulder - 0.01, 0.58, 0.03))
-	_upper_r = _pivot(_torso, Vector3(shoulder + 0.01, 0.58, 0.03))
+	# --- Bras (IK à deux os) et mains à cinq doigts.
+	_upper_l = _pivot(_torso, Vector3(-shoulder - 0.02, 0.48, 0.0))
+	_upper_r = _pivot(_torso, Vector3(shoulder + 0.02, 0.48, 0.0))
 	_fore_l = _build_arm(_upper_l, coat, skin)
 	_fore_r = _build_arm(_upper_r, coat, skin)
+	var glove := _own_mat(skin.albedo_color if not appearance.get("guitar", true) else Color(0.16, 0.12, 0.1), 0.6)
+	_hand_l = _build_hand(_fore_l, skin, glove, -1.0)
+	_hand_r = _build_hand(_fore_r, skin, glove, 1.0)
+	if appearance.get("guitar", true):
+		# Médiator entre le pouce et l'index de la main droite.
+		_pick = Visuals.cylinder(_hand_r, 0.018, 0.018, 0.004, Vector3(0.0, -0.075, 0.03),
+			Visuals.mat(Color(1.0, 0.75, 0.2), 0.3), Vector3(90, 0, 0), 3)
 
 	# --- Aura dorée du solo (invincibilité).
 	_aura = Node3D.new()
@@ -291,20 +328,80 @@ func _build_hair(style: int, hair: Material) -> void:
 			Visuals.box(_head, Vector3(0.2, 0.08, 0.06), Vector3(0, 0.36, 0.15), hair, Vector3(-20, 0, 0))
 
 
+## Jambe : cuisse fuselée, genou, tibia, cheville et botte (le dernier enfant du genou
+## est la cheville, qui porte le pied).
 func _build_leg(hip: Node3D, leather: Material, coat: Material) -> Node3D:
-	Visuals.capsule(hip, 0.1, 0.46, Vector3(0, -0.22, 0), leather)
-	var knee := _pivot(hip, Vector3(0, -0.43, 0))
-	Visuals.capsule(knee, 0.085, 0.44, Vector3(0, -0.2, 0), leather)
-	Visuals.box(knee, Vector3(0.16, 0.13, 0.3), Vector3(0, -0.4, 0.05), coat) # botte
+	Visuals.cylinder(hip, 0.085, 0.065, THIGH, Vector3(0, -THIGH * 0.5, 0), leather, Vector3.ZERO, 12) # cuisse
+	var knee := _pivot(hip, Vector3(0, -THIGH, 0))
+	Visuals.sphere(knee, 0.065, Vector3.ZERO, leather)
+	Visuals.cylinder(knee, 0.062, 0.048, SHIN, Vector3(0, -SHIN * 0.5, 0), leather, Vector3.ZERO, 12) # tibia
+	Visuals.cylinder(knee, 0.06, 0.055, 0.2, Vector3(0, -SHIN + 0.1, 0.005), coat, Vector3.ZERO, 12) # tige de botte
+	var ankle := _pivot(knee, Vector3(0, -SHIN, 0))
+	Visuals.box(ankle, Vector3(0.1, 0.07, 0.25), Vector3(0, -0.03, 0.06), coat) # pied (botte)
+	Visuals.box(ankle, Vector3(0.105, 0.025, 0.26), Vector3(0, -0.07, 0.06), Visuals.mat(Color(0.03, 0.03, 0.03))) # semelle
 	return knee
 
 
-func _build_arm(upper: Node3D, sleeve: Material, skin: Material) -> Node3D:
-	Visuals.capsule(upper, 0.075, UPPER_ARM + 0.05, Vector3(0, -UPPER_ARM * 0.5, 0), sleeve)
+## Bras : haut du bras fuselé, coude, avant-bras (la main est ajoutée par _build_hand).
+func _build_arm(upper: Node3D, sleeve: Material, _skin: Material) -> Node3D:
+	Visuals.cylinder(upper, 0.05, 0.042, UPPER_ARM, Vector3(0, -UPPER_ARM * 0.5, 0), sleeve, Vector3.ZERO, 10)
 	var fore := _pivot(upper, Vector3(0, -UPPER_ARM, 0))
-	Visuals.capsule(fore, 0.065, FOREARM, Vector3(0, -FOREARM * 0.5, 0), sleeve)
-	Visuals.sphere(fore, 0.06, Vector3(0, -FOREARM, 0), skin, Vector3(0.9, 1.1, 0.8))
+	Visuals.sphere(fore, 0.043, Vector3.ZERO, sleeve)
+	Visuals.cylinder(fore, 0.042, 0.03, FOREARM, Vector3(0, -FOREARM * 0.5, 0), sleeve, Vector3.ZERO, 10)
 	return fore
+
+
+## Main : paume, quatre doigts à trois phalanges et un pouce à deux phalanges.
+## Repère de la main : doigts vers -Y (dans le prolongement de l'avant-bras), paume vers +Z.
+## `side` = -1 main gauche, +1 main droite (position du pouce).
+func _build_hand(fore: Node3D, skin: Material, glove: Material, side: float) -> Node3D:
+	var hand := _pivot(fore, Vector3(0, -FOREARM, 0))
+	# Doigts : cel shading sans contour (un contour les rendrait trop épais à cette échelle).
+	var finger_mat := (skin as StandardMaterial3D).duplicate() as StandardMaterial3D
+	finger_mat.next_pass = null
+	_flash_mats.append(finger_mat)
+	skin = finger_mat
+	Visuals.box(hand, Vector3(0.075, 0.085, 0.028), Vector3(0, -0.045, 0), glove) # paume (mitaine de cuir)
+	var fingers: Array = []
+	# Pouce : part du côté de la paume, vers l'avant.
+	var thumb_root := _pivot(hand, Vector3(-0.035 * side, -0.025, 0.012))
+	thumb_root.rotation = Vector3(-0.5, 0.0, 0.7 * side)
+	fingers.append(_build_finger(thumb_root, skin, 0.011, 2))
+	# Index → auriculaire.
+	for i in 4:
+		var x := (0.027 - i * 0.018) * -side
+		var root := _pivot(hand, Vector3(x, -0.088, 0.0))
+		var s: float = [1.0, 1.08, 1.0, 0.82][i]
+		root.scale = Vector3.ONE * float(s)
+		fingers.append(_build_finger(root, skin, 0.0085, 3))
+	if side < 0.0:
+		_fingers_l = fingers
+	else:
+		_fingers_r = fingers
+	return hand
+
+
+## Doigt : chaîne de pivots (une phalange par pivot), renvoie la liste des pivots.
+func _build_finger(root: Node3D, skin: Material, r: float, count: int) -> Array:
+	var joints: Array = []
+	var parent := root
+	for k in count:
+		var length: float = PHALANGES[k + (1 if count == 2 else 0)]
+		var j := _pivot(parent, Vector3.ZERO if k == 0 else Vector3(0, -float(PHALANGES[k - 1 + (1 if count == 2 else 0)]), 0))
+		Visuals.capsule(j, r * (1.0 - k * 0.12), length + r, Vector3(0, -length * 0.5, 0), skin)
+		joints.append(j)
+		parent = j
+	return joints
+
+
+## Replie les doigts d'une main : `curls` = angle (rad) par doigt [pouce, index, majeur, annulaire, auriculaire].
+func _curl_fingers(fingers: Array, curls: Array) -> void:
+	for f in fingers.size():
+		var joints: Array = fingers[f]
+		var c: float = curls[f]
+		for k in joints.size():
+			var j: Node3D = joints[k]
+			j.rotation.x = -c * (1.0 if k == 0 else 1.2) # les phalanges se replient vers la paume (+Z)
 
 
 ## Réplique de Gibson Flying V (finition cerise, plaque de protection blanche,
@@ -357,9 +454,7 @@ func _build_flying_v(g: Node3D, chrome: Material) -> void:
 
 
 func _own_mat(color: Color, roughness: float) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
-	m.roughness = roughness
+	var m := Visuals.char_mat(color, roughness) # cel shading + contour encré
 	m.emission_enabled = true
 	m.emission = Color.BLACK
 	_flash_mats.append(m)
@@ -390,8 +485,11 @@ func _process(delta: float) -> void:
 	if _strings_mat != null:
 		_strings_mat.emission_energy_multiplier = (3.0 if _soloing else 0.8) + sin(_t * 6.0) * 0.3
 
-	var phase := _t * 7.0
-	var bob := 0.0
+	# Cadence et amplitude selon la vitesse : marche (PNJ, 1,4 m/s) ou course (héros, 5,5 m/s).
+	var run := clampf((move_speed - 1.5) / 4.0, 0.0, 1.0)
+	_phase += delta * lerpf(5.2, 9.5, run) * _walk
+	var p := _phase
+	var breath := sin(_t * 1.8)
 	if seated:
 		# Assis : cuisses à l'horizontale, tibias vers le sol, bassin à hauteur de l'assise.
 		var hip_y := _seat_height / maxf(scale.y, 0.01) + 0.04
@@ -399,52 +497,62 @@ func _process(delta: float) -> void:
 		_hip_r.rotation.x = -1.45
 		_knee_l.rotation.x = 1.45
 		_knee_r.rotation.x = 1.45
-		_torso.position.y = hip_y
+		_ankle_l.rotation.x = 0.0
+		_ankle_r.rotation.x = 0.0
+		_torso.position.y = hip_y + breath * 0.004
 		_hip_l.position.y = hip_y
 		_hip_r.position.y = hip_y
 		_torso.rotation.z = sin(_t * 0.9) * 0.02
+		_torso.rotation.y = 0.0
 	else:
-		# Démarche : pas traînants et boiteux façon Réprouvé (héros), ou pas normal (PNJ).
-		var step := sin(phase) + (0.3 * sin(phase * 2.0) if hunched else 0.0)
-		var knee_base := 0.55 if hunched else 0.15
-		var thigh_base := -0.3 if hunched else -0.08
-		_hip_l.rotation.x = thigh_base + step * 0.45 * _walk
-		_hip_r.rotation.x = thigh_base - step * 0.45 * _walk
-		_knee_l.rotation.x = knee_base + maxf(0.0, -cos(phase)) * 0.5 * _walk
-		_knee_r.rotation.x = knee_base + maxf(0.0, cos(phase)) * 0.5 * _walk
-		bob = absf(sin(phase)) * 0.05 * _walk + sin(_t * 1.7) * 0.01 * (1.0 - _walk)
-		var base_y := 0.8 if hunched else 0.85
+		# Cycle de marche : chaque jambe avance (cuisse), plie le genou pendant la phase
+		# d'oscillation, pose le talon puis déroule le pied ; le bassin monte et descend
+		# deux fois par cycle, les épaules tournent à l'inverse des hanches.
+		var thigh_amp := lerpf(0.42, 0.75, run) * _walk
+		var knee_amp := lerpf(0.75, 1.35, run) * _walk
+		for leg in 2:
+			var ph := p + (0.0 if leg == 0 else PI)
+			var hip: Node3D = _hip_l if leg == 0 else _hip_r
+			var knee: Node3D = _knee_l if leg == 0 else _knee_r
+			var ankle: Node3D = _ankle_l if leg == 0 else _ankle_r
+			var thigh := -sin(ph) * thigh_amp - 0.03
+			var bend := 0.05 + knee_amp * pow(maxf(0.0, cos(ph - 0.35)), 1.6) + 0.12 * run * _walk
+			hip.rotation.x = thigh
+			knee.rotation.x = bend
+			# Pied à plat au sol, pointe qui se lève au passage et talon qui décolle à la poussée.
+			ankle.rotation.x = -(thigh + bend) * 0.85 + 0.25 * maxf(0.0, -cos(ph)) * _walk
+		var bob := (absf(cos(p)) * lerpf(0.025, 0.06, run) - 0.02 * run) * _walk + breath * 0.004 * (1.0 - _walk)
+		var base_y := HIP_Y - 0.02 * _walk
 		_torso.position.y = base_y + bob
 		_hip_l.position.y = base_y + bob
 		_hip_r.position.y = base_y + bob
-		_torso.rotation.z = sin(phase) * (0.09 if hunched else 0.03) * _walk + sin(_t * 0.9) * 0.02
-	var lean := (TORSO_LEAN + 0.06 * _walk) if hunched else 0.05
+		_torso.rotation.y = sin(p) * 0.14 * _walk # contre-rotation des épaules
+		_torso.rotation.z = sin(p) * 0.035 * _walk + sin(_t * 0.7) * 0.01 * (1.0 - _walk) # transfert du poids
+	var lean := (TORSO_LEAN if hunched else 0.03) + lerpf(0.04, 0.2, run) * _walk # on se penche en courant
 	if seated:
 		lean = 0.08
 	if _soloing:
-		lean = -0.12 # cambré en arrière pour le solo
+		lean = -0.14 # cambré en arrière pour le solo
 	_torso.rotation.x = lerpf(_torso.rotation.x, lean, delta * 8.0)
 
-	# Tête : saccades nerveuses (héros), headbang pendant le solo.
-	if hunched:
-		_twitch_timer -= delta
-		if _twitch_timer <= 0.0:
-			_twitch_timer = randf_range(1.5, 4.0)
-			_twitch = randf_range(-0.35, 0.35)
-	_twitch = move_toward(_twitch, 0.0, delta * 1.5)
-	_head.rotation.y = _twitch + head_turn
+	# Tête : le regard reste à l'horizontale (compense l'inclinaison du dos), headbang en solo.
+	_head.rotation.y = head_turn - _torso.rotation.y * 0.6
 	if _soloing:
 		_head.rotation.x = -0.1 + absf(sin(_t * 9.0)) * 0.55
 	else:
-		var rest := -0.2 if hunched else -0.05
-		_head.rotation.x = lerpf(_head.rotation.x, rest + sin(phase) * 0.05 * _walk, delta * 8.0)
-	_hair_back.rotation.x = -0.1 - _walk * 0.15 - (absf(sin(_t * 9.0)) * 0.3 if _soloing else 0.0)
+		var rest := -lean * 0.7
+		_head.rotation.x = lerpf(_head.rotation.x, rest + sin(p * 2.0) * 0.02 * _walk, delta * 8.0)
+	_hair_back.rotation.x = -0.1 - _walk * lerpf(0.1, 0.3, run) - (absf(sin(_t * 9.0)) * 0.3 if _soloing else 0.0)
 
-	# Grattage permanent pendant le solo.
+	# Grattage permanent pendant le solo ; doigts de la main gauche qui changent de case.
 	if _soloing:
 		_strum = absf(sin(_t * 18.0))
 	else:
 		_strum = move_toward(_strum, 0.0, delta * 4.0)
+	_fret_timer -= delta
+	if _fret_timer <= 0.0:
+		_fret_timer = 0.12 if (_soloing or _strum > 0.1) else 0.6
+		_fret_finger = randi_range(1, 4)
 	_apply_special_pose(delta)
 	_aura.visible = _soloing
 	if _soloing:
@@ -453,29 +561,63 @@ func _process(delta: float) -> void:
 	_update_arms()
 
 
-# --- IK des bras ---------------------------------------------------------------
+# --- IK des bras et des mains ------------------------------------------------------------
 
 func _update_arms() -> void:
 	if _guitar == null:
-		# Sans guitare (PNJ) : bras le long du corps en marchant, mains sur la table assis.
-		var swing := sin(_t * 7.0) * 0.12 * _walk
-		var l := Vector3(-0.32, 0.05, 0.08 + swing)
-		var r := Vector3(0.32, 0.05, 0.08 - swing)
+		# Sans guitare (PNJ) : bras qui balancent à l'opposé des jambes, mains sur la table assis.
+		var swing := sin(_phase) * lerpf(0.1, 0.2, clampf((move_speed - 1.5) / 4.0, 0.0, 1.0)) * _walk
+		var l := Vector3(-0.27, 0.02, 0.03 - swing)
+		var r := Vector3(0.27, 0.02, 0.03 + swing)
 		if seated:
-			l = Vector3(-0.2, 0.3, 0.42)
-			r = Vector3(0.2, 0.3 + sin(_t * 1.3) * 0.03, 0.42)
-		_solve_arm(_upper_l, _fore_l, l, Vector3(-1.0, -0.2, -0.6))
-		_solve_arm(_upper_r, _fore_r, r, Vector3(1.0, -0.2, -0.6))
+			l = Vector3(-0.17, 0.28, 0.38)
+			r = Vector3(0.17, 0.28 + sin(_t * 1.3) * 0.03, 0.38)
+		_solve_arm(_upper_l, _fore_l, l, Vector3(-0.4, -0.2, -1.0))
+		_solve_arm(_upper_r, _fore_r, r, Vector3(0.4, -0.2, -1.0))
+		var palm_l := Vector3(0, -1, 0) if seated else Vector3(1, 0, 0.2)
+		var palm_r := Vector3(0, -1, 0) if seated else Vector3(-1, 0, 0.2)
+		_orient_hand(_upper_l, _fore_l, _hand_l, palm_l, 0.0)
+		_orient_hand(_upper_r, _fore_r, _hand_r, palm_r, 0.0)
+		var relaxed := [0.3, 0.25, 0.3, 0.35, 0.4] if not seated else [0.15, 0.1, 0.12, 0.15, 0.18]
+		_curl_fingers(_fingers_l, relaxed)
+		_curl_fingers(_fingers_r, relaxed)
 		return
 	var gt := _guitar.transform
 	var fret := 0.42
 	if _soloing:
 		fret = 0.3 + 0.18 * (0.5 + 0.5 * sin(_t * 5.0)) # la main gauche court sur le manche
-	var left_target := gt * Vector3(0, fret, 0.035)
-	var pick := gt * Vector3(0.0, -0.1 + _strum * 0.06, 0.07 + _strum * 0.03)
-	var right_target := pick.lerp(gt * Vector3(0, 0.3, 0.03), _smash)
+	# Main gauche derrière le manche (pouce dessous, doigts qui passent par-dessus la touche).
+	var left_target := gt * Vector3(-0.02, fret, -0.025)
+	var pick := gt * Vector3(0.0, -0.1 + _strum * 0.06, 0.08 + _strum * 0.03)
+	var right_target := pick.lerp(gt * Vector3(0, 0.3, -0.02), _smash)
 	_solve_arm(_upper_l, _fore_l, left_target, Vector3(-1.0, -0.4, -0.3))
 	_solve_arm(_upper_r, _fore_r, right_target, Vector3(1.0, -0.6, -0.4))
+	var neck_front := gt.basis.z.normalized()
+	_orient_hand(_upper_l, _fore_l, _hand_l, neck_front, 0.0)
+	_orient_hand(_upper_r, _fore_r, _hand_r, -neck_front, -0.5 + _strum * 0.6) # coup de poignet
+	# Main gauche : doigts recourbés sur la touche, un doigt appuie plus fort sur une case.
+	var chord := [0.35, 1.05, 1.1, 1.15, 1.2]
+	if _smash < 0.5:
+		chord[_fret_finger] = 1.45
+	else:
+		chord = [1.2, 1.5, 1.5, 1.5, 1.5] # poing serré sur le manche pour frapper
+	_curl_fingers(_fingers_l, chord)
+	# Main droite : médiator pincé entre le pouce et l'index, autres doigts repliés.
+	var grip := [0.55, 1.1, 1.45, 1.5, 1.55] if _smash < 0.5 else [1.2, 1.5, 1.5, 1.5, 1.5]
+	_curl_fingers(_fingers_r, grip)
+
+
+## Oriente la main dans le prolongement de l'avant-bras, paume tournée vers `palm_dir`
+## (espace du torse) ; `wrist_pitch` plie le poignet.
+func _orient_hand(upper: Node3D, fore: Node3D, hand: Node3D, palm_dir: Vector3, wrist_pitch: float) -> void:
+	var fb := upper.basis * fore.basis
+	var y := fb.y.normalized()
+	var z := palm_dir - y * palm_dir.dot(y)
+	if z.length() < 0.01:
+		return
+	z = z.normalized()
+	var desired := Basis(y.cross(z), y, z)
+	hand.basis = fb.inverse() * desired * Basis(Vector3.RIGHT, wrist_pitch)
 
 
 ## IK analytique à deux segments dans l'espace du torse.
@@ -589,7 +731,7 @@ func _apply_special_pose(delta: float) -> void:
 	match _pose:
 		"slide":
 			# À genoux : cuisses verticales, tibias à plat vers l'arrière, bassin abaissé.
-			var y := 0.46
+			var y := THIGH + 0.06
 			_hip_l.rotation.x = -0.15
 			_hip_r.rotation.x = -0.15
 			_knee_l.rotation.x = 1.55
@@ -607,9 +749,9 @@ func _apply_special_pose(delta: float) -> void:
 			_knee_l.rotation.x = 1.5
 			_hip_r.rotation.x = 0.0
 			_knee_r.rotation.x = 0.1
-			_torso.position.y = 0.86 + hop
-			_hip_l.position.y = 0.86 + hop
-			_hip_r.position.y = 0.86 + hop
+			_torso.position.y = HIP_Y + hop
+			_hip_l.position.y = HIP_Y + hop
+			_hip_r.position.y = HIP_Y + hop
 			_torso.rotation.x = -0.05
 			_torso.rotation.z = sin(_t * 8.0) * 0.12
 			_head.rotation.x = absf(sin(_t * 16.0)) * 0.3

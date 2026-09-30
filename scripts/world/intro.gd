@@ -17,7 +17,6 @@ const START_S := 3.0
 const TAVERN_S := ROAD_LENGTH + 6.0
 
 var _rng := RandomNumberGenerator.new()
-var _bolt_timer := 3.0
 var _moon_light: DirectionalLight3D
 var _bats: Array[Node3D] = []
 var _bat_data: Array[Vector4] = [] # (rayon, vitesse, phase, hauteur)
@@ -42,7 +41,8 @@ func _ready() -> void:
 	hero.captive = true
 	hero.facing = road_dir(START_S)
 	hero.model.rotation.y = atan2(hero.facing.x, hero.facing.z)
-	Sfx.play_ambience("amb_dungeon", -20.0)
+	Sfx.play_storm_music() # musique d'orage pendant toute l'intro
+	Sfx.music_strike.connect(_on_music_strike)
 	_play_cinematic()
 
 
@@ -147,6 +147,7 @@ func _build_ground() -> void:
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
 	m.roughness = 1.0
+	Visuals.toon(m)
 	mmi.material_override = m
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
@@ -187,6 +188,7 @@ func _build_road() -> void:
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
 	m.roughness = 0.85
+	Visuals.toon(m)
 	mmi.material_override = m
 	add_child(mmi)
 	# Bas-côtés de terre battue.
@@ -482,6 +484,16 @@ func _update_bats(delta: float) -> void:
 		(bat.get_node("Wing1") as Node3D).rotation.z = -flap
 
 
+## Les éclairs tombent sur les coups de tonnerre de la musique d'orage.
+func _on_music_strike(force: float) -> void:
+	if hero == null:
+		return
+	if _cinematic:
+		Events.screen_flash.emit(Color(0.85, 0.88, 1.0, 0.2 + 0.3 * force), 0.35)
+		return
+	_lightning()
+
+
 ## Un éclair frappe le décor, jamais sur la route : flash, tonnerre, petit tremblement.
 func _lightning() -> void:
 	var s := road_s(hero.global_position) + _rng.randf_range(-4.0, 14.0)
@@ -528,10 +540,6 @@ func _process(delta: float) -> void:
 	if _cinematic:
 		return
 	_keep_on_path()
-	_bolt_timer -= delta
-	if _bolt_timer <= 0.0:
-		_bolt_timer = _rng.randf_range(2.5, 6.0)
-		_lightning()
 	# Arrivée devant la porte : on entre automatiquement.
 	if road_s(hero.global_position) > TAVERN_S - 1.0:
 		_enter_tavern()

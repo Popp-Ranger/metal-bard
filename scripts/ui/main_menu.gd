@@ -7,7 +7,6 @@ var _controls_panel: PanelContainer
 var _options: OptionsMenu
 var _saves: SaveMenu
 var _coop: CoopMenu
-var _bolt_timer := 2.0
 
 
 func _ready() -> void:
@@ -27,8 +26,8 @@ func _ready() -> void:
 	vb.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	vb.offset_left = -320
 	vb.offset_right = 320
-	vb.offset_top = -320
-	vb.offset_bottom = 320
+	vb.offset_top = -350
+	vb.offset_bottom = 350
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER
 	vb.add_theme_constant_override("separation", 14)
 	add_child(vb)
@@ -55,6 +54,9 @@ func _ready() -> void:
 		any_save = any_save or GameState.has_slot(slot)
 	load_button.disabled = not any_save
 	vb.add_child(load_button)
+	var host_button := _button("Héberger une partie (coop, 6 joueurs)", _on_host)
+	host_button.disabled = not GameState.has_save()
+	vb.add_child(host_button)
 	vb.add_child(_button("Rejoindre une partie (coop)", func() -> void: _coop.open_join()))
 	vb.add_child(_button("Contrôles", func() -> void: _controls_panel.visible = not _controls_panel.visible))
 	vb.add_child(_button("Options", func() -> void: _options.open()))
@@ -92,7 +94,7 @@ func _ready() -> void:
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v0.1.5 — Godot 4.7", 13, UiStyle.DIM)
+	var credits := UiStyle.label("Prototype v0.1.6 — Godot 4.7", 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30
@@ -103,7 +105,8 @@ func _ready() -> void:
 	add_child(_saves)
 	_coop = CoopMenu.new()
 	add_child(_coop)
-	Sfx.play_ambience("amb_dungeon", -18.0)
+	Sfx.play_storm_music() # orage (lightning_menu.mp3) : les éclairs tombent sur ses coups de tonnerre
+	Sfx.music_strike.connect(_on_strike)
 
 
 func _button(text: String, cb: Callable) -> Button:
@@ -116,17 +119,28 @@ func _button(text: String, cb: Callable) -> Button:
 
 
 func _process(delta: float) -> void:
-	_bolt_timer -= delta
-	if _bolt_timer <= 0.0:
-		_bolt_timer = randf_range(3.0, 7.0)
-		_flash.color.a = 0.35
-		Sfx.play("thunder", -16.0)
 	_flash.color.a = maxf(0.0, _flash.color.a - delta * 1.5)
+
+
+## Coup de tonnerre dans la musique : éclair à l'écran.
+func _on_strike(force: float) -> void:
+	_flash.color.a = 0.2 + 0.4 * force
 
 
 func _on_new_game() -> void:
 	GameState.new_game()
 	Router.go_to(Router.CHARACTER_CREATION)
+
+
+## Reprend la dernière partie et l'ouvre aussitôt aux amis (le code s'affiche en jeu).
+func _on_host() -> void:
+	if not GameState.load_game():
+		return
+	var err := Net.host()
+	if not err.is_empty():
+		Events.notify(err, Events.COLOR_BAD)
+		return
+	Router.go_to(GameState.resume_scene())
 
 
 func _on_continue() -> void:

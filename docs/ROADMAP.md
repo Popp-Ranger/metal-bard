@@ -58,6 +58,14 @@
 - [x] Coop en ligne par code d'invitation (ENet + UPnP), chacun avec son personnage
 - [x] Musique par défaut à 50 %
 
+## ✅ v0.1.6 — Cel shading et vrais sons
+- [x] Cel shading (lumière toon, contour encré des personnages, post-traitement plus marqué)
+- [x] Proportions réalistes, démarche réaliste, mains à cinq doigts (jeu de guitare animé)
+- [x] Coop 6 joueurs : +33 % d'ennemis et +25 % de PV ennemis par joueur supplémentaire, bouton « Héberger » sur l'écran titre, code affiché dans le HUD
+- [x] Riff électrique : recharge 3 s, son `riff electrique.wav`
+- [x] Ballade réparatrice sur `Healing.wav`, notes synchronisées
+- [x] Musique d'orage `lightning_menu.mp3` (menu + intro) avec éclairs calés sur le tonnerre ; sons d'éclairs `short_lightning` / `short_thunder`
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

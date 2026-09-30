@@ -314,9 +314,10 @@ func _cast_solo_endiable() -> bool:
 
 func _on_solo_note_hit(mode: String, _hits: int) -> void:
 	if mode == "ballade" and in_ballade:
-		# Un solo sans faute (toutes les notes) rend BALLADE_HEAL_TOTAL (90 %) des PV max.
-		var total := maxi(1, (SoloMinigame.ballade_chart().get("notes", []) as Array).size())
-		_heal_group(hero.global_position, GROUP_HEAL_RADIUS, Balance.BALLADE_HEAL_TOTAL / total)
+		# 9 % des PV max par seconde de musique : chaque note vaut sa part de la durée du morceau.
+		var chart := SoloMinigame.ballade_chart()
+		var total := maxi(1, (chart.get("notes", []) as Array).size())
+		_heal_group(hero.global_position, GROUP_HEAL_RADIUS, Balance.BALLADE_HEAL_PER_SECOND * float(chart.get("duration", 10.0)) / total)
 		_burst(hero.global_position, Color(0.45, 1.0, 0.5), 4)
 		for ally in _allies_near(hero.global_position, GROUP_HEAL_RADIUS):
 			_burst(ally.global_position, Color(0.45, 1.0, 0.5), 3)

@@ -20,7 +20,7 @@ signal code_ready(code: String, note: String)
 signal roster_changed
 
 const PORT := 24565
-const MAX_PLAYERS := 6
+const MAX_PLAYERS := Balance.COOP_MAX_PLAYERS
 const STATE_RATE := 1.0 / 15.0
 const ENEMY_RATE := 0.1
 const CODE_ALPHABET := "0123456789ABCDEFGHJKMNPQRSTVWXYZ" # base 32 de Crockford (pas de I, L, O, U)

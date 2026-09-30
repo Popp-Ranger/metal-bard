@@ -11,7 +11,8 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 
 ## Le jeu en bref
 
-- **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon** (contours encrés, vignette, torches vacillantes).
+- **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon**, en **cel shading** : lumière en aplats, contour noir encré autour des personnages, vignette, torches vacillantes.
+- **Personnages aux proportions réalistes** (jambes ≈ la moitié de la taille, tête ≈ 1/7,5), démarche réaliste (foulée et cadence selon la vitesse, genoux qui plient, pieds qui se déroulent, épaules en contre-rotation, respiration) et **mains à cinq doigts** : la main gauche change de case sur le manche, la main droite pince le médiator.
 - **Héros** : un barde que vous créez (6 races, homme ou femme ; par défaut Riffald, inspiré de Dave Mustaine et Ronnie James Dio), armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
 - **Intro** : la nuit de la **Lune de Sang**. Cinématique sur une lune sanglante dans la brume, puis un cimetière près d'une chapelle : tombes déterrées et vides, cadavres de toutes les races. Le héros lâche « Aaaaaah... une bonne vieille balade par ce temps est si agréable. Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un ! » en coop), puis ~40 s de marche sur une route pavée entre champs et prairies, cadavres ensanglantés et chauves-souris, sous un orage sans pluie (éclairs hors de la route, flashs, tremblements d'écran). Les portes de la taverne se referment derrière lui.
 - **Taverne-hub** « Le Crâne Hurlant » sur 3 niveaux :
@@ -27,7 +28,7 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
   - **Coup de guitare** au corps-à-corps (clic gauche, empoignée par le manche) ;
   - **Glissade sur les genoux** (Espace) : 5 m, **esquive toutes les attaques**, recharge 20 s. Une esquive passive réussie déclenche un petit saut sur une jambe façon **Angus Young** ;
   - **Accordage de cordes** (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis ;
-  - **Riff électrique** (1) : une seule cible ; en appuyant **en rythme**, les dégâts montent en 4 paliers jusqu'à **×3**, et restent au maximum tant qu'on garde le tempo (métronome dans le HUD) ;
+  - **Riff électrique** (1) : une seule cible, **recharge de 3 s**, son `riff electrique.wav`. En le relançant **dès la fin de la recharge** (fenêtre de 0,4 s), les dégâts montent en 4 paliers jusqu'à **×3** (métronome dans le HUD) ;
   - **Onde de choc** sonore (2) : tous les ennemis dans un rayon ;
   - **Solo de la Foudre** (3) : mini-jeu façon *Guitar Hero* (5 notes, touches **1 2 3 4**) **sans pause** — le héros est **invincible** pendant le solo — puis pluie d'éclairs sur tout l'écran.
 - **Règles Donjons & Dragons 5e** : FOR / DEX / CON / INT / SAG / CHA, jets d'attaque d20 contre la CA, sauvegardes, table d'XP officielle, points à répartir à chaque niveau.
@@ -36,7 +37,8 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 - **Menu Options > Audio** (écran titre et menu pause) : volumes indépendants **Musique** (50 % plus bas par défaut), **Sorts et effets**, **Dialogues**.
 - **Sauvegarder / Charger** : 5 emplacements + la sauvegarde automatique, dans le menu pause (impossible en plein combat) et sur l'écran titre ; on reprend au même endroit.
 - **Monnaie : les médiators.**
-- **Coopération en ligne** jusqu'à 6 joueurs avec un **code d'invitation** (voir plus bas).
+- **Coopération en ligne** jusqu'à 6 joueurs avec un **code d'invitation** (voir plus bas) : +33 % d'ennemis et +25 % de PV ennemis par joueur supplémentaire.
+- **Orage** : la musique `lightning_menu.mp3` joue sur l'écran titre et pendant toute l'intro, et les éclairs tombent sur ses coups de tonnerre ; chaque éclair joue au hasard `short_lightning.mp3` ou `short_thunder.mp3`.
 
 ## Création de personnage
 
@@ -69,7 +71,7 @@ Pour tous : **3 barbes** (hommes : courte, longue tressée, bouc), **4 coiffures
 | **Transe** (contrôle) | **Solo endiablé** | Tempo hypnotique *(passif)* | Growl de l'Abîme | Maître du tempo *(passif)* |
 | **Thrash** (destruction) | Distorsion *(passif)* | Enceinte de façade | Overdrive *(passif)* | Pyrotechnie |
 
-**Ballade réparatrice** : mini-jeu sur le **vrai solo de guitare de la musique de la taverne**, extrait par analyse du morceau (126 s → 136 s, 23 notes). Chaque note juste soigne tout le groupe ; un solo sans faute (10 s) rend 90 % des PV max ; une fausse note arrête la ballade.
+**Ballade réparatrice** : mini-jeu sur `Healing.wav` (12,3 s, 31 notes repérées par analyse du morceau et synchronisées sur le son). Chaque note juste soigne tout le groupe (9 % des PV max par seconde de musique, soit 90 % pour 10 s) ; une fausse note arrête la ballade.
 
 Tout mini-jeu raté (Solo de la Foudre, Solo endiablé, Ballade) rend la recharge du sort **2,5 fois plus longue**.
 
@@ -137,7 +139,7 @@ Toutes les valeurs (vitesses, dégâts, recharges, rayon de détection, prix…)
 ```bash
 Godot_v4.7.2-stable_win64_console.exe --headless --path . res://tests/smoke_test.tscn
 ```
-Le test (100 vérifications) contrôle :
+Le test (107 vérifications) contrôle :
 - les règles D&D et la génération de 50 donjons ;
 - toute la quête, avec les trois issues du dialogue de Gloubah ;
 - la Ballade, la glissade, la taverne (clients, portes, sous-sol) ;

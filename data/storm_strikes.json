@@ -1,0 +1,59 @@
+{
+	"duration": 31.49,
+	"info": "Coups de tonnerre repérés dans la musique du menu (montées brusques de volume) : les éclairs à l'écran tombent à ces instants.",
+	"source": "res://audio/music/lightning_menu.mp3",
+	"strikes": [
+		{
+			"force": 0.47,
+			"t": 0.47
+		},
+		{
+			"force": 0.63,
+			"t": 1.88
+		},
+		{
+			"force": 0.5,
+			"t": 3.89
+		},
+		{
+			"force": 0.64,
+			"t": 5.39
+		},
+		{
+			"force": 0.77,
+			"t": 6.85
+		},
+		{
+			"force": 0.79,
+			"t": 9.65
+		},
+		{
+			"force": 0.56,
+			"t": 12.65
+		},
+		{
+			"force": 0.38,
+			"t": 15.43
+		},
+		{
+			"force": 0.58,
+			"t": 16.82
+		},
+		{
+			"force": 0.66,
+			"t": 18.64
+		},
+		{
+			"force": 0.65,
+			"t": 21.44
+		},
+		{
+			"force": 0.37,
+			"t": 25.34
+		},
+		{
+			"force": 0.37,
+			"t": 28.87
+		}
+	]
+}

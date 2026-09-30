@@ -1,123 +1,163 @@
 {
-	"duration": 10.0,
-	"info": "Solo de guitare extrait de la musique de la taverne (126 s - 136 s) par détection d'attaques (flux spectral 0,8-4 kHz) ; la corde dépend de la hauteur de la note.",
+	"duration": 12.31,
+	"info": "Notes détectées automatiquement dans Healing.wav (attaques repérées par flux spectral 150 Hz - 5 kHz) ; la corde dépend de la hauteur de la note.",
 	"notes": [
 		{
-			"hz": 603,
+			"hz": 280,
 			"lane": 2,
-			"t": 0.874
-		},
-		{
-			"hz": 301,
-			"lane": 0,
-			"t": 1.199
-		},
-		{
-			"hz": 301,
-			"lane": 0,
-			"t": 1.524
-		},
-		{
-			"hz": 431,
-			"lane": 1,
-			"t": 1.872
-		},
-		{
-			"hz": 603,
-			"lane": 2,
-			"t": 2.197
-		},
-		{
-			"hz": 345,
-			"lane": 0,
-			"t": 2.522
-		},
-		{
-			"hz": 345,
-			"lane": 0,
-			"t": 2.848
-		},
-		{
-			"hz": 581,
-			"lane": 2,
-			"t": 3.196
+			"t": 0.36
 		},
 		{
 			"hz": 517,
-			"lane": 1,
-			"t": 3.683
-		},
-		{
-			"hz": 668,
 			"lane": 3,
-			"t": 4.009
+			"t": 0.964
 		},
 		{
-			"hz": 517,
+			"hz": 258,
 			"lane": 1,
-			"t": 4.519
+			"t": 1.324
 		},
 		{
-			"hz": 431,
-			"lane": 1,
-			"t": 5.007
-		},
-		{
-			"hz": 345,
+			"hz": 172,
 			"lane": 0,
-			"t": 5.495
+			"t": 1.718
 		},
 		{
-			"hz": 581,
-			"lane": 2,
-			"t": 5.843
-		},
-		{
-			"hz": 689,
+			"hz": 388,
 			"lane": 3,
-			"t": 6.168
+			"t": 2.078
 		},
 		{
-			"hz": 668,
-			"lane": 3,
-			"t": 6.493
-		},
-		{
-			"hz": 345,
+			"hz": 215,
 			"lane": 0,
-			"t": 7.004
+			"t": 2.322
 		},
 		{
-			"hz": 603,
+			"hz": 194,
+			"lane": 0,
+			"t": 2.694
+		},
+		{
+			"hz": 194,
+			"lane": 0,
+			"t": 3.053
+		},
+		{
+			"hz": 258,
+			"lane": 1,
+			"t": 3.634
+		},
+		{
+			"hz": 215,
+			"lane": 0,
+			"t": 4.017
+		},
+		{
+			"hz": 237,
+			"lane": 1,
+			"t": 4.261
+		},
+		{
+			"hz": 258,
+			"lane": 1,
+			"t": 4.598
+		},
+		{
+			"hz": 194,
+			"lane": 0,
+			"t": 5.166
+		},
+		{
+			"hz": 237,
+			"lane": 1,
+			"t": 5.561
+		},
+		{
+			"hz": 237,
+			"lane": 1,
+			"t": 5.944
+		},
+		{
+			"hz": 215,
+			"lane": 0,
+			"t": 6.246
+		},
+		{
+			"hz": 215,
+			"lane": 0,
+			"t": 6.525
+		},
+		{
+			"hz": 151,
+			"lane": 0,
+			"t": 7.105
+		},
+		{
+			"hz": 280,
 			"lane": 2,
-			"t": 7.492
+			"t": 7.396
 		},
 		{
-			"hz": 431,
+			"hz": 258,
 			"lane": 1,
-			"t": 7.817
+			"t": 7.674
 		},
 		{
-			"hz": 431,
-			"lane": 1,
-			"t": 8.165
+			"hz": 409,
+			"lane": 3,
+			"t": 7.988
+		},
+		{
+			"hz": 388,
+			"lane": 3,
+			"t": 8.243
+		},
+		{
+			"hz": 215,
+			"lane": 0,
+			"t": 8.824
+		},
+		{
+			"hz": 280,
+			"lane": 2,
+			"t": 9.218
 		},
 		{
 			"hz": 301,
-			"lane": 0,
-			"t": 8.49
+			"lane": 2,
+			"t": 9.787
 		},
 		{
-			"hz": 603,
-			"lane": 2,
-			"t": 8.978
+			"hz": 345,
+			"lane": 3,
+			"t": 10.17
 		},
 		{
-			"hz": 581,
+			"hz": 280,
 			"lane": 2,
-			"t": 9.488
+			"t": 10.449
+		},
+		{
+			"hz": 301,
+			"lane": 2,
+			"t": 10.751
+		},
+		{
+			"hz": 560,
+			"lane": 3,
+			"t": 11.146
+		},
+		{
+			"hz": 280,
+			"lane": 2,
+			"t": 11.529
+		},
+		{
+			"hz": 258,
+			"lane": 1,
+			"t": 11.9
 		}
 	],
-	"source": "res://audio/music/tavern_theme.mp3",
-	"start": 126.0
+	"source": "res://audio/sfx/healing.wav",
+	"start": 0.0
 }

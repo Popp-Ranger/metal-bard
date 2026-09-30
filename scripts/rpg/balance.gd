@@ -37,9 +37,10 @@ const ZAP_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc éle
 
 # Riff électrique (touche 1) : une seule cible, combo rythmique.
 const RIFF_COST := 6.0
-const RIFF_BEAT := 0.7 # tempo du riff : un appui toutes les 0,7 s (~86 BPM)
-const RIFF_BEAT_TOLERANCE := 0.16 # fenêtre acceptée autour du temps (± s)
-const RIFF_MIN_INTERVAL := 0.3 # anti-spam
+const RIFF_COOLDOWN := 3.0 # recharge du Riff électrique
+const RIFF_BEAT := 3.0 # en rythme = relancer dès la fin de la recharge...
+const RIFF_BEAT_TOLERANCE := 0.4 # ... dans les 0,4 s qui suivent
+const RIFF_MIN_INTERVAL := RIFF_COOLDOWN
 const RIFF_MAX_STACKS := 4 # « se multiplie jusqu'à 4 fois »...
 const RIFF_MAX_MULT := 3.0 # ... « pour atteindre au maximum 3 fois sa puissance »
 const RIFF_RANGE := 12.0
@@ -61,8 +62,9 @@ const DASH_COOLDOWN := 20.0
 
 ## Mini-jeux ratés (fausse note) : la recharge du sort est 2,5 fois plus longue.
 const MINIGAME_FAIL_COOLDOWN_MULT := 2.5
-## Ballade réparatrice : un solo joué sans faute (10 s) soigne 90 % des PV max.
-const BALLADE_HEAL_TOTAL := 0.9
+## Ballade réparatrice : chaque seconde de musique jouée sans faute soigne 9 % des PV max
+## (10 s = 90 % d'une barre de vie ; Healing.wav dure 12,3 s).
+const BALLADE_HEAL_PER_SECOND := 0.09
 
 # Potion, chambre, médiators : voir data/items.json (ItemDB).
 
@@ -74,4 +76,19 @@ const ENEMY_ATTACK_COOLDOWN := 2.5 # « ... 1 attaque toutes les 2,5 secondes »
 const ENEMY_ATTACK_WINDUP := 0.45 # Temps d'élan (télégraphie) avant le coup
 
 const DROP_ITEM_CHANCE := 0.08
+
+# --- Coopération (jusqu'à 6 joueurs) ---------------------------------------------
+const COOP_MAX_PLAYERS := 6
+const COOP_ENEMIES_PER_EXTRA_PLAYER := 0.33 # +33 % d'ennemis par joueur supplémentaire
+const COOP_ENEMY_HP_PER_EXTRA_PLAYER := 0.25 # +25 % de PV ennemis par joueur supplémentaire
+
+
+## Multiplicateur du nombre d'ennemis selon le nombre de joueurs (1 à 6).
+static func coop_enemy_count_mult(players: int) -> float:
+	return 1.0 + COOP_ENEMIES_PER_EXTRA_PLAYER * float(clampi(players, 1, COOP_MAX_PLAYERS) - 1)
+
+
+## Multiplicateur des PV ennemis selon le nombre de joueurs.
+static func coop_enemy_hp_mult(players: int) -> float:
+	return 1.0 + COOP_ENEMY_HP_PER_EXTRA_PLAYER * float(clampi(players, 1, COOP_MAX_PLAYERS) - 1)
 

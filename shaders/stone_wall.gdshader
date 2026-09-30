@@ -1,4 +1,5 @@
 shader_type spatial;
+render_mode diffuse_toon, specular_toon; // cel shading
 // Mur de pierre procédural (briques) + découpe « façon Diablo » :
 // les murs situés entre la caméra et le héros sont tramés pour laisser voir le héros.
 

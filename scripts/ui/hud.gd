@@ -53,6 +53,7 @@ var talent_tree: TalentTree
 var _kills_label: Label
 var _recap: PanelContainer
 var _death_recap: Label
+var _coop_label: Label
 
 
 func _ready() -> void:
@@ -91,6 +92,12 @@ func _ready() -> void:
 	_build_death_screen()
 	_connect_events()
 	_refresh_quest("")
+	_coop_label = UiStyle.label("", 16, Color(0.55, 0.85, 1.0))
+	_coop_label.position = Vector2(20, 118)
+	_root.add_child(_coop_label)
+	Net.roster_changed.connect(_refresh_coop)
+	Net.code_ready.connect(_on_coop_code)
+	_refresh_coop()
 
 
 func _connect_events() -> void:
@@ -666,3 +673,24 @@ func _close_recap(on_continue: Callable) -> void:
 
 func is_recap_open() -> bool:
 	return _recap != null
+
+
+# --- Coopération -------------------------------------------------------------------------
+
+func _refresh_coop() -> void:
+	if not Net.is_online():
+		_coop_label.text = ""
+		return
+	var n := Net.player_count()
+	if Net.is_host():
+		_coop_label.text = "Coop %d/%d  •  code : %s" % [n, Net.MAX_PLAYERS, Net.code if not Net.code.is_empty() else "…"]
+	else:
+		_coop_label.text = "Coop %d/%d  •  partie d'un ami" % [n, Net.MAX_PLAYERS]
+	if n > 1:
+		_coop_label.text += "  •  ennemis +%d %%, PV +%d %%" % [
+			roundi((Balance.coop_enemy_count_mult(n) - 1.0) * 100.0), roundi((Balance.coop_enemy_hp_mult(n) - 1.0) * 100.0)]
+
+
+func _on_coop_code(code: String, _note: String) -> void:
+	_refresh_coop()
+	Events.notify("Partie ouverte ! Code d'invitation : %s (Échap → Coopération pour le copier)" % code, Events.COLOR_GOLD)

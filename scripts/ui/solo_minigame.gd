@@ -27,6 +27,11 @@ var _end_t := 0.0
 ## réparatrice : le vrai solo de la musique de la taverne). Les deux derniers s'arrêtent
 ## à la première fausse note.
 var mode := "foudre"
+## Extrait musical de la Ballade : lancé quand _t atteint _clip_at, à partir de _clip_offset.
+var _clip_source := ""
+var _clip_offset := 0.0
+var _clip_at := 0.0
+var _clip_started := true
 
 
 func _ready() -> void:
@@ -39,6 +44,7 @@ func _ready() -> void:
 
 func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -> void:
 	mode = solo_mode
+	_clip_started = true
 	_notes.clear()
 	var t := LEAD_TIME
 	var last_lane := -1
@@ -50,7 +56,13 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 		t = LEAD_TIME + float(chart.get("duration", 10.0))
 		# La musique démarre en avance pour que chaque note tombe sur la cible au moment où
 		# elle résonne dans le morceau.
-		Sfx.play_clip(str(chart.get("source", "")), float(chart.get("start", 0.0)) - LEAD_TIME)
+		# (si l'extrait commence au tout début du fichier, on attend que la 1re note ait eu
+		# le temps de tomber avant de lancer le son).
+		var start := float(chart.get("start", 0.0))
+		_clip_source = str(chart.get("source", ""))
+		_clip_offset = maxf(0.0, start - LEAD_TIME)
+		_clip_at = maxf(0.0, LEAD_TIME - start)
+		_clip_started = false
 	for i in note_count:
 		var lane := randi_range(0, LANES - 1)
 		if lane == last_lane:
@@ -73,6 +85,9 @@ func _process(delta: float) -> void:
 	if not _active:
 		return
 	_t += delta
+	if not _clip_started and _t >= _clip_at:
+		_clip_started = true
+		Sfx.play_clip(_clip_source, _clip_offset + (_t - _clip_at))
 	_feedback_t -= delta
 	for i in LANES:
 		_lane_flash[i] = maxf(0.0, float(_lane_flash[i]) - delta * 4.0)

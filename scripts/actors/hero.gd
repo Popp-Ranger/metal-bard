@@ -37,6 +37,7 @@ func _ready() -> void:
 	collision_mask = 1 | 4
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	model = HeroModel.new()
+	model.move_speed = Balance.HERO_SPEED # foulée de course
 	add_child(model)
 	# Collision adaptée à la taille de la race (1,8 m à 2,5 m).
 	var h := model.height()
@@ -254,7 +255,7 @@ func cast_tuning() -> void:
 
 
 ## Riff électrique (touche 1) : éclair sur UNE cible. Chaque appui en rythme
-## (tous les RIFF_BEAT s, ± tolérance) fait monter le combo : ×1 → ×1,67 → ×2,33 → ×3.
+## (dès la fin de la recharge de 3 s, dans les 0,4 s) fait monter le combo : ×1 → ×1,67 → ×2,33 → ×3.
 ## Au maximum, le riff reste à ×3 tant qu'on garde le rythme ; un contretemps remet à ×1.
 func cast_riff() -> void:
 	if not _ready_skill("riff"):
@@ -281,8 +282,7 @@ func cast_riff() -> void:
 	var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
 	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
 	ArcBolt.spawn(get_parent(), from, target.global_position + Vector3(0, 0.9, 0), 0.1 + 0.06 * riff_stack, 0.25, color)
-	Sfx.play("note_%d" % mini(riff_stack - 1, 3), -5.0, 0.0)
-	Sfx.play("zap", Balance.ZAP_VOLUME_DB - 3.0)
+	Sfx.play("riff", -3.0 + riff_stack * 0.5, 0.0) # riff electrique.wav
 	var dmg := roundi(Dice.roll(1, 10, GameState.mod("CHA")) * mult)
 	target.take_damage(maxi(1, roundi(dmg * GameState.spell_power())), global_position, 0.4, riff_stack >= max_stacks, "shock")
 	if GameState.has_talent("tempo_hypnotique") and target.is_alive():

@@ -24,6 +24,7 @@ func _ready() -> void:
 	add_to_group("heroes")
 	add_to_group("allies")
 	model = HeroModel.new()
+	model.move_speed = Balance.HERO_SPEED
 	var look: Dictionary = profile.get("appearance", {}).duplicate()
 	for key: String in RaceDB.DEFAULT_APPEARANCE:
 		if not look.has(key):

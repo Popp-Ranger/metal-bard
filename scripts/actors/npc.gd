@@ -172,6 +172,8 @@ func _process(delta: float) -> void:
 	var moving := walker != null and walker.walking and walker.direction.length() > 0.1
 	if moving:
 		rotation.y = lerp_angle(rotation.y, atan2(walker.direction.x, walker.direction.z), 1.0 - exp(-10.0 * delta))
+	if model != null and walker != null:
+		model.move_speed = walker.speed
 	if model != null:
 		model.set_moving(moving)
 	else:

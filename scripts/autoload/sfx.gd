@@ -18,6 +18,14 @@ const CHANNELS := [
 	[BUS_DIALOGUE, "Dialogues"],
 ]
 
+## Émis à chaque coup de tonnerre de la musique d'orage (menu, intro) : force 0..1.
+signal music_strike(force: float)
+
+const THUNDER_FILES := ["res://audio/sfx/short_lightning.mp3", "res://audio/sfx/short_thunder.mp3"]
+const RIFF_FILE := "res://audio/sfx/riff_electrique.wav"
+const STORM_MUSIC := "res://audio/music/lightning_menu.mp3"
+const STORM_DATA := "res://data/storm_strikes.json"
+
 var _streams := {}
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
@@ -27,6 +35,9 @@ var _voice: AudioStreamPlayer
 var _volumes := {BUS_MUSIC: 0.4, BUS_SFX: 0.8, BUS_DIALOGUE: 0.8} # linéaire 0..1
 ## Extrait de musique joué par un sort (solo de la Ballade réparatrice).
 var _clip: AudioStreamPlayer
+var _thunders: Array[int] = []
+var _strikes: Array[Vector2] = [] # (instant, force) des coups de tonnerre de la musique d'orage
+var _last_music_pos := -1.0
 
 
 func _ready() -> void:
@@ -102,7 +113,10 @@ func load_settings() -> void:
 # --- Lecture ------------------------------------------------------------------------
 
 func play(id: String, volume_db: float = 0.0, pitch_jitter: float = 0.05) -> void:
-	var stream: AudioStreamWAV = _streams.get(id)
+	# Tous les éclairs : un des deux enregistrements de tonnerre, tiré au hasard.
+	if id == "thunder" and _thunders.size() > 0:
+		id = "thunder_%d" % randi_range(0, _thunders.size() - 1)
+	var stream: AudioStream = _streams.get(id)
 	if stream == null:
 		return
 	var p := _players[_next]
@@ -162,7 +176,15 @@ func _build_all() -> void:
 	_streams["swoosh"] = _to_wav(_swoosh())
 	_streams["clack"] = _to_wav(_clack())
 	_streams["bones"] = _to_wav(_bones())
-	_streams["thunder"] = _to_wav(_thunder())
+	_streams["thunder"] = _to_wav(_thunder()) # secours si les fichiers manquent
+	for i in THUNDER_FILES.size():
+		var t := load(str(THUNDER_FILES[i])) as AudioStream
+		if t != null:
+			_streams["thunder_%d" % i] = t
+			_thunders.append(i)
+	var riff := load(RIFF_FILE) as AudioStream
+	if riff != null:
+		_streams["riff"] = riff
 	_streams["croak"] = _to_wav(_croak())
 	_streams["splash"] = _to_wav(_splash())
 	_streams["hurt"] = _to_wav(_hurt())
@@ -486,3 +508,34 @@ func stop_clip() -> void:
 
 func clip_playing() -> bool:
 	return _clip.playing
+
+
+# --- Musique d'orage : éclairs calés sur les coups de tonnerre ----------------------------
+
+## Musique d'orage (menu, intro) : ses coups de tonnerre déclenchent `music_strike`.
+func play_storm_music(volume_db: float = -6.0) -> void:
+	if _strikes.is_empty():
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(STORM_DATA)) if FileAccess.file_exists(STORM_DATA) else null
+		if parsed is Dictionary:
+			for s: Dictionary in (parsed as Dictionary).get("strikes", []):
+				_strikes.append(Vector2(float(s["t"]), float(s["force"])))
+	play_music(STORM_MUSIC, volume_db)
+	_last_music_pos = 0.0
+
+
+func storm_playing() -> bool:
+	return _ambience.playing and _ambience.stream != null and _ambience.stream.resource_path == STORM_MUSIC
+
+
+func _process(_delta: float) -> void:
+	if not storm_playing():
+		_last_music_pos = -1.0
+		return
+	var pos := _ambience.get_playback_position()
+	if _last_music_pos >= 0.0:
+		for s in _strikes:
+			# Franchi depuis la dernière image (en tenant compte du retour au début de la boucle).
+			var crossed := (s.x > _last_music_pos and s.x <= pos) if pos >= _last_music_pos else (s.x > _last_music_pos or s.x <= pos)
+			if crossed:
+				music_strike.emit(s.y)
+	_last_music_pos = pos

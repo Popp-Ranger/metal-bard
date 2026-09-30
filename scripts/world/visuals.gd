@@ -8,6 +8,39 @@ const STONE_SHADER := preload("res://shaders/stone_wall.gdshader")
 const PORTAL_SHADER := preload("res://shaders/portal.gdshader")
 
 static var _mat_cache := {}
+static var _outline: StandardMaterial3D
+
+## Épaisseur du contour encré des personnages (cel shading), en mètres.
+const OUTLINE_WIDTH := 0.012
+
+
+## Cel shading : lumière en aplats (toon) au lieu d'un dégradé réaliste.
+static func toon(m: StandardMaterial3D, outline: bool = false) -> StandardMaterial3D:
+	m.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+	m.specular_mode = BaseMaterial3D.SPECULAR_TOON
+	if outline:
+		m.next_pass = outline_material()
+	return m
+
+
+## Contour noir des personnages (technique de la « coque inversée »).
+static func outline_material() -> StandardMaterial3D:
+	if _outline == null:
+		_outline = StandardMaterial3D.new()
+		_outline.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_outline.albedo_color = Color(0.02, 0.015, 0.02)
+		_outline.cull_mode = BaseMaterial3D.CULL_FRONT
+		_outline.grow = true
+		_outline.grow_amount = OUTLINE_WIDTH
+	return _outline
+
+
+## Matériau de personnage : cel shading + contour encré.
+static func char_mat(color: Color, roughness: float = 0.8) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.roughness = roughness
+	return toon(m, true)
 
 
 static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0) -> StandardMaterial3D:
@@ -19,6 +52,7 @@ static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0) ->
 	m.albedo_color = color
 	m.roughness = roughness
 	m.metallic = metallic
+	toon(m)
 	_mat_cache[key] = m
 	return m
 

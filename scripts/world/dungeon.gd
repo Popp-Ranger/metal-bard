@@ -105,6 +105,7 @@ func _build_floor() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	mat.roughness = 0.9
+	Visuals.toon(mat)
 	mmi.material_override = mat
 	add_child(mmi)
 	# Joints sombres entre les dalles.
@@ -266,12 +267,12 @@ func _spawn_enemies() -> void:
 		if gen.ambush_rooms.has(i):
 			_spawn_ambush(i)
 			continue
-		var count := _rng.randi_range(2, 4)
+		var count := _coop_count(_rng.randi_range(2, 4))
 		for k in count:
 			_spawn_skeleton(cell_to_world(gen.random_cell_in_room(i, 2)), false)
 		# Premier donjon : des rats grouillent un peu partout.
 		if enemy_level <= 1:
-			for k in _rng.randi_range(1, 3):
+			for k in _coop_count(_rng.randi_range(1, 3)):
 				_spawn_rat(cell_to_world(gen.random_cell_in_room(i, 1)))
 		if i == captain_room:
 			_spawn_skeleton(cell_to_world(gen.center(i)), true)
@@ -279,7 +280,7 @@ func _spawn_enemies() -> void:
 
 ## Salle cul-de-sac : une douzaine de squelettes (dont 2 capitaines) gardent un coffre.
 func _spawn_ambush(room: int) -> void:
-	for k in 12:
+	for k in _coop_count(12):
 		_spawn_skeleton(cell_to_world(gen.random_cell_in_room(room, 1)), k < 2)
 	var c := cell_to_world(gen.center(room))
 	var chest := Node3D.new()
@@ -316,6 +317,11 @@ func _spawn_ambush(room: int) -> void:
 				Pickup.spawn(self, c + Vector3(-0.8, 0, 1.0), "item", 0, pool.pick_random())
 		Events.notify("Coffre ouvert !", Events.COLOR_GOLD)
 	Interactable.create(self, c + Vector3(0, 0, 0.9), "Ouvrir le coffre", open_chest, 2.0)
+
+
+## Coop : +33 % d'ennemis par joueur supplémentaire (même calcul chez l'hôte et les clients).
+func _coop_count(base: int) -> int:
+	return roundi(base * Balance.coop_enemy_count_mult(Net.player_count()))
 
 
 func _spawn_rat(pos: Vector3) -> Rat:

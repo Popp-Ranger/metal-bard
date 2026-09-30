@@ -155,6 +155,18 @@ func _test_quest_flow() -> void:
 	hero.cooldowns["riff"] = 0.0
 	hero.cast_riff()
 	_check(hero.riff_stack == 1, "riff à contretemps → combo remis à ×1")
+	_check(absf(float(hero.cooldowns["riff"]) - 3.0) < 0.05, "Riff électrique : recharge de 3 s")
+	_check(Sfx._streams.has("riff") and (Sfx._streams["riff"] as AudioStream).resource_path.ends_with("riff_electrique.wav"),
+		"Riff électrique : son riff electrique.wav")
+	_check(Sfx._thunders.size() == 2 and Sfx._streams.has("thunder_0") and Sfx._streams.has("thunder_1"),
+		"éclairs : short_lightning.mp3 et short_thunder.mp3 tirés au hasard")
+	# Proportions et mains : cinq doigts par main, tête ≈ 1/7,5 de la taille.
+	_check(hero.model._fingers_l.size() == 5 and hero.model._fingers_r.size() == 5
+		and (hero.model._fingers_r[1] as Array).size() == 3 and (hero.model._fingers_r[0] as Array).size() == 2,
+		"mains modélisées : 5 doigts (3 phalanges, pouce à 2)")
+	# Coop : +33 % d'ennemis et +25 % de PV par joueur supplémentaire.
+	_check(is_equal_approx(Balance.coop_enemy_count_mult(1), 1.0) and is_equal_approx(Balance.coop_enemy_count_mult(6), 2.65)
+		and is_equal_approx(Balance.coop_enemy_hp_mult(6), 2.25), "coop 6 joueurs : ennemis ×2,65, PV ×2,25")
 	# Solo : le jeu continue, le héros est invincible, touches 1 2 3 4.
 	GameState.mana = GameState.max_mana()
 	hero.cooldowns["solo"] = 0.0
@@ -213,20 +225,22 @@ func _test_quest_flow() -> void:
 	# Ballade réparatrice : mini-jeu sur le solo extrait de la musique de la taverne.
 	var chart := SoloMinigame.ballade_chart()
 	var chart_notes: Array = chart.get("notes", [])
-	_check(chart_notes.size() >= 15 and is_equal_approx(float(chart.get("duration", 0.0)), 10.0),
-		"partition du solo de la taverne : %d notes sur 10 s" % chart_notes.size())
+	_check(chart_notes.size() >= 15 and str(chart.get("source", "")).ends_with("healing.wav") and float(chart.get("duration", 0.0)) > 8.0,
+		"partition calée sur Healing.wav : %d notes sur %.1f s" % [chart_notes.size(), float(chart.get("duration", 0.0))])
 	GameState.mana = GameState.max_mana()
 	hero.cooldowns["ballade_reparatrice"] = 0.0
 	hero.talents_caster.cast("ballade_reparatrice")
 	await _frames(2)
 	var ballade_solo := (dungeon as Level).hud.solo
 	_check(ballade_solo._active and ballade_solo.mode == "ballade" and ballade_solo._notes.size() == chart_notes.size()
-		and hero.planted and Sfx.clip_playing(), "Ballade : mini-jeu lancé sur l'extrait musical, héros planté")
+		and hero.planted, "Ballade : mini-jeu lancé, héros planté")
+	await get_tree().create_timer(SoloMinigame.LEAD_TIME + 0.2).timeout
+	_check(Sfx.clip_playing() and Sfx._clip.stream.resource_path.ends_with("healing.wav"),
+		"Healing.wav démarre quand la première note atteint la cible")
 	GameState.hp = 1
 	for k in chart_notes.size():
 		Events.solo_note_hit.emit("ballade", k + 1)
-	var expected_heal := roundi(GameState.max_hp() * Balance.BALLADE_HEAL_TOTAL / chart_notes.size()) * chart_notes.size()
-	_check(absi(GameState.hp - 1 - expected_heal) <= chart_notes.size(), "solo sans faute ≈ 90 %% des PV max soignés (%d PV)" % (GameState.hp - 1))
+	_check(GameState.hp >= roundi(GameState.max_hp() * 0.8), "solo sans faute : la barre de vie remonte presque entièrement (%d / %d PV)" % [GameState.hp, GameState.max_hp()])
 	ballade_solo._hits = 3
 	ballade_solo._finish()
 	var ballade_cd := 12.0 * Balance.MINIGAME_FAIL_COOLDOWN_MULT * GameState.cooldown_multiplier()
@@ -450,6 +464,7 @@ func _test_new_features() -> void:
 	var i_level := intro as Level
 	var road_time := 222.0 / Balance.HERO_SPEED
 	_check(i_level.hero.captive and bool(intro.get("_cinematic")), "intro : cinématique de la lune de sang, héros figé")
+	_check(Sfx.storm_playing() and Sfx._strikes.size() >= 5, "intro : musique d'orage lightning_menu.mp3 (%d coups de tonnerre repérés)" % Sfx._strikes.size())
 	_check(road_time > 35.0 and road_time < 45.0, "route pavée d'environ 40 s de marche (%.0f s)" % road_time)
 	intro.set("_cinematic", false)
 	i_level.hero.captive = false
