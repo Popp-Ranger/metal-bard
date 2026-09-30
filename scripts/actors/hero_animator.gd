@@ -25,6 +25,12 @@ const HANDS := {
 }
 ## Guitare empoignée : distance main → jonction manche/caisse (repère de la guitare).
 const GRIP := 0.3
+## Point où la main droite gratte les cordes (repère de la guitare, comme HeroModel._update_arms).
+const PICK := Vector3(0.0, -0.1, 0.08)
+## Position de jeu du modèle importé : point de grattage (repère du squelette, au repos) et
+## inclinaison du manche au-dessus de l'horizontale.
+const PLAY_PICK := Vector3(-0.08, 1.1, 0.21)
+const PLAY_TILT_DEG := 25.0
 ## Os filtrés pour les réactions du haut du corps.
 const UPPER := ["spine", "chest", "neck", "head"]
 const NOD := ["neck", "head"]
@@ -82,10 +88,31 @@ func _setup(player: AnimationPlayer) -> void:
 	if _guitar != null:
 		var guitar_t := _in_model(_guitar)
 		_guitar_scale = guitar_t.basis.get_scale()
-		var chest := _skel_to_model() * sk.get_bone_global_rest(_bone["chest"])
-		_mount = chest.affine_inverse() * guitar_t.orthonormalized()
+		# Position de jeu (repère du squelette, au repos) : caisse devant le ventre côté droit,
+		# manche qui monte vers la gauche du héros (+X), table face au public (+Z).
+		var tilt := deg_to_rad(PLAY_TILT_DEG)
+		var y := Vector3(cos(tilt), sin(tilt), 0.0)
+		var z := Vector3(0.0, -0.15, 1.0).normalized()
+		z = (z - y * z.dot(y)).normalized()
+		var basis := Basis(y.cross(z), y, z)
+		var play := Transform3D(basis, PLAY_PICK - basis * PICK)
+		_mount = sk.get_bone_global_rest(_bone["chest"]).affine_inverse() * play
+		_fit_mount(sk)
 		_guitar.get_parent().remove_child(_guitar)
 		model.add_child(_guitar)
+
+
+## Les bras du modèle importé sont plus courts que ceux du squelette procédural : on remonte la
+## guitare vers l'épaule droite juste assez pour que la main droite atteigne les cordes.
+func _fit_mount(sk: Skeleton3D) -> void:
+	var chest := sk.get_bone_global_rest(_bone["chest"])
+	var shoulder := sk.get_bone_global_rest(_bone["upper_arm.R"]).origin
+	var reach := (sk.get_bone_rest(_bone["forearm.R"]).origin.length() + sk.get_bone_rest(_bone["hand.R"]).origin.length()) * 0.92
+	var pick := chest * _mount * PICK
+	var excess := pick.distance_to(shoulder) - reach
+	if excess > 0.0:
+		var shift := (shoulder - pick).normalized() * excess
+		_mount.origin += chest.basis.inverse() * shift
 
 
 func _clip(anim_name: String, loop: bool, timeline := 0.0, offset := 0.0) -> AnimationNodeAnimation:
@@ -248,11 +275,11 @@ func _process_modification_with_delta(_delta: float) -> void:
 	if model._soloing:
 		fret = (0.3 + 0.18 * (0.5 + 0.5 * sin(model._t * 5.0))) * ns
 	var strum := model._strum
-	var fret_target := t * Vector3(-0.02, fret, -0.025)
-	var pick_target := t * Vector3(0.0, -0.1 + strum * 0.06, 0.08 + strum * 0.03)
-	# Correspondance des côtés : main du manche = os « .R » (côté -X), main qui gratte = « .L ».
-	_arm(sk, g, "R", fret_target, float(_weights[0]), -chest.basis.x)
-	_arm(sk, g, "L", pick_target, float(_weights[1]), chest.basis.x)
+	var fret_target := t * Vector3(0.02, fret, -0.025)
+	var pick_target := t * (PICK + Vector3(0.0, strum * 0.06, strum * 0.03))
+	# Guitariste droitier : main gauche (os « .L », côté +X) sur le manche, main droite qui gratte.
+	_arm(sk, g, "L", fret_target, float(_weights[0]), chest.basis.x)
+	_arm(sk, g, "R", pick_target, float(_weights[1]), -chest.basis.x)
 
 
 ## Guitare tenue par le manche comme une hache : dans le prolongement des bras.

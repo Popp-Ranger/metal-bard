@@ -674,13 +674,18 @@ func _test_characters() -> void:
 	var anim := rig._anim
 	_check(anim != null and anim.tree.active and anim.lengths.size() >= 15 and anim.lengths.has("run") and anim.lengths.has("sleep"),
 		"Riffald : animations Mixamo (transférées dans Blender) jouées par un AnimationTree")
-	# IK après l'animation : la main du manche (os « hand.R ») est posée sur la case de la guitare.
+	# IK après l'animation : la main gauche (os « hand.L ») est posée sur la case de la guitare.
 	# La pose modifiée n'existe qu'au moment du rendu : on la lit au signal skeleton_updated.
 	await sk.skeleton_updated
 	var gt := anim._skel_to_model().affine_inverse() * rig._guitar.transform.orthonormalized()
-	var fret_target := gt * Vector3(-0.02, 0.42 * rig._neck_scale, -0.025)
-	var hand_err := (sk.get_bone_global_pose(sk.find_bone("hand.R")).origin - fret_target).length()
-	_check(hand_err < 0.03, "Riffald : la main du manche reste sur la guitare (écart %.3f m)" % hand_err)
+	var fret_target := gt * Vector3(0.02, 0.42 * rig._neck_scale, -0.025)
+	var hand_err := (sk.get_bone_global_pose(sk.find_bone("hand.L")).origin - fret_target).length()
+	_check(hand_err < 0.03, "Riffald : la main gauche reste sur le manche (écart %.3f m)" % hand_err)
+	var pick_err := (sk.get_bone_global_pose(sk.find_bone("hand.R")).origin - gt * (HeroAnimator.PICK + Vector3(0, rig._strum * 0.06, rig._strum * 0.03))).length()
+	_check(pick_err < 0.03, "Riffald : la main droite gratte les cordes (écart %.3f m)" % pick_err)
+	# Guitariste droitier : le manche part vers la gauche du héros (+X, le modèle regarde vers +Z).
+	_check(gt.basis.y.x > 0.5 and sk.get_bone_global_pose(sk.find_bone("hand.L")).origin.x > 0.0,
+		"Riffald : droitier, manche à gauche tenu par la main gauche")
 	_check(anim._playback.get_current_node() == "loco"
 		and float(anim.tree.get("parameters/sm/loco/pace/scale")) > 1.0, "Riffald : course accélérée à la vitesse du héros")
 	# Les cycles bouclent : après plusieurs foulées, les pieds bougent encore (pas de pose figée).

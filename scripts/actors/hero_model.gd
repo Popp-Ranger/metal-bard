@@ -19,11 +19,14 @@ const HEAD_SCALE := 0.78 # tête ≈ 1/7,5 de la taille (proportions réalistes)
 const TORSO_LEAN := 0.12 # dos légèrement voûté (attitude metal)
 ## Doigts : longueur des phalanges (proximale, moyenne, distale) ; le pouce en a deux.
 const PHALANGES := [0.034, 0.024, 0.019]
-const GUITAR_REST := Vector3(-0.38, 0.0, 0.8) # manche vers le haut-gauche, caisse sur la hanche droite, table face au public
-const GUITAR_REST_POS := Vector3(0.04, 0.06, 0.26)
-const GUITAR_SOLO := Vector3(-0.5, 0.0, 0.5) # manche dressé vers le ciel pour le solo
-const GUITAR_WINDUP := Vector3(-0.6, 0.0, 2.9) # guitare levée au-dessus de l'épaule, tenue par le manche
-const GUITAR_STRIKE := Vector3(1.2, 0.0, 2.9) # abattue vers l'avant
+## Guitariste droitier : manche vers la gauche du héros (+X, le modèle regarde vers +Z), caisse sur
+## la hanche droite, main gauche sur les cases, main droite qui gratte. Attention : les pivots de bras
+## « _l » sont du côté -X (anatomiquement la main DROITE) et « _r » du côté +X (main GAUCHE).
+const GUITAR_REST := Vector3(-0.38, 0.0, -0.8) # manche vers le haut, à gauche du héros, table face au public
+const GUITAR_REST_POS := Vector3(-0.04, 0.06, 0.26)
+const GUITAR_SOLO := Vector3(-0.5, 0.0, -0.5) # manche dressé vers le ciel pour le solo
+const GUITAR_WINDUP := Vector3(-0.6, 0.0, -2.9) # guitare levée au-dessus de l'épaule, tenue par le manche
+const GUITAR_STRIKE := Vector3(1.2, 0.0, -2.9) # abattue vers l'avant
 ## Modèles importés de Blender (voir docs/RIFFALD.md et docs/GUITARE.md).
 const RIFFALD_MODEL := "res://assets/models/riffald/riffald.glb"
 const GUITAR_MODEL := "res://assets/models/guitare/guitare_heros.glb"
@@ -177,7 +180,7 @@ func _build() -> void:
 		Visuals.cylinder(_torso, 0.0, 0.025, 0.1, Vector3((shoulder + 0.04) * side, 0.57, 0.0), metal, Vector3(0, 0, -30 * side))
 	# Sangle de guitare en travers du torse.
 	if appearance.get("guitar", true):
-		Visuals.box(_torso, Vector3(0.04, 0.6, 0.015), Vector3(-0.01, 0.3, 0.125), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, 33))
+		Visuals.box(_torso, Vector3(0.04, 0.6, 0.015), Vector3(0.01, 0.3, 0.125), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, -33))
 
 	# --- Tête (à l'échelle réaliste) légèrement projetée en avant.
 	_head = _pivot(_torso, Vector3(0, 0.6, 0.03))
@@ -203,8 +206,8 @@ func _build() -> void:
 	_hand_l = _build_hand(_fore_l, skin, glove, -1.0)
 	_hand_r = _build_hand(_fore_r, skin, glove, 1.0)
 	if appearance.get("guitar", true):
-		# Médiator entre le pouce et l'index de la main droite.
-		_pick = Visuals.cylinder(_hand_r, 0.018, 0.018, 0.004, Vector3(0.0, -0.075, 0.03),
+		# Médiator entre le pouce et l'index de la main droite (pivot « _l », côté -X).
+		_pick = Visuals.cylinder(_hand_l, 0.018, 0.018, 0.004, Vector3(0.0, -0.075, 0.03),
 			Visuals.mat(Color(1.0, 0.75, 0.2), 0.3), Vector3(90, 0, 0), 3)
 
 	# --- Aura dorée du solo (invincibilité).
@@ -667,25 +670,25 @@ func _update_arms() -> void:
 	var fret := 0.42 * _neck_scale
 	if _soloing:
 		fret = (0.3 + 0.18 * (0.5 + 0.5 * sin(_t * 5.0))) * _neck_scale # la main gauche court sur le manche
-	# Main gauche derrière le manche (pouce dessous, doigts qui passent par-dessus la touche).
-	var left_target := gt * Vector3(-0.02, fret, -0.025)
+	# Main gauche (pivots « _r », côté +X) derrière le manche : pouce dessous, doigts par-dessus la touche.
+	var left_target := gt * Vector3(0.02, fret, -0.025)
 	var pick := gt * Vector3(0.0, -0.1 + _strum * 0.06, 0.08 + _strum * 0.03)
 	var right_target := pick.lerp(gt * Vector3(0, 0.3 * _neck_scale, -0.02), _smash)
-	_solve_arm(_upper_l, _fore_l, left_target, Vector3(-1.0, -0.4, -0.3))
-	_solve_arm(_upper_r, _fore_r, right_target, Vector3(1.0, -0.6, -0.4))
+	_solve_arm(_upper_r, _fore_r, left_target, Vector3(1.0, -0.4, -0.3))
+	_solve_arm(_upper_l, _fore_l, right_target, Vector3(-1.0, -0.6, -0.4))
 	var neck_front := gt.basis.z.normalized()
-	_orient_hand(_upper_l, _fore_l, _hand_l, neck_front, 0.0)
-	_orient_hand(_upper_r, _fore_r, _hand_r, -neck_front, -0.5 + _strum * 0.6) # coup de poignet
+	_orient_hand(_upper_r, _fore_r, _hand_r, neck_front, 0.0)
+	_orient_hand(_upper_l, _fore_l, _hand_l, -neck_front, -0.5 + _strum * 0.6) # coup de poignet
 	# Main gauche : doigts recourbés sur la touche, un doigt appuie plus fort sur une case.
 	var chord := [0.35, 1.05, 1.1, 1.15, 1.2]
 	if _smash < 0.5:
 		chord[_fret_finger] = 1.45
 	else:
 		chord = [1.2, 1.5, 1.5, 1.5, 1.5] # poing serré sur le manche pour frapper
-	_curl_fingers(_fingers_l, chord)
+	_curl_fingers(_fingers_r, chord)
 	# Main droite : médiator pincé entre le pouce et l'index, autres doigts repliés.
 	var grip := [0.55, 1.1, 1.45, 1.5, 1.55] if _smash < 0.5 else [1.2, 1.5, 1.5, 1.5, 1.5]
-	_curl_fingers(_fingers_r, grip)
+	_curl_fingers(_fingers_l, grip)
 
 
 ## Oriente la main dans le prolongement de l'avant-bras, paume tournée vers `palm_dir`
@@ -739,9 +742,9 @@ func swing() -> void:
 	var tw := create_tween()
 	tw.tween_property(self, "_smash", 1.0, 0.05)
 	tw.parallel().tween_property(_guitar, "rotation", GUITAR_WINDUP, 0.09)
-	tw.parallel().tween_property(_guitar, "position", Vector3(0.1, 0.45, 0.2), 0.09)
+	tw.parallel().tween_property(_guitar, "position", Vector3(-0.1, 0.45, 0.2), 0.09)
 	tw.tween_property(_guitar, "rotation", GUITAR_STRIKE, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.parallel().tween_property(_guitar, "position", Vector3(0.05, 0.3, 0.45), 0.09)
+	tw.parallel().tween_property(_guitar, "position", Vector3(-0.05, 0.3, 0.45), 0.09)
 	tw.tween_interval(0.07)
 	tw.tween_property(_guitar, "rotation", GUITAR_REST, 0.2)
 	tw.parallel().tween_property(_guitar, "position", GUITAR_REST_POS, 0.2)
