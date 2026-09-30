@@ -183,6 +183,17 @@ func _test_quest_flow() -> void:
 		lane_keys.append(int((InputMap.action_get_events("solo_lane_%d" % lane)[0] as InputEventKey).physical_keycode))
 	var expected: Array[int] = [KEY_1, KEY_2, KEY_3, KEY_4]
 	_check(lane_keys == expected, "le solo se joue avec les touches 1 2 3 4")
+	var foudre_times: Array[float] = []
+	for n in solo._notes:
+		foudre_times.append(float(n["time"]))
+	var even := foudre_times.size() == 6
+	for i in range(2, foudre_times.size()):
+		even = even and absf((foudre_times[i] - foudre_times[i - 1]) - (foudre_times[1] - foudre_times[0])) < 0.01
+	_check(even and solo._clip_source.ends_with("solo_de_la_foudre.mp3"),
+		"Solo de la Foudre : 6 notes régulières sur solo_del_la_foudre.mp3")
+	_check((Sfx._streams["solo_thunder"] as AudioStream).resource_path.ends_with("short_thunder.mp3")
+		and (Sfx._streams["wave"] as AudioStream).resource_path.ends_with("ondes_de_chocs.wav"),
+		"sons : éclairs du solo = short_thunder, onde de choc = ondes de chocs.wav")
 	solo._hits = Balance.SOLO_NOTES
 	solo._finish()
 	_check(not hero.casting_solo, "fin du solo, le héros redevient vulnérable")
@@ -415,6 +426,28 @@ func _test_new_features() -> void:
 				chair_moved = true
 	_check(max_up >= 1 and max_up <= 2, "au plus 2 clients debout à la fois (%d)" % max_up)
 	_check(chair_moved, "les clients reculent leur chaise pour se lever")
+	# Un client va vraiment jusqu'au comptoir, prend une chope et revient s'asseoir.
+	var walker_p: Patron = null
+	for p in patrons:
+		if p.mode == Patron.Mode.TO_BAR and not p.wheelchair:
+			walker_p = p
+	var reached_bar := false
+	var back_seated := false
+	if walker_p != null:
+		walker_p.walk_speed = 12.0
+		walker_p.walker.speed = 12.0
+		for f in 600:
+			await get_tree().physics_frame
+			if walker_p.mode == Patron.Mode.AT_BAR:
+				reached_bar = true
+				walker_p._timer = 0.0
+			if reached_bar and walker_p.walker.walking:
+				walker_p.walker.speed = 12.0
+			if reached_bar and walker_p.mode == Patron.Mode.SEATED:
+				back_seated = walker_p.has_mug()
+				break
+	_check(reached_bar, "un client marche jusqu'au comptoir")
+	_check(back_seated, "il revient s'asseoir à sa place avec une chope")
 	var zarathos: Npc = null
 	for c in tavern.get_children():
 		if c is Npc and (c as Npc).npc_id == "zarathos":

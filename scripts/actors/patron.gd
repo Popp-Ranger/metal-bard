@@ -2,7 +2,7 @@ class_name Patron
 extends Npc
 ## Client de la taverne avec une petite « simulation de vie » :
 ## assis à sa table au moins 40 s, il recule sa chaise, se lève et va au comptoir parler
-## avec la tavernière (20 s au plus), puis revient, s'assoit et rapproche sa chaise.
+## avec la tavernière (20 s au plus), prend une chope, puis revient, s'assoit et rapproche sa chaise.
 ## La taverne n'autorise jamais plus de 2 clients debout en même temps (claim_standing).
 ## Les clients sont un peu grossiers : ils lâchent des jurons de temps en temps.
 
@@ -35,6 +35,8 @@ var _bark_timer := randf_range(8.0, 40.0)
 var _bar_index := -1
 var _wheels: Array[Node3D] = []
 var _chair_home := Vector3.ZERO
+## Chope servie au comptoir, rapportée à table (vidée et reposée au prochain lever).
+var _mug: Node3D
 
 
 func _ready() -> void:
@@ -83,6 +85,7 @@ func _try_stand_up() -> void:
 		tavern.call("release_standing")
 		_timer = randf_range(8.0, 15.0) # comptoir plein : on réessaiera
 		return
+	_drop_mug()
 	mode = Mode.STANDING_UP
 	var back := _pull_dir() * CHAIR_PULL
 	var tw := create_tween()
@@ -102,6 +105,7 @@ func _go_to_bar() -> void:
 
 
 func _leave_bar() -> void:
+	_take_mug()
 	tavern.call("release_bar_spot", _bar_index)
 	_bar_index = -1
 	mode = Mode.TO_SEAT
@@ -144,6 +148,30 @@ func _sit_down() -> void:
 	global_position = seat_pos
 	rotation.y = seat_yaw
 	sit(true, seat_height)
+
+
+## La tavernière sert une chope : le client la tient dans la main droite.
+func _take_mug() -> void:
+	_drop_mug()
+	if model == null or model._hand_r == null:
+		return
+	_mug = Node3D.new()
+	model._hand_r.add_child(_mug)
+	_mug.position = Vector3(0.0, -0.08, 0.06)
+	var wood := Visuals.mat(Color(0.5, 0.33, 0.16), 0.7)
+	Visuals.cylinder(_mug, 0.05, 0.045, 0.13, Vector3.ZERO, wood, Vector3.ZERO, 10)
+	Visuals.cylinder(_mug, 0.047, 0.047, 0.012, Vector3(0, 0.06, 0), Visuals.mat(Color(0.95, 0.9, 0.75), 0.9), Vector3.ZERO, 10) # mousse
+	Visuals.torus(_mug, 0.03, 0.045, Vector3(0.06, 0.0, 0), wood, Vector3(90, 0, 0))
+
+
+func _drop_mug() -> void:
+	if _mug != null and is_instance_valid(_mug):
+		_mug.queue_free()
+	_mug = null
+
+
+func has_mug() -> bool:
+	return _mug != null and is_instance_valid(_mug)
 
 
 ## Direction dans laquelle la chaise recule (à l'opposé de la table).

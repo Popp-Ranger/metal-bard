@@ -1,10 +1,10 @@
 class_name SoloMinigame
 extends Control
 ## Mini-jeu du « Solo de la Foudre », façon Guitar Hero.
-## 5 notes descendent sur 4 cordes ; il faut appuyer au bon moment
+## 6 notes (calées sur solo_del_la_foudre.mp3) descendent sur 4 cordes ; il faut appuyer au bon moment
 ## (touches 1 2 3 4). Le jeu continue pendant le solo : le héros reste sur place,
 ## invincible, et les ennemis continuent d'avancer.
-## Résultat : 5/5 = pluie d'éclairs à 100 %, 4/5 = 70 %, 3/5 = 45 %, moins = fausse note.
+## Résultat : 6/6 = pluie d'éclairs à 100 %, 5/6 = 70 %, 3-4/6 = 45 %, moins = fausse note.
 
 const LANES := 4
 const NOTE_SPEED := 330.0 # pixels par seconde
@@ -45,6 +45,7 @@ func _ready() -> void:
 func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -> void:
 	mode = solo_mode
 	_clip_started = true
+	_clip_source = ""
 	_notes.clear()
 	var t := LEAD_TIME
 	var last_lane := -1
@@ -63,6 +64,25 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 		_clip_offset = maxf(0.0, start - LEAD_TIME)
 		_clip_at = maxf(0.0, LEAD_TIME - start)
 		_clip_started = false
+	elif mode == "foudre":
+		# Solo de la Foudre : le morceau solo_del_la_foudre.mp3, avec des notes réparties
+		# régulièrement du début à la fin (la 1re tombe quand le morceau démarre).
+		var stream := load(Sfx.SOLO_FOUDRE_FILE) as AudioStream
+		var length := stream.get_length() if stream != null else 8.0
+		var margin := 0.25
+		for i in note_count:
+			var lane := randi_range(0, LANES - 1)
+			if lane == last_lane:
+				lane = (lane + randi_range(1, LANES - 1)) % LANES
+			last_lane = lane
+			var at := margin + (length - 2.0 * margin) * float(i) / float(maxi(1, note_count - 1))
+			_notes.append({"lane": lane, "time": LEAD_TIME + at, "judged": false, "hit": false})
+		t = LEAD_TIME + length - margin
+		note_count = 0
+		_clip_source = Sfx.SOLO_FOUDRE_FILE if stream != null else ""
+		_clip_offset = 0.0
+		_clip_at = LEAD_TIME
+		_clip_started = stream == null
 	for i in note_count:
 		var lane := randi_range(0, LANES - 1)
 		if lane == last_lane:
@@ -78,7 +98,8 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 	_feedback_t = 1.2
 	_active = true
 	visible = true
-	Sfx.play("solo_start", -4.0, 0.0)
+	if mode == "endiable":
+		Sfx.play("solo_start", -4.0, 0.0)
 
 
 func _process(delta: float) -> void:
@@ -139,7 +160,7 @@ func _press(lane: int) -> void:
 	best["hit"] = true
 	_hits += 1
 	Events.solo_note_hit.emit(mode, _hits)
-	if mode != "ballade": # la ballade, elle, joue les vraies notes du morceau
+	if mode == "endiable": # la ballade et le Solo de la Foudre jouent un vrai morceau
 		Sfx.play("note_%d" % lane, -3.0, 0.0)
 	if best_err <= WINDOW_PERFECT:
 		_set_feedback("PARFAIT !", Color(1.0, 0.9, 0.3))
@@ -154,7 +175,7 @@ func _set_feedback(text: String, color: Color) -> void:
 
 
 func _finish() -> void:
-	if mode == "ballade":
+	if _clip_source != "":
 		Sfx.stop_clip()
 	_active = false
 	visible = false

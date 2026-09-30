@@ -23,6 +23,10 @@ signal music_strike(force: float)
 
 const THUNDER_FILES := ["res://audio/sfx/short_lightning.mp3", "res://audio/sfx/short_thunder.mp3"]
 const RIFF_FILE := "res://audio/sfx/riff_electrique.wav"
+const WAVE_FILE := "res://audio/sfx/ondes_de_chocs.wav"
+const SOLO_FOUDRE_FILE := "res://audio/sfx/solo_de_la_foudre.mp3"
+## Éclairs du Solo de la Foudre : toujours le même tonnerre court.
+const SOLO_THUNDER_FILE := "res://audio/sfx/short_thunder.mp3"
 const STORM_MUSIC := "res://audio/music/lightning_menu.mp3"
 const STORM_DATA := "res://data/storm_strikes.json"
 
@@ -57,6 +61,7 @@ func _ready() -> void:
 	_clip = AudioStreamPlayer.new()
 	_clip.bus = BUS_SFX
 	add_child(_clip)
+	_clip.finished.connect(_on_clip_finished)
 	_build_all()
 	load_settings()
 
@@ -185,6 +190,10 @@ func _build_all() -> void:
 	var riff := load(RIFF_FILE) as AudioStream
 	if riff != null:
 		_streams["riff"] = riff
+	for pair: Array in [["wave", WAVE_FILE], ["solo_thunder", SOLO_THUNDER_FILE]]:
+		var s := load(str(pair[1])) as AudioStream
+		if s != null:
+			_streams[str(pair[0])] = s
 	_streams["croak"] = _to_wav(_croak())
 	_streams["splash"] = _to_wav(_splash())
 	_streams["hurt"] = _to_wav(_hurt())
@@ -503,6 +512,10 @@ func stop_clip() -> void:
 		var tw := create_tween()
 		tw.tween_property(_clip, "volume_db", -40.0, 0.4)
 		tw.tween_callback(_clip.stop)
+	_ambience.stream_paused = false
+
+
+func _on_clip_finished() -> void:
 	_ambience.stream_paused = false
 
 

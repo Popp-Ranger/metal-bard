@@ -22,7 +22,7 @@ func _ready() -> void:
 func _run() -> void:
 	Events.screen_flash.emit(Color(0.75, 0.85, 1.0, 0.55), 0.35)
 	Events.camera_shake.emit(0.35, 0.8)
-	Sfx.play("thunder", -2.0)
+	Sfx.play("solo_thunder", -2.0, 0.0) # short_thunder
 	# Éclairs décoratifs autour du héros.
 	for i in 6:
 		var p := center + Vector3(randf_range(-9, 9), 0, randf_range(-9, 9))
@@ -40,8 +40,6 @@ func _run() -> void:
 		ArcBolt.spawn(get_parent(), top, e.global_position + Vector3(0, 0.5, 0), 0.28, 0.45, Color(0.7, 0.8, 1.0))
 		var dmg := roundi(Dice.roll(4, 10, cha) * power)
 		e.take_damage(maxi(1, dmg), e.global_position + Vector3(0.01, 0, 0), 0.0, false, "shock")
-		if i % 3 == 0:
-			Sfx.play("zap", -6.0)
 		i += 1
 		await get_tree().create_timer(0.09, false).timeout
 	await get_tree().create_timer(0.6, false).timeout

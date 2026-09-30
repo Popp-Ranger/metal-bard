@@ -66,6 +66,11 @@
 - [x] Ballade réparatrice sur `Healing.wav`, notes synchronisées
 - [x] Musique d'orage `lightning_menu.mp3` (menu + intro) avec éclairs calés sur le tonnerre ; sons d'éclairs `short_lightning` / `short_thunder`
 
+## ✅ v0.1.7 — Sons et taverne qui bouge
+- [x] Onde de choc : son `ondes de chocs.wav`
+- [x] Solo de la Foudre : morceau `solo_del_la_foudre.mp3`, 6 notes régulières, éclairs au son `short_thunder`
+- [x] Clients qui marchent vraiment jusqu'au comptoir et reviennent avec une chope (2 debout au maximum) ; correction du suivi de chemin des PNJ
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

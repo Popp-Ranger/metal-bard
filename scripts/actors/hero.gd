@@ -364,7 +364,7 @@ func cast_wave() -> void:
 	var wave_radius := Balance.WAVE_RADIUS + (2.0 if GameState.has_talent("larsen_persistant") else 0.0)
 	var wave_knock := Balance.WAVE_KNOCKBACK * (1.5 if GameState.has_talent("larsen_persistant") else 1.0)
 	Shockwave.spawn(get_parent(), global_position, wave_radius)
-	Sfx.play("boom", -2.0)
+	Sfx.play("wave", -2.0, 0.0) # ondes de chocs.wav
 	Events.camera_shake.emit(0.2, 0.25)
 	var dc := GameState.spell_dc()
 	for e in enemies():

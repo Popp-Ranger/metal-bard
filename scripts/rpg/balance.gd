@@ -52,7 +52,7 @@ const WAVE_KNOCKBACK := 5.5
 
 const SOLO_COST := 45.0
 const SOLO_COOLDOWN := 18.0
-const SOLO_NOTES := 5
+const SOLO_NOTES := 6 # réparties régulièrement sur solo_del_la_foudre.mp3
 const SOLO_SCREEN_RADIUS := 20.0
 
 # Glissade sur les genoux (barre Espace) : esquive toutes les attaques.

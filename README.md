@@ -29,8 +29,8 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
   - **Glissade sur les genoux** (Espace) : 5 m, **esquive toutes les attaques**, recharge 20 s. Une esquive passive réussie déclenche un petit saut sur une jambe façon **Angus Young** ;
   - **Accordage de cordes** (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis ;
   - **Riff électrique** (1) : une seule cible, **recharge de 3 s**, son `riff electrique.wav`. En le relançant **dès la fin de la recharge** (fenêtre de 0,4 s), les dégâts montent en 4 paliers jusqu'à **×3** (métronome dans le HUD) ;
-  - **Onde de choc** sonore (2) : tous les ennemis dans un rayon ;
-  - **Solo de la Foudre** (3) : mini-jeu façon *Guitar Hero* (5 notes, touches **1 2 3 4**) **sans pause** — le héros est **invincible** pendant le solo — puis pluie d'éclairs sur tout l'écran.
+  - **Onde de choc** sonore (2) : tous les ennemis dans un rayon (son `ondes de chocs.wav`) ;
+  - **Solo de la Foudre** (3) : mini-jeu façon *Guitar Hero* (6 notes réparties régulièrement sur le morceau `solo_del_la_foudre.mp3`, touches **1 2 3 4**) **sans pause** — le héros est **invincible** pendant le solo — puis pluie d'éclairs sur tout l'écran (tonnerre `short_thunder`).
 - **Règles Donjons & Dragons 5e** : FOR / DEX / CON / INT / SAG / CHA, jets d'attaque d20 contre la CA, sauvegardes, table d'XP officielle, points à répartir à chaque niveau.
 - **IA des squelettes** : errance aléatoire, détection à 4 m, vitesse = 25 % du héros, 1 attaque toutes les 2,5 s (avec élan visible pour esquiver).
 - **Musiques metal** en boucle pour la taverne et le donjon (`audio/music/`), bruitages **synthétisés par code**, « voix » babillées pendant les dialogues.
