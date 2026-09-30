@@ -683,6 +683,15 @@ func _test_characters() -> void:
 	_check(hand_err < 0.03, "Riffald : la main du manche reste sur la guitare (écart %.3f m)" % hand_err)
 	_check(anim._playback.get_current_node() == "loco"
 		and float(anim.tree.get("parameters/sm/loco/pace/scale")) > 1.0, "Riffald : course accélérée à la vitesse du héros")
+	# Les cycles bouclent : après plusieurs foulées, les pieds bougent encore (pas de pose figée).
+	await get_tree().create_timer(1.2).timeout
+	var foot_ys: Array[float] = []
+	for k in 8:
+		await get_tree().create_timer(0.1).timeout
+		await sk.skeleton_updated
+		foot_ys.append(sk.get_bone_global_pose(sk.find_bone("foot.L")).origin.y)
+	_check(foot_ys.max() - foot_ys.min() > 0.2 and foot_ys.min() < 0.16,
+		"Riffald : la course boucle et le pied revient au sol (%.2f → %.2f m)" % [foot_ys.min(), foot_ys.max()])
 	# Actions : coups alternés (guitare empoignée), sorts, lit, mort.
 	rig.set_moving(false)
 	rig.swing()

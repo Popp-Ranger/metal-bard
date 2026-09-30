@@ -91,6 +91,8 @@ func _setup(player: AnimationPlayer) -> void:
 func _clip(anim_name: String, loop: bool, timeline := 0.0, offset := 0.0) -> AnimationNodeAnimation:
 	var n := AnimationNodeAnimation.new()
 	n.animation = anim_name
+	if loop and timeline <= 0.0:
+		timeline = float(lengths.get(anim_name, 1.0)) # le mode boucle du nœud exige une timeline propre
 	if timeline > 0.0 or offset > 0.0:
 		n.use_custom_timeline = true
 		n.timeline_length = timeline if timeline > 0.0 else float(lengths.get(anim_name, 1.0))
