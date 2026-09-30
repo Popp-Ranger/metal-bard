@@ -16,6 +16,10 @@ var captive := false
 var planted := false
 ## Glissade sur les genoux en cours : aucune attaque ne touche.
 var dashing := false
+## Allongé sur un lit de la taverne : la vie remonte progressivement ; bouger fait se lever.
+var resting := false
+var _rest_from := Vector3.ZERO
+var _rest_heal := 0.0
 var _regen_tick := 0.0
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
@@ -79,6 +83,9 @@ func _physics_process(delta: float) -> void:
 				GameState.heal_hero(1) # Régénération trollesque
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if resting:
+		_rest_tick(delta, input)
+		return
 	var move := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
 	if casting_solo or leaping or captive or planted or dashing:
 		move = Vector3.ZERO # planté sur place en plein solo (ou en plein vol, ou en cage)
@@ -116,7 +123,7 @@ var _click_interacted := false
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if dead or get_tree().paused or captive:
+	if dead or get_tree().paused or captive or resting:
 		return
 	# Clic gauche sur un personnage ou un objet à portée : on interagit au lieu de frapper.
 	var mb := event as InputEventMouseButton
@@ -169,7 +176,7 @@ func _cooldown(skill: String, base: float) -> void:
 
 
 func _ready_skill(skill: String) -> bool:
-	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not captive \
+	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not captive and not resting \
 		and not planted and not dashing and not talents_caster.blocks_actions()
 
 
@@ -491,6 +498,7 @@ func dodged() -> void:
 func take_hit(amount: int, _from: Vector3, attacker: Node3D = null) -> void:
 	if dead or _invuln > 0.0 or leaping:
 		return
+	get_up() # un coup réveille le dormeur
 	if dashing:
 		GameState.run_add("avoided", amount)
 		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), "Glissade !", Color(0.7, 0.85, 1.0))
@@ -555,3 +563,50 @@ func _update_interaction() -> void:
 	if text != _prompt_text:
 		_prompt_text = text
 		Events.interaction_prompt.emit(text)
+
+
+# --- Repos dans un lit (chambre louée à la taverne) ----------------------------------------
+
+## S'allonge sur le lit (centre `bed_center`, tête vers -Z tourné de `yaw`).
+func lie_down(bed_center: Vector3, yaw: float = 0.0) -> void:
+	if resting or dead:
+		return
+	resting = true
+	_rest_from = global_position
+	_rest_heal = 0.0
+	velocity = Vector3.ZERO
+	global_position = Vector3(bed_center.x, 0.0, bed_center.z)
+	model.set_moving(false)
+	# Allongé sur le dos : pieds au bout du lit, tête sur l'oreiller.
+	model.rotation = Vector3(-PI * 0.5, yaw, 0.0)
+	model.position = Basis(Vector3.UP, yaw) * Vector3(0, 0.62, 0.95)
+	Events.notify("Vous vous allongez... (bougez pour vous lever)", Events.COLOR_GOOD)
+
+
+func get_up() -> void:
+	if not resting:
+		return
+	resting = false
+	model.rotation = Vector3(0, atan2(facing.x, facing.z), 0)
+	model.position = Vector3.ZERO
+	global_position = _rest_from
+
+
+## 10 s pour passer de 1 PV à la vie pleine (les dB remontent au même rythme).
+func _rest_tick(delta: float, input: Vector2) -> void:
+	velocity = Vector3.ZERO
+	var max_hp := GameState.max_hp()
+	_rest_heal += max_hp / Balance.BED_FULL_HEAL_TIME * delta
+	var whole := int(_rest_heal)
+	if whole > 0:
+		_rest_heal -= whole
+		GameState.heal_hero(whole)
+	GameState.mana = minf(GameState.max_mana(), GameState.mana + GameState.max_mana() / Balance.BED_FULL_HEAL_TIME * delta)
+	Events.hero_mana_changed.emit(GameState.mana, GameState.max_mana())
+	if GameState.hp >= max_hp and GameState.mana >= GameState.max_mana():
+		GameState.flags.erase("room_paid") # une nuit par location
+		Events.notify("Vous vous levez frais comme un roadie après un concert. PV et dB au maximum !", Events.COLOR_GOOD)
+		get_up()
+	elif input.length() > 0.1:
+		Events.notify("Vous vous levez avant d'être complètement reposé.", Events.COLOR_DEFAULT)
+		get_up()

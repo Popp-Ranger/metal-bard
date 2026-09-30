@@ -17,11 +17,14 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 - **Intro** : la nuit de la **Lune de Sang**. Cinématique sur une lune sanglante dans la brume, puis un cimetière près d'une chapelle : tombes déterrées et vides, cadavres de toutes les races. Le héros lâche « Aaaaaah... une bonne vieille balade par ce temps est si agréable. Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un ! » en coop), puis ~40 s de marche sur une route pavée entre champs et prairies, cadavres ensanglantés et chauves-souris, sous un orage sans pluie (éclairs hors de la route, flashs, tremblements d'écran). Les portes de la taverne se referment derrière lui.
 - **Taverne-hub** « Le Crâne Hurlant » sur 3 niveaux :
   - salle commune : clients générés aléatoirement qui reculent leur chaise, vont au comptoir et jurent (« Yeah ! », « Enfer et damnation ! », « Bordel ! », « Ça, c'est Metal ! ») ; jamais plus de 2 debout à la fois ;
-  - étage avec les chambres ;
+  - étage avec les chambres : louez la chambre 2 à Brunhilde puis **couchez-vous sur le lit** (clic) : la vie remonte progressivement, de 1 PV à 100 % en 10 s ;
   - **sous-sol d'entraînement** : mannequins, cible amicale, **dB illimités**, et un **portail démoniaque rouge sang** dans une zone brumeuse, d'où sortent cinq tentacules.
   - Zarathos fait les cent pas près de son cercle de runes. L'Inconnue encapuchonnée **réinitialise l'arbre de talents**.
 - **Première quête complète** : retrouver Plumeau, le bébé ours-hibou de Gérald, dans de vastes **catacombes générées procéduralement** (salles de 16 à 26 m, couloirs de 6 m, torches espacées).
   - **Rats** (3 PV) un peu partout ; salles cul-de-sac gardées par une douzaine de squelettes.
+  - **Portes** à ouvrir ([E] ou clic) : tant qu'une porte est fermée, la salle derrière reste **plongée dans le noir** et ses occupants sont invisibles.
+  - La salle de Gloubah est **scellée** : la clé est sur le **chef des squelettes**, un squelette 25 % plus grand coiffé d'une **tête de loup en capuche**, peau de loup sur les épaules.
+  - **Touche T** : **portail bleu** de retour à la taverne. Un portail bleu s'ouvre à côté de celui de Zarathos et vous ramène exactement où vous étiez : le donjon reste tel quel (ennemis tués, portes ouvertes, clés) tant que vous ne l'avez pas terminé.
   - **Boss Gloubah**, grenouille géante trônant sur un **pentagramme de bave verte**, la gueule ensanglantée. Elle vous parle d'abord : selon vos réponses (rien n'indique lesquelles mènent au combat), elle se bat, vous enferme dans une cage… ou devient amicale et vous donne la clé (XP doublée).
   - Compteur de victimes, puis **récapitulatif** en fin de donjon (dégâts infligés, subis, évités).
 - **Arsenal** :
@@ -116,7 +119,8 @@ Tous les objets du jeu (reliques, potion, chambre, médiators, clé de la cage) 
 | Riff électrique (en rythme !) / Onde de choc / Solo | **1** / **2** / **3** |
 | Mini-jeu du solo | **1 2 3 4** |
 | Sorts de talents | **4 5 6 7** |
-| Arbre de talents | **T** |
+| Arbre de talents | **K** |
+| Portail de retour à la taverne (donjon) | **T** |
 | Potion | **R** |
 | Parler / interagir | **E** |
 | Fiche de personnage | **C** |

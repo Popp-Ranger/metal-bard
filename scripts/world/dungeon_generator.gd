@@ -242,3 +242,57 @@ func _add_ambush_rooms(count: int) -> void:
 				nearest = i
 		_carve_corridor(center(nearest), center(idx))
 		ambush_rooms.append(idx)
+
+
+## Salle du boss fermée à clé : toutes les autres salles doivent rester accessibles depuis
+## le départ sans la traverser (sinon la clé du chef pourrait être hors d'atteinte).
+func all_rooms_reachable_without_boss_room() -> bool:
+	var boss := rooms[boss_room]
+	var saved := PackedByteArray()
+	saved.resize(boss.size.x * boss.size.y)
+	var k := 0
+	for y in range(boss.position.y, boss.end.y):
+		for x in range(boss.position.x, boss.end.x):
+			saved[k] = grid[y * width + x]
+			grid[y * width + x] = EMPTY
+			k += 1
+	var dist := distance_field(center(start_room))
+	k = 0
+	for y in range(boss.position.y, boss.end.y):
+		for x in range(boss.position.x, boss.end.x):
+			grid[y * width + x] = saved[k]
+			k += 1
+	for i in rooms.size():
+		if i == boss_room:
+			continue
+		var c := center(i)
+		if dist[c.y * width + c.x] < 0:
+			return false
+	return true
+
+
+## Ouvertures d'une salle : pour chaque côté, les suites de cases de sol juste à l'extérieur
+## du rectangle (là où arrive un couloir). Renvoie [{cell, step, out, length}].
+func room_openings(room_index: int) -> Array[Dictionary]:
+	var r := rooms[room_index]
+	var sides: Array[Array] = [
+		[Vector2i(r.position.x, r.position.y - 1), Vector2i(1, 0), Vector2i(0, -1), r.size.x],
+		[Vector2i(r.position.x, r.end.y), Vector2i(1, 0), Vector2i(0, 1), r.size.x],
+		[Vector2i(r.position.x - 1, r.position.y), Vector2i(0, 1), Vector2i(-1, 0), r.size.y],
+		[Vector2i(r.end.x, r.position.y), Vector2i(0, 1), Vector2i(1, 0), r.size.y],
+	]
+	var out: Array[Dictionary] = []
+	for side in sides:
+		var start: Vector2i = side[0]
+		var step: Vector2i = side[1]
+		var length: int = side[3]
+		var run_start := -1
+		for k in length + 1:
+			var c := start + step * k
+			var open := k < length and is_floor(c.x, c.y)
+			if open and run_start < 0:
+				run_start = k
+			elif not open and run_start >= 0:
+				out.append({"cell": start + step * run_start, "step": step, "out": side[2], "length": k - run_start})
+				run_start = -1
+	return out

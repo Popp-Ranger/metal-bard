@@ -71,6 +71,12 @@
 - [x] Solo de la Foudre : morceau `solo_del_la_foudre.mp3`, 6 notes régulières, éclairs au son `short_thunder`
 - [x] Clients qui marchent vraiment jusqu'au comptoir et reviennent avec une chope (2 debout au maximum) ; correction du suivi de chemin des PNJ
 
+## ✅ v0.1.8 — Portes, portail de retour et repos au lit
+- [x] Portes à ouvrir dans le donjon ; salles sombres et occupants endormis tant que la porte est fermée
+- [x] Salle du boss fermée à clé ; clé portée par le chef des squelettes (25 % plus grand, tête de loup en capuche)
+- [x] Touche K : arbre de talents ; touche T : portail bleu de retour à la taverne, donjon persistant jusqu'à la fin
+- [x] Chambre louée : se coucher sur le lit pour récupérer (1 PV → 100 % en 10 s)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

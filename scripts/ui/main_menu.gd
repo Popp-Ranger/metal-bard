@@ -89,12 +89,14 @@ func _ready() -> void:
 		"%s : boire une potion" % Controls.key_label("potion"),
 		"%s : parler / interagir" % Controls.key_label("interact"),
 		"%s : fiche de personnage" % Controls.key_label("character_sheet"),
+		"%s : arbre de talents" % Controls.key_label("talents"),
+		"%s : portail de retour à la taverne (donjon)" % Controls.key_label("town_portal"),
 		"Échap : pause",
 	])), 17)
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v0.1.7 — Godot 4.7", 13, UiStyle.DIM)
+	var credits := UiStyle.label("Prototype v0.1.8 — Godot 4.7", 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30

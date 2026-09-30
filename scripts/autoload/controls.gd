@@ -17,7 +17,8 @@ const KEY_ACTIONS := {
 	"potion": [KEY_R],
 	"interact": [KEY_E],
 	"character_sheet": [KEY_C],
-	"talents": [KEY_T],
+	"talents": [KEY_K],
+	"town_portal": [KEY_T], # Portail de retour en ville (donjon)
 	"talent_1": [KEY_4, KEY_KP_4],
 	"talent_2": [KEY_5, KEY_KP_5],
 	"talent_3": [KEY_6, KEY_KP_6],

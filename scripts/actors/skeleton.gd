@@ -2,8 +2,12 @@ class_name Skeleton
 extends Enemy
 ## Squelette guerrier (FP 1/4 en D&D 5e : CA 13, 13 PV, épée courte 1d6+2).
 ## Variante « capitaine » : plus grand, casque, plus de PV.
+## Variante « chef » : 25 % plus grand, capuche en tête de loup, porte la clé du boss.
 
 var captain := false
+## Chef des squelettes (garde la clé de la salle du boss).
+var chief := false
+const CHIEF_SCALE := 1.25
 
 var _arm_r: Node3D
 var _arm_l: Node3D
@@ -35,10 +39,23 @@ func _configure() -> void:
 		gold_range = Vector2i(10, 25)
 		radius = 0.45
 		height = 2.1
+	if chief:
+		# Chef des squelettes : un squelette comme les autres, 25 % plus grand, coiffé d'une
+		# peau de loup ; il porte la clé de la salle du boss.
+		display_name = "Chef des squelettes"
+		is_boss = true
+		max_hp = 55 + 10 * lvl
+		armor_class = 15
+		attack_bonus += 2
+		damage_dice = Vector3i(1, 10, 3 + lvl)
+		xp_reward = 250 + 30 * lvl
+		gold_range = Vector2i(20, 40)
+		radius = 0.45
+		height = 1.7 * CHIEF_SCALE
 
 
 func _build_model() -> void:
-	var s := 1.25 if captain else 1.0
+	var s := CHIEF_SCALE if chief else (1.25 if captain else 1.0)
 	model.scale = Vector3.ONE * s
 	var bone := own_mat(Color(0.82, 0.78, 0.66), 0.7)
 	var dark_bone := own_mat(Color(0.55, 0.5, 0.4), 0.8)
@@ -64,7 +81,7 @@ func _build_model() -> void:
 	_jaw = Visuals.box(_torso, Vector3(0.16, 0.06, 0.12), Vector3(0, 0.63, 0.06), dark_bone)
 	Visuals.sphere(_torso, 0.03, Vector3(-0.05, 0.77, 0.12), eye)
 	Visuals.sphere(_torso, 0.03, Vector3(0.05, 0.77, 0.12), eye)
-	if captain:
+	if captain and not chief:
 		Visuals.sphere(_torso, 0.16, Vector3(0, 0.82, 0), rust, Vector3(1.0, 0.7, 1.0)) # casque
 		Visuals.cylinder(_torso, 0.0, 0.03, 0.2, Vector3(-0.13, 0.95, 0), rust, Vector3(0, 0, 30))
 		Visuals.cylinder(_torso, 0.0, 0.03, 0.2, Vector3(0.13, 0.95, 0), rust, Vector3(0, 0, -30))
@@ -78,8 +95,41 @@ func _build_model() -> void:
 	var sword := _pivot(_arm_r, Vector3(0, -0.6, 0.08))
 	Visuals.box(sword, Vector3(0.05, 0.05, 0.14), Vector3.ZERO, dark_bone)
 	Visuals.box(sword, Vector3(0.18, 0.03, 0.04), Vector3(0, 0, 0.08), rust)
-	Visuals.box(sword, Vector3(0.05, 0.02, 0.6 if captain else 0.5), Vector3(0, 0, 0.4), rust)
+	Visuals.box(sword, Vector3(0.05, 0.02, (0.6 if captain or chief else 0.5)), Vector3(0, 0, 0.4), rust)
 	Visuals.cylinder(_arm_l, 0.2, 0.2, 0.04, Vector3(0.0, -0.45, 0.12), rust, Vector3(90, 0, 0))
+	if chief:
+		_build_wolf_pelt()
+
+
+## Peau de loup du chef : tête de loup portée en capuche, pelisse sur les épaules,
+## pattes croisées sur la poitrine et queue dans le dos ; la clé pend à la ceinture.
+func _build_wolf_pelt() -> void:
+	var fur := own_mat(Color(0.46, 0.43, 0.4), 0.95)
+	var dark_fur := own_mat(Color(0.26, 0.24, 0.23), 0.95)
+	var pale := own_mat(Color(0.72, 0.68, 0.62), 0.9)
+	var fang := own_mat(Color(0.95, 0.93, 0.85), 0.4)
+	var black := Visuals.mat(Color(0.03, 0.03, 0.03), 0.3)
+	# Tête de loup en capuche, posée sur le crâne, museau vers l'avant.
+	Visuals.sphere(_torso, 0.17, Vector3(0, 0.84, -0.01), fur, Vector3(1.08, 0.78, 1.15))
+	Visuals.box(_torso, Vector3(0.13, 0.09, 0.2), Vector3(0, 0.86, 0.17), fur, Vector3(8, 0, 0)) # museau
+	Visuals.box(_torso, Vector3(0.1, 0.035, 0.16), Vector3(0, 0.815, 0.19), pale, Vector3(8, 0, 0)) # mâchoire
+	Visuals.sphere(_torso, 0.028, Vector3(0, 0.885, 0.275), black) # truffe
+	for side: float in [-1.0, 1.0]:
+		Visuals.cylinder(_torso, 0.0, 0.05, 0.12, Vector3(0.09 * side, 0.99, -0.03), dark_fur, Vector3(0, 0, -12 * side), 6) # oreilles
+		Visuals.cylinder(_torso, 0.0, 0.012, 0.045, Vector3(0.035 * side, 0.785, 0.24), fang, Vector3(180, 0, 0), 5) # crocs
+		Visuals.sphere(_torso, 0.018, Vector3(0.06 * side, 0.9, 0.13), Visuals.glow_mat(Color(1.0, 0.65, 0.15), 1.5)) # yeux vitreux
+		# Pelisse sur les épaules et pattes avant croisées sur la poitrine.
+		Visuals.sphere(_torso, 0.13, Vector3(0.17 * side, 0.58, -0.01), fur, Vector3(1.2, 0.55, 1.1))
+		Visuals.capsule(_torso, 0.045, 0.34, Vector3(0.07 * side, 0.46, 0.12), fur, Vector3(0, 0, 38 * side))
+		Visuals.sphere(_torso, 0.045, Vector3(-0.03 * side, 0.36, 0.14), dark_fur) # pattes
+	# Peau qui tombe dans le dos jusqu'aux genoux, avec la queue.
+	Visuals.box(_torso, Vector3(0.46, 0.72, 0.05), Vector3(0, 0.3, -0.14), fur, Vector3(-6, 0, 0))
+	Visuals.box(_torso, Vector3(0.3, 0.12, 0.2), Vector3(0, 0.66, -0.06), dark_fur) # nuque
+	Visuals.capsule(_torso, 0.05, 0.45, Vector3(0, -0.15, -0.19), dark_fur, Vector3(-15, 0, 0)) # queue
+	# Clé de la salle du boss à la ceinture.
+	var gold := Visuals.glow_mat(Color(1.0, 0.8, 0.3), 1.5)
+	Visuals.torus(model, 0.035, 0.05, Vector3(0.17, 0.78, 0.06), gold, Vector3(0, 0, 90))
+	Visuals.box(model, Vector3(0.02, 0.14, 0.02), Vector3(0.17, 0.68, 0.06), gold)
 
 
 func _pivot(parent: Node3D, pos: Vector3) -> Node3D:

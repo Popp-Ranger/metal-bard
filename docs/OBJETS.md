@@ -15,7 +15,7 @@ Tous les objets sont définis dans **[`data/items.json`](../data/items.json)**. 
 | Objet | Effet | Prix | Réglages dans le fichier |
 |---|---|---|---|
 | **Potion de soin** | Rend 40 % des PV max (touche R). | 25 médiators (Brunhilde) | `prix`, `soin`, `chance_butin` (12 %), `depart` (2) |
-| **Nuit à l'auberge** | PV et dB restaurés (Brunhilde, ou le lit de la chambre 2). | 10 médiators | `prix` |
+| **Nuit à l'auberge** | Se paie à Brunhilde ; il faut ensuite se coucher sur le lit de la chambre 2 (PV et dB de 1 à 100 % en 10 s). | 10 médiators | `prix` |
 
 ### Objet de quête
 

@@ -16,6 +16,11 @@ var quests := {} # quest_id -> QuestDB.State
 var flags := {}
 var active_quest := ""
 var dungeon_seed := 0
+## Donjon en cours, persistant jusqu'à ce qu'il soit terminé : ennemis tués, portes ouvertes,
+## salles découvertes, clés... (voir dungeon.gd).
+var dungeon_state := {}
+## Portail bleu de retour en ville (touche T) : {"pos": [x, z]} dans le donjon, vide sinon.
+var town_portal := {}
 ## Personnage créé au début de la partie (voir RaceDB).
 var hero_name := DEFAULT_NAME
 var appearance := RaceDB.DEFAULT_APPEARANCE.duplicate()
@@ -48,6 +53,8 @@ func new_game() -> void:
 		quests[id] = QuestDB.State.AVAILABLE if requires.is_empty() else QuestDB.State.LOCKED
 	active_quest = ""
 	dungeon_seed = 0
+	dungeon_state = {}
+	town_portal = {}
 	hero_name = DEFAULT_NAME
 	appearance = RaceDB.DEFAULT_APPEARANCE.duplicate()
 	talents.clear()
@@ -367,7 +374,11 @@ func run_dialogue_action(action: String) -> void:
 			turn_in_quest(arg)
 		"portal":
 			flags["portal_open"] = true
-			dungeon_seed = randi_range(1, 999999)
+			# Nouveau donjon seulement si le précédent a été terminé (sinon il reste tel quel).
+			if dungeon_seed == 0 or dungeon_state.is_empty():
+				dungeon_seed = randi_range(1, 999999)
+				dungeon_state = {}
+				town_portal = {}
 			Events.portal_opened.emit()
 		"buy_potion":
 			if gold >= ItemDB.potion_price():
@@ -378,12 +389,14 @@ func run_dialogue_action(action: String) -> void:
 			else:
 				Events.notify("Pas assez de médiators (il en faut %d)." % ItemDB.potion_price(), Events.COLOR_BAD)
 		"rest":
-			if gold >= ItemDB.rest_price():
+			# La chambre se paie ici, mais on ne récupère qu'en allant se coucher à l'étage.
+			if bool(flags.get("room_paid", false)):
+				Events.notify("Ta chambre est déjà payée : monte à l'étage (chambre 2) et couche-toi.", Events.COLOR_DEFAULT)
+			elif gold >= ItemDB.rest_price():
 				add_gold(-ItemDB.rest_price())
-				hp = max_hp()
-				mana = max_mana()
-				broadcast_all()
-				Events.notify("Vous dormez comme un roadie après un concert. PV et dB restaurés.", Events.COLOR_GOOD)
+				flags["room_paid"] = true
+				Sfx.play("coin")
+				Events.notify("Chambre 2 louée : monte à l'étage et couche-toi sur le lit pour te reposer.", Events.COLOR_GOOD)
 			else:
 				Events.notify("Pas assez de médiators pour une chambre.", Events.COLOR_BAD)
 		"reset_talents":
@@ -443,6 +456,8 @@ func _snapshot() -> Dictionary:
 		"flags": flags,
 		"active_quest": active_quest,
 		"dungeon_seed": dungeon_seed,
+		"dungeon_state": dungeon_state,
+		"town_portal": town_portal,
 		"location": location,
 	}
 
@@ -525,6 +540,8 @@ func load_slot(slot: int) -> bool:
 	hp = clampi(int(data.get("hp", max_hp())), 1, max_hp())
 	mana = clampf(float(data.get("mana", max_mana())), 0.0, max_mana())
 	dungeon_seed = int(data.get("dungeon_seed", 0))
+	dungeon_state = data.get("dungeon_state", {})
+	town_portal = data.get("town_portal", {})
 	location = data.get("location", {})
 	return true
 

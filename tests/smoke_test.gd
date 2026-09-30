@@ -14,6 +14,7 @@ func _ready() -> void:
 	await _test_characters()
 	await _test_quest_flow()
 	await _test_new_features()
+	await _test_town_portal()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
 	else:
@@ -94,6 +95,52 @@ func _test_quest_flow() -> void:
 	var dungeon: Node = load("res://scenes/dungeon.tscn").instantiate()
 	add_child(dungeon)
 	await _frames(30)
+	# Portes : salles fermées plongées dans le noir, occupants endormis.
+	var dg := dungeon as Node
+	var door_list: Array = dg.get("doors")
+	_check(door_list.size() >= dg.get("gen").rooms.size(), "portes à l'entrée des salles (%d)" % door_list.size())
+	var covers: Dictionary = dg.get("_covers")
+	var dormant := 0
+	for c in dg.get_children():
+		if c is Enemy and (c as Enemy).dormant:
+			dormant += 1
+	_check(covers.size() >= dg.get("gen").rooms.size() - 2 and dormant >= 8,
+		"salles fermées sombres, %d ennemis endormis derrière les portes" % dormant)
+	var boss_door := -1
+	var normal_door := -1
+	for i in door_list.size():
+		if bool(door_list[i]["locked"]):
+			boss_door = i
+		elif normal_door < 0 and int(door_list[i]["room"]) != dg.get("gen").start_room:
+			normal_door = i
+	var normal_room := int(door_list[normal_door]["room"])
+	dg.call("_on_door", normal_door)
+	await _frames(2)
+	_check(bool(door_list[normal_door]["open"]) and not covers.has(normal_room), "ouvrir une porte éclaire la salle")
+	dg.call("_on_door", boss_door)
+	_check(boss_door >= 0 and not bool(door_list[boss_door]["open"]), "salle du boss fermée à clé")
+	var chief_sk: Skeleton = dg.get("chief")
+	_check(chief_sk != null and chief_sk.chief and is_equal_approx(chief_sk.model.scale.x, 1.25) and chief_sk.display_name == "Chef des squelettes",
+		"chef des squelettes 25 % plus grand, en peau de loup")
+	var room_enemies: Dictionary = dg.get("_room_enemies")
+	for room: int in room_enemies:
+		if (room_enemies[room] as Array).has(chief_sk):
+			dg.call("_reveal_room", room)
+	chief_sk.take_damage(99999, chief_sk.global_position + Vector3(0.1, 0, 0), 0.0, false, "phys")
+	await _frames(3)
+	var boss_key: Interactable = null
+	for c in dg.get_children():
+		if c is Interactable and (c as Interactable).prompt.contains("clé de la salle du boss"):
+			boss_key = c
+	_check(boss_key != null, "le chef laisse tomber la clé de la salle du boss")
+	boss_key.interact(null)
+	dg.call("_on_door", boss_door)
+	_check(bool(door_list[boss_door]["open"]), "la clé du chef ouvre la salle du boss")
+	GameState.stats.xp = 0 # l'XP du chef ne doit pas faire monter de niveau (dB remplis) pendant la suite
+	# On découvre tout le donjon pour la suite du test.
+	for i in dg.get("gen").rooms.size():
+		dg.call("_reveal_room", i)
+	await _frames(2)
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	_check(enemies.size() >= 8, "donjon peuplé (%d ennemis)" % enemies.size())
 	var dungeon_music := Sfx._ambience.stream as AudioStreamMP3
@@ -183,6 +230,9 @@ func _test_quest_flow() -> void:
 		lane_keys.append(int((InputMap.action_get_events("solo_lane_%d" % lane)[0] as InputEventKey).physical_keycode))
 	var expected: Array[int] = [KEY_1, KEY_2, KEY_3, KEY_4]
 	_check(lane_keys == expected, "le solo se joue avec les touches 1 2 3 4")
+	_check(int((InputMap.action_get_events("talents")[0] as InputEventKey).physical_keycode) == KEY_K
+		and int((InputMap.action_get_events("town_portal")[0] as InputEventKey).physical_keycode) == KEY_T,
+		"touches : K = arbre de talents, T = portail de retour")
 	var foudre_times: Array[float] = []
 	for n in solo._notes:
 		foudre_times.append(float(n["time"]))
@@ -453,6 +503,23 @@ func _test_new_features() -> void:
 		if c is Npc and (c as Npc).npc_id == "zarathos":
 			zarathos = c
 	_check(zarathos != null and zarathos.wander_radius > 0.0, "Zarathos fait les cent pas près de son portail")
+	# Chambre : payer ne soigne plus, il faut se coucher sur le lit (1 PV → 100 % en 10 s).
+	var t_tavern := tavern as Node
+	GameState.flags.erase("room_paid")
+	GameState.gold = 500
+	GameState.hp = 1
+	GameState.run_dialogue_action("rest")
+	_check(GameState.hp == 1 and bool(GameState.flags.get("room_paid", false)), "louer la chambre ne soigne pas immédiatement")
+	var bed: Interactable = t_tavern.get("bed_interact")
+	var hp_max := GameState.max_hp()
+	bed.interact(hero)
+	_check(hero.resting and absf(hero.model.rotation.x + PI * 0.5) < 0.01, "clic sur le lit : le héros s'allonge")
+	await get_tree().create_timer(5.0).timeout
+	var half_hp := GameState.hp
+	_check(half_hp > hp_max * 0.35 and half_hp < hp_max * 0.65, "vie régénérée progressivement (%d / %d après 5 s)" % [half_hp, hp_max])
+	await get_tree().create_timer(5.5).timeout
+	_check(GameState.hp == hp_max and not hero.resting and not GameState.flags.has("room_paid"),
+		"10 s au lit : vie pleine, le héros se relève")
 	var demon_found := false
 	for c in tavern.get_children():
 		demon_found = demon_found or c is DemonPortal
@@ -596,4 +663,65 @@ func _test_characters() -> void:
 	_check(DialogueDB.hero() == "Lemmy" and RaceDB.title(GameState.appearance) == "Barde trollesse"
 		and GameState.g("le barde", "la barde") == "la barde", "nom et genre repris dans les dialogues")
 	creation.queue_free()
+	await _frames(3)
+
+
+## Portail bleu (T) et donjon persistant : on repart exactement où on était, rien n'a bougé.
+func _test_town_portal() -> void:
+	print("[Portail de retour et donjon persistant]")
+	GameState.dungeon_seed = 4242
+	GameState.dungeon_state = {}
+	GameState.town_portal = {}
+	GameState.active_quest = "plumeau"
+	var d1: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(d1)
+	await _frames(10)
+	var hero := get_tree().get_first_node_in_group("hero") as Hero
+	var d1_doors: Array = d1.get("doors")
+	var opened := -1
+	for i in d1_doors.size():
+		if not bool(d1_doors[i]["locked"]):
+			opened = i
+			break
+	d1.call("_on_door", opened)
+	var chief_sk: Skeleton = d1.get("chief")
+	chief_sk.set_dormant(false)
+	chief_sk.take_damage(99999, chief_sk.global_position + Vector3(0.1, 0, 0), 0.0, false, "phys")
+	await _frames(3)
+	GameState.stats.xp = 0
+	hero.global_position += Vector3(1.0, 0, 0)
+	Events.town_portal_requested.emit()
+	await _frames(2)
+	var tp: Array = GameState.town_portal.get("pos", [])
+	var blue_ok := false
+	for c in d1.get_children():
+		if c is Portal and (c as Portal).blue:
+			blue_ok = true
+	_check(tp.size() == 2 and blue_ok, "touche T : portail bleu ouvert dans le donjon")
+	var portal_pos := Vector3(float(tp[0]), 0, float(tp[1]))
+	d1.call("_take_town_portal")
+	d1.queue_free()
+	await _frames(3)
+	var tavern: Node = load("res://scenes/tavern.tscn").instantiate()
+	add_child(tavern)
+	await _frames(5)
+	var bp: Portal = tavern.get("blue_portal")
+	var t_hero := get_tree().get_first_node_in_group("hero") as Hero
+	_check(bp != null and bp.blue and t_hero.global_position.distance_to(bp.global_position) < 2.5,
+		"taverne : arrivée devant un portail bleu, à côté de celui de Zarathos")
+	tavern.call("_on_enter_blue_portal")
+	tavern.queue_free()
+	await _frames(3)
+	var d2: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(d2)
+	await _frames(10)
+	var hero2 := get_tree().get_first_node_in_group("hero") as Hero
+	_check(hero2.global_position.distance_to(portal_pos) < 2.0 and GameState.town_portal.is_empty(),
+		"portail bleu repris : retour exactement là où on était")
+	var d2_doors: Array = d2.get("doors")
+	_check(d2.get("chief") == null and bool(d2_doors[opened]["open"]),
+		"donjon persistant : chef toujours mort, porte toujours ouverte")
+	d2.queue_free()
+	GameState.dungeon_state = {}
+	GameState.dungeon_seed = 0
 	await _frames(3)

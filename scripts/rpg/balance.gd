@@ -65,6 +65,8 @@ const MINIGAME_FAIL_COOLDOWN_MULT := 2.5
 ## Ballade réparatrice : chaque seconde de musique jouée sans faute soigne 9 % des PV max
 ## (10 s = 90 % d'une barre de vie ; Healing.wav dure 12,3 s).
 const BALLADE_HEAL_PER_SECOND := 0.09
+## Lit de la taverne (chambre louée) : de 1 PV à 100 % en 10 s allongé.
+const BED_FULL_HEAL_TIME := 10.0
 
 # Potion, chambre, médiators : voir data/items.json (ItemDB).
 

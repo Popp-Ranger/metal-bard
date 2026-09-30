@@ -19,7 +19,7 @@
 		},
 		"chambre": {
 			"nom": "Nuit à l'auberge",
-			"desc": "Un lit, une couverture qui gratte : PV et dB restaurés.",
+			"desc": "Chambre 2 louée à Brunhilde : couchez-vous sur le lit, PV et dB remontent en 10 s.",
 			"prix": 10
 		}
 	},

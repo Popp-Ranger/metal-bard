@@ -124,6 +124,23 @@ func is_alive() -> bool:
 	return state != State.DEAD
 
 
+## Donjon : un ennemi dans une salle encore fermée (porte close, pièce plongée dans le noir)
+## est « endormi » : invisible, immobile et impossible à cibler jusqu'à ce qu'on ouvre.
+var dormant := false
+
+
+func set_dormant(value: bool) -> void:
+	if value == dormant or not is_alive():
+		return
+	dormant = value
+	visible = not value
+	process_mode = Node.PROCESS_MODE_DISABLED if value else Node.PROCESS_MODE_INHERIT
+	if value:
+		remove_from_group("enemies")
+	else:
+		add_to_group("enemies")
+
+
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:
 		return

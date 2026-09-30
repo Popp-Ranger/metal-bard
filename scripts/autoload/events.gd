@@ -35,6 +35,8 @@ signal solo_note_hit(mode: String, hits: int)
 signal talents_changed
 signal shield_changed(amount: int)
 signal portal_opened
+## Touche T : portail bleu de retour à la taverne (traité par le donjon).
+signal town_portal_requested
 ## Choix de dialogue qui fait avancer l'histoire (ex. « gloubah_fight »), traité par le niveau.
 signal story_action(action: String)
 signal run_stats_changed

@@ -220,8 +220,8 @@ func _build_skills() -> void:
 	_riff_combo_label.position = Vector2(-10, -30)
 	_riff_combo_label.size = Vector2(104, 26)
 	riff_panel.add_child(_riff_combo_label)
-	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : talents  •  Échap : pause" % [
-		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("talents")], 13, UiStyle.DIM)
+	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : talents  •  %s : portail  •  Échap : pause" % [
+		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
 	help.anchor_right = 0.5
 	help.anchor_top = 1.0
@@ -391,6 +391,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("talents") and not dialogue.visible and not solo.visible and not _pause_menu.visible and not sheet.visible:
 		talent_tree.open()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("town_portal") and not dialogue.visible and not solo.visible and not _pause_menu.visible:
+		Events.town_portal_requested.emit()
 		get_viewport().set_input_as_handled()
 
 

@@ -11,6 +11,8 @@ const HALF_X := 15.0
 const HALF_Z := 11.0
 const WALL_H := 4.0
 const RUNE_CIRCLE := Vector3(10.5, 0.0, -1.0)
+## Portail bleu (touche T dans le donjon), à côté de celui de Zarathos.
+const BLUE_PORTAL_POS := Vector3(6.9, 0.0, -1.6)
 const UP := Vector3(0.0, 0.0, -70.0) # origine de l'étage
 const CELLAR := Vector3(70.0, 0.0, 0.0) # origine du sous-sol
 const GROUND_STAIRS_UP := Vector3(13.4, 0.0, -4.4)
@@ -40,6 +42,8 @@ var _gerald_home := Vector3(-6.5, 0, 7.5)
 var _door_hinges: Array[Node3D] = []
 var _door_block: StaticBody3D
 var _door_interact: Interactable
+## Lit de la chambre louée (chambre 2, à l'étage).
+var bed_interact: Interactable
 
 
 func _ready() -> void:
@@ -56,6 +60,9 @@ func _ready() -> void:
 	if from_dungeon:
 		spawn = RUNE_CIRCLE + Vector3(0.0, 0.0, 2.5)
 		GameState.flags.erase("in_dungeon")
+		if GameState.flags.get("from_town_portal", false):
+			spawn = BLUE_PORTAL_POS + Vector3(0.0, 0.0, 1.6) # sortie du portail bleu
+		GameState.flags.erase("from_town_portal")
 		if GameState.flags.has("last_death_gold_lost"):
 			var lost: int = GameState.flags.get("last_death_gold_lost", 0)
 			GameState.flags.erase("last_death_gold_lost")
@@ -67,6 +74,8 @@ func _ready() -> void:
 	if GameState.flags.get("portal_open", false) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE:
 		_open_portal()
 	Events.portal_opened.connect(_open_portal)
+	if not GameState.town_portal.is_empty():
+		_open_blue_portal()
 	Sfx.play_music("res://audio/music/tavern_theme.mp3", -8.0) # musique « metal-band-tavern »
 	_spawn_plumeau()
 	GameState.save_game()
@@ -338,9 +347,8 @@ func _build_room(c: Vector3, index: int) -> void:
 			for k in 4:
 				Visuals.box(self, Vector3(0.4, 0.08, 0.3), c + Vector3(1.5, 0.62 + k * 0.08, -2.2), Visuals.mat(Color(0.3 + k * 0.1, 0.1, 0.35)))
 			Visuals.sphere(self, 0.12, c + Vector3(1.9, 0.75, 1.0), Visuals.glow_mat(Color(0.6, 0.4, 1.0), 3.0))
-		1: # votre chambre : on peut y dormir
-			Interactable.create(self, bed + Vector3(1.0, 0, 0.3), "Dormir (%d médiators — PV et dB restaurés)" % ItemDB.rest_price(),
-				func() -> void: GameState.run_dialogue_action("rest"), 1.8)
+		1: # votre chambre (à louer à Brunhilde) : on s'y allonge pour récupérer
+			bed_interact = Interactable.create(self, bed + Vector3(1.0, 0, 0.3), "Se coucher sur le lit", _use_bed.bind(bed), 1.8)
 		2: # occupée : ronflements (une bosse sous la couverture)
 			Visuals.capsule(self, 0.3, 1.4, bed + Vector3(0, 0.75, 0.2), Visuals.mat(blankets[2]), Vector3(90, 0, 0))
 		3: # hantée : lueur spectrale
@@ -714,3 +722,41 @@ func _reunion() -> void:
 	if GameState.quest_state("plumeau") == QuestDB.State.TURNED_IN:
 		GameState.flags["plumeau_reunited"] = true
 	_gerald.walk_to(_gerald_home)
+
+
+# =====================================================================================
+# Chambre louée : se coucher pour récupérer
+# =====================================================================================
+
+## Lit de la chambre 2 : il faut l'avoir louée à Brunhilde, puis le héros s'y allonge et
+## récupère progressivement (voir Hero.lie_down).
+func _use_bed(bed: Vector3) -> void:
+	if hero == null or hero.resting:
+		return
+	if not bool(GameState.flags.get("room_paid", false)):
+		Events.notify("Ce lit n'est pas à toi : loue d'abord la chambre à Brunhilde (%d médiators)." % ItemDB.rest_price(), Events.COLOR_BAD)
+		Sfx.play("dud", -8.0)
+		return
+	hero.lie_down(bed)
+
+
+# =====================================================================================
+# Portail bleu : retour au donjon, là où on l'a ouvert
+# =====================================================================================
+
+var blue_portal: Portal
+
+
+func _open_blue_portal() -> void:
+	blue_portal = Portal.new()
+	blue_portal.blue = true
+	blue_portal.position = BLUE_PORTAL_POS
+	blue_portal.prompt = "Portail bleu : retourner dans les catacombes"
+	blue_portal.target_scene = Router.DUNGEON
+	blue_portal.on_enter = _on_enter_blue_portal
+	add_child(blue_portal)
+
+
+func _on_enter_blue_portal() -> void:
+	GameState.flags["via_town_portal"] = true
+	_on_enter_dungeon()
