@@ -28,7 +28,7 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
   - **Boss Gloubah**, grenouille géante trônant sur un **pentagramme de bave verte**, la gueule ensanglantée. Elle vous parle d'abord : selon vos réponses (rien n'indique lesquelles mènent au combat), elle se bat, vous enferme dans une cage… ou devient amicale et vous donne la clé (XP doublée).
   - Compteur de victimes, puis **récapitulatif** en fin de donjon (dégâts infligés, subis, évités).
 - **Arsenal** :
-  - **Coup de guitare** au corps-à-corps (clic gauche, empoignée par le manche) ;
+  - **Coup de guitare** au corps-à-corps (clic gauche sur un ennemi : le héros va au contact ; Maj + clic : sur place) ;
   - **Glissade sur les genoux** (Espace) : 5 m, **esquive toutes les attaques**, recharge 20 s. Une esquive passive réussie déclenche un petit saut sur une jambe façon **Angus Young** ;
   - **Accordage de cordes** (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis ;
   - **Riff électrique** (1) : une seule cible, **recharge de 3 s**, son `riff electrique.wav`. En le relançant **dès la fin de la recharge** (fenêtre de 0,4 s), les dégâts montent en 4 paliers jusqu'à **×3** (métronome dans le HUD) ;
@@ -111,9 +111,10 @@ Tous les objets du jeu (reliques, potion, chambre, médiators, clé de la cage) 
 
 | Action | Touche |
 |---|---|
-| Se déplacer | **ZQSD** (AZERTY) / **WASD** (QWERTY) / flèches |
+| Se déplacer | **Clic gauche** sur le sol (maintenu : le héros suit la souris), ou **ZQSD** (AZERTY) / **WASD** (QWERTY) / flèches |
 | Viser | Souris |
-| Coup de guitare (ou parler / interagir en cliquant sur quelqu'un) | **Clic gauche** |
+| Frapper (le héros va au contact) / parler / interagir | **Clic gauche** sur l'ennemi, le personnage ou l'objet |
+| Frapper sur place | **Maj + clic gauche** |
 | Glissade sur les genoux | **Espace** |
 | Accordage de cordes | **Clic droit** |
 | Riff électrique (en rythme !) / Onde de choc / Solo | **1** / **2** / **3** |

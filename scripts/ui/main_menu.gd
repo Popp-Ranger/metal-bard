@@ -79,7 +79,8 @@ func _ready() -> void:
 		"%s %s %s %s / flèches : se déplacer" % [Controls.key_label("move_up"), Controls.key_label("move_left"),
 			Controls.key_label("move_down"), Controls.key_label("move_right")],
 		"Souris : viser   •   Molette : zoom",
-		"Clic gauche : coup de guitare (ou parler / interagir si on vise quelqu'un)",
+		"Clic gauche : aller là (maintenu : suivre la souris), frapper un ennemi, parler / interagir",
+		"Maj + clic gauche : frapper sur place",
 		"Espace : Glissade sur les genoux (5 m, esquive tout, recharge 20 s)",
 		"Clic droit : Accordage de cordes (jusqu'à 5 cibles)",
 		"%s : Riff électrique (en rythme : jusqu'à ×3)" % Controls.key_label("spell_riff"),
@@ -96,7 +97,7 @@ func _ready() -> void:
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v0.1.9 — Godot 4.7", 13, UiStyle.DIM)
+	var credits := UiStyle.label("Prototype v0.1.10 — Godot 4.7", 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30

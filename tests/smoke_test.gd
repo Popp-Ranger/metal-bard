@@ -15,6 +15,7 @@ func _ready() -> void:
 	await _test_quest_flow()
 	await _test_new_features()
 	await _test_town_portal()
+	await _test_click_move()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
 	else:
@@ -731,3 +732,53 @@ func _test_town_portal() -> void:
 	GameState.dungeon_state = {}
 	GameState.dungeon_seed = 0
 	await _frames(3)
+
+
+## Déplacement à la souris façon Diablo : aller au point cliqué, aller frapper un ennemi.
+func _test_click_move() -> void:
+	print("[Déplacement à la souris]")
+	GameState.dungeon_seed = 777
+	GameState.dungeon_state = {}
+	GameState.town_portal = {}
+	var d: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(d)
+	await _frames(10)
+	for i in d.get("gen").rooms.size():
+		d.call("_reveal_room", i)
+	var hero := get_tree().get_first_node_in_group("hero") as Hero
+	var from := hero.global_position
+	var dest := from + IsoCamera.SCREEN_RIGHT * 3.0
+	hero._click_mode = Hero.ClickMode.GROUND
+	hero._click_hold = false
+	hero.move_target = dest
+	var marker := MoveMarker.spawn(d, dest)
+	_check(marker != null and marker.is_inside_tree(), "zone lumineuse au sol à l'endroit cliqué")
+	await get_tree().create_timer(1.2).timeout
+	_check(hero.global_position.distance_to(dest) < 0.35 and hero._click_mode == Hero.ClickMode.NONE,
+		"clic sur le sol : le héros marche jusqu'au point cliqué")
+	var target: Enemy = null
+	for e in hero.enemies():
+		if not e.is_boss:
+			target = e
+			break
+	target.hp = 500
+	target.max_hp = 500
+	target.process_mode = Node.PROCESS_MODE_DISABLED # cible immobile pour le test
+	target.global_position = hero.global_position + IsoCamera.SCREEN_UP * 4.0
+	hero._click_mode = Hero.ClickMode.ENEMY
+	hero._click_node = target
+	hero.cooldowns["attack"] = 0.0
+	var swung := false
+	for f in 100:
+		await get_tree().physics_frame
+		swung = swung or float(hero.cooldowns["attack"]) > 0.0
+	_check(_flat(hero.global_position, target.global_position) < Balance.MELEE_RANGE + target.radius and swung,
+		"clic sur un ennemi : le héros va au contact et frappe")
+	d.queue_free()
+	GameState.dungeon_state = {}
+	GameState.dungeon_seed = 0
+	await _frames(3)
+
+
+func _flat(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x - b.x, a.z - b.z).length()

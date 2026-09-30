@@ -87,6 +87,12 @@ func _physics_process(delta: float) -> void:
 		_rest_tick(delta, input)
 		return
 	var move := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
+	if camera != null:
+		aim_point = camera.mouse_ground_point()
+	if input.length() > 0.1:
+		_click_mode = ClickMode.NONE # le clavier reprend la main
+	elif not (casting_solo or leaping or captive or planted or dashing):
+		move = _click_move(delta)
 	if casting_solo or leaping or captive or planted or dashing:
 		move = Vector3.ZERO # planté sur place en plein solo (ou en plein vol, ou en cage)
 	var speed := Balance.HERO_SPEED * (0.6 if talents_caster.in_frenzy else 1.0)
@@ -101,38 +107,176 @@ func _physics_process(delta: float) -> void:
 		_update_interaction()
 		return
 
-	if camera != null:
-		aim_point = camera.mouse_ground_point()
 	var to_aim := aim_point - global_position
 	to_aim.y = 0.0
-	if to_aim.length() > 0.3:
+	if _click_mode == ClickMode.ENEMY and is_instance_valid(_click_node):
+		var to_enemy := _click_node.global_position - global_position
+		to_enemy.y = 0.0
+		if to_enemy.length() > 0.1:
+			facing = to_enemy.normalized() # on regarde sa cible
+	elif _click_mode != ClickMode.NONE and move.length() > 0.1:
+		facing = move.normalized() # on regarde où l'on marche
+	elif to_aim.length() > 0.3:
 		facing = to_aim.normalized()
 	elif move.length() > 0.1:
 		facing = move.normalized()
 	model.rotation.y = lerp_angle(model.rotation.y, atan2(facing.x, facing.z), 1.0 - exp(-20.0 * delta))
 	model.set_moving(move.length() > 0.1)
 
-	if Input.is_action_pressed("attack") and not _click_interacted:
+	# Maj + clic : frapper sur place (sans bouger), comme dans Diablo.
+	if Input.is_action_pressed("attack") and Input.is_key_pressed(KEY_SHIFT):
 		melee()
-	if not Input.is_action_pressed("attack"):
-		_click_interacted = false
 	_update_interaction()
 
 
-var _click_interacted := false
+# --- Déplacement à la souris (façon Diablo / Path of Exile) ------------------------------
+# Clic sur le sol : le héros y va (petite zone lumineuse au sol). Clic maintenu : il suit
+# la souris. Clic sur un ennemi : il va le frapper (et continue tant que le clic est tenu).
+# Clic sur un personnage ou un objet : il y va puis interagit. Maj + clic : frappe sur place.
+
+enum ClickMode { NONE, GROUND, ENEMY, INTERACT }
+var _click_mode := ClickMode.NONE
+var _click_node: Node3D
+var _click_hold := false
+var move_target := Vector3.ZERO
+var _stuck_time := 0.0
+
+
+func _on_left_click(shift: bool) -> void:
+	if camera != null:
+		aim_point = camera.mouse_ground_point()
+	if shift:
+		_click_mode = ClickMode.NONE
+		melee()
+		return
+	_click_hold = true
+	_stuck_time = 0.0
+	var enemy := _enemy_under_cursor()
+	if enemy != null:
+		_click_mode = ClickMode.ENEMY
+		_click_node = enemy
+		return
+	var target := _interactable_under_cursor()
+	if target != null:
+		_click_mode = ClickMode.INTERACT
+		_click_node = target
+		return
+	_click_mode = ClickMode.GROUND
+	move_target = Vector3(aim_point.x, 0.0, aim_point.z)
+	MoveMarker.spawn(get_parent(), move_target)
+
+
+## Direction de marche imposée par le dernier clic (ou vecteur nul une fois arrivé).
+func _click_move(delta: float) -> Vector3:
+	if _click_hold and not Input.is_action_pressed("attack"):
+		_click_hold = false
+	var dest := Vector3.ZERO
+	var stop_at := 0.2
+	match _click_mode:
+		ClickMode.NONE:
+			return Vector3.ZERO
+		ClickMode.GROUND:
+			if _click_hold:
+				move_target = Vector3(aim_point.x, 0.0, aim_point.z) # clic maintenu : on suit la souris
+			dest = move_target
+		ClickMode.ENEMY:
+			var e := _click_node as Enemy
+			if e == null or not is_instance_valid(e) or not e.is_alive() or e.dormant:
+				_click_mode = ClickMode.NONE
+				return Vector3.ZERO
+			dest = e.global_position
+			stop_at = Balance.MELEE_RANGE + e.radius - 0.3
+			if _flat_dist(dest, global_position) <= stop_at:
+				# À portée : on frappe (une fois, ou en continu tant que le clic est maintenu).
+				var to := dest - global_position
+				to.y = 0.0
+				if to.length() > 0.05:
+					facing = to.normalized()
+				if _ready_skill("attack"):
+					melee()
+					if not _click_hold:
+						_click_mode = ClickMode.NONE
+				return Vector3.ZERO
+		ClickMode.INTERACT:
+			if _click_node == null or not is_instance_valid(_click_node) or not _click_node.is_visible_in_tree():
+				_click_mode = ClickMode.NONE
+				return Vector3.ZERO
+			dest = _click_node.global_position
+			stop_at = minf(float(_click_node.get("interact_radius")) * 0.8, 1.8)
+			if _flat_dist(dest, global_position) <= stop_at:
+				_click_mode = ClickMode.NONE
+				_click_node.call("interact", self)
+				return Vector3.ZERO
+	var to_dest := dest - global_position
+	to_dest.y = 0.0
+	if to_dest.length() <= stop_at:
+		if not _click_hold:
+			_click_mode = ClickMode.NONE
+		return Vector3.ZERO
+	# Bloqué contre un mur ou une table : on abandonne au bout d'un moment.
+	if get_real_velocity().length() < Balance.HERO_SPEED * 0.2:
+		_stuck_time += delta
+		if _stuck_time > 0.6 and not _click_hold:
+			_click_mode = ClickMode.NONE
+			return Vector3.ZERO
+	else:
+		_stuck_time = 0.0
+	return to_dest.normalized()
+
+
+## Ennemi sous le curseur : distance écran au segment pieds → tête de chaque ennemi.
+func _enemy_under_cursor() -> Enemy:
+	var best: Enemy = null
+	var best_d := INF
+	for e in enemies():
+		var d := _cursor_distance(e.global_position, e.height, e.radius)
+		if d < best_d:
+			best_d = d
+			best = e
+	return best if best_d <= 0.0 else null
+
+
+func _interactable_under_cursor() -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for n in get_tree().get_nodes_in_group("interactable"):
+		var n3 := n as Node3D
+		if n3 == null or not n3.is_visible_in_tree():
+			continue
+		var d := _cursor_distance(n3.global_position, 1.7, 0.5)
+		if d < best_d:
+			best_d = d
+			best = n3
+	return best if best_d <= 0.0 else null
+
+
+## Distance (en pixels, négative = sous le curseur) entre la souris et la silhouette
+## verticale d'un objet (des pieds à `height`, de demi-largeur `radius` en mètres).
+func _cursor_distance(feet: Vector3, height: float, radius: float) -> float:
+	if camera == null or camera.is_position_behind(feet):
+		return INF
+	var mouse := get_viewport().get_mouse_position()
+	var a := camera.unproject_position(feet)
+	var b := camera.unproject_position(feet + Vector3(0, height, 0))
+	var px_per_m := get_viewport().get_visible_rect().size.y / maxf(camera.size, 0.01)
+	var closest := Geometry2D.get_closest_point_to_segment(mouse, a, b)
+	return mouse.distance_to(closest) - (radius * px_per_m + 10.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if dead or get_tree().paused or captive or resting:
+	if dead or get_tree().paused or captive:
 		return
-	# Clic gauche sur un personnage ou un objet à portée : on interagit au lieu de frapper.
 	var mb := event as InputEventMouseButton
-	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _interact_target != null:
-		if _flat_dist(aim_point, _interact_target.global_position) <= 1.4:
-			_click_interacted = true
-			_interact_target.call("interact", self)
+	var left_click := mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT
+	if resting:
+		if left_click:
+			get_up() # un clic pour se lever du lit
 			get_viewport().set_input_as_handled()
-			return
+		return
+	if left_click:
+		_on_left_click(mb.shift_pressed)
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("dash"):
 		dash()
 	elif event.is_action_pressed("spell_tuning"):

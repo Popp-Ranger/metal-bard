@@ -80,6 +80,10 @@
 ## ✅ v0.1.9 — Intro plus courte
 - [x] Route de l'intro ramenée à ~20 s de marche, tracé sinueux (virages jusqu'à ~70°)
 
+## ✅ v0.1.10 — Déplacement à la souris
+- [x] Clic sur le sol : le héros y va (zone lumineuse au sol) ; clic maintenu : il suit la souris
+- [x] Clic sur un ennemi : il va le frapper ; clic sur un PNJ ou un objet : il va interagir ; Maj + clic : frappe sur place
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

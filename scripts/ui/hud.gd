@@ -220,7 +220,7 @@ func _build_skills() -> void:
 	_riff_combo_label.position = Vector2(-10, -30)
 	_riff_combo_label.size = Vector2(104, 26)
 	riff_panel.add_child(_riff_combo_label)
-	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : talents  •  %s : portail  •  Échap : pause" % [
+	var help := UiStyle.label("ZQSD / clic : se déplacer  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : talents  •  %s : portail  •  Échap : pause" % [
 		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
 	help.anchor_right = 0.5
