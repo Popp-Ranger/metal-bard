@@ -10,10 +10,16 @@ var talents_caster: TalentCaster
 var dead := false
 var casting_solo := false
 var leaping := false # Stage Diving en cours
+## Enfermé (capturé par Gloubah) ou figé par une cinématique : ni déplacement ni action.
+var captive := false
+## Planté sur place sans être invincible (Ballade réparatrice).
+var planted := false
+## Glissade sur les genoux en cours : aucune attaque ne touche.
+var dashing := false
 var _regen_tick := 0.0
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
-var cooldowns := {"attack": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
+var cooldowns := {"attack": 0.0, "dash": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
 ## Combo du Riff électrique : nombre d'appuis consécutifs en rythme (1..RIFF_MAX_STACKS).
 var riff_stack := 0
 var _riff_last := -100.0
@@ -26,6 +32,7 @@ var _prompt_text := ""
 
 func _ready() -> void:
 	add_to_group("hero")
+	add_to_group("heroes") # tous les joueurs (le héros local + les autres joueurs en coop)
 	collision_layer = 2
 	collision_mask = 1 | 4
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
@@ -72,13 +79,19 @@ func _physics_process(delta: float) -> void:
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var move := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
-	if casting_solo or leaping:
-		move = Vector3.ZERO # planté sur place en plein solo (ou en plein vol)
+	if casting_solo or leaping or captive or planted or dashing:
+		move = Vector3.ZERO # planté sur place en plein solo (ou en plein vol, ou en cage)
 	var speed := Balance.HERO_SPEED * (0.6 if talents_caster.in_frenzy else 1.0)
-	if not leaping:
+	if dashing:
+		pass # la glissade déplace le héros elle-même (voir dash())
+	elif not leaping:
 		velocity = move * speed
 		move_and_slide()
 		global_position.y = 0.0
+	if captive:
+		model.set_moving(false)
+		_update_interaction()
+		return
 
 	if camera != null:
 		aim_point = camera.mouse_ground_point()
@@ -91,15 +104,30 @@ func _physics_process(delta: float) -> void:
 	model.rotation.y = lerp_angle(model.rotation.y, atan2(facing.x, facing.z), 1.0 - exp(-20.0 * delta))
 	model.set_moving(move.length() > 0.1)
 
-	if Input.is_action_pressed("attack"):
+	if Input.is_action_pressed("attack") and not _click_interacted:
 		melee()
+	if not Input.is_action_pressed("attack"):
+		_click_interacted = false
 	_update_interaction()
 
 
+var _click_interacted := false
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if dead or get_tree().paused:
+	if dead or get_tree().paused or captive:
 		return
-	if event.is_action_pressed("spell_tuning"):
+	# Clic gauche sur un personnage ou un objet à portée : on interagit au lieu de frapper.
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and _interact_target != null:
+		if _flat_dist(aim_point, _interact_target.global_position) <= 1.4:
+			_click_interacted = true
+			_interact_target.call("interact", self)
+			get_viewport().set_input_as_handled()
+			return
+	if event.is_action_pressed("dash"):
+		dash()
+	elif event.is_action_pressed("spell_tuning"):
 		cast_tuning()
 	elif event.is_action_pressed("spell_riff"):
 		cast_riff()
@@ -140,7 +168,8 @@ func _cooldown(skill: String, base: float) -> void:
 
 
 func _ready_skill(skill: String) -> bool:
-	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not talents_caster.blocks_actions()
+	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not captive \
+		and not planted and not dashing and not talents_caster.blocks_actions()
 
 
 # API utilisée par TalentCaster.
@@ -373,6 +402,9 @@ func _on_solo_finished(mode: String, hits: int, total: int) -> void:
 		power = 0.7
 	elif hits >= 3:
 		power = 0.45
+	if hits < total:
+		# Notes mal jouées : la recharge du sort est 2,5 fois plus longue.
+		_cooldown("solo", Balance.SOLO_COOLDOWN * Balance.MINIGAME_FAIL_COOLDOWN_MULT)
 	if power <= 0.0:
 		GameState.spend_mana(Balance.SOLO_COST * 0.5)
 		Sfx.play("dud", -2.0)
@@ -400,7 +432,7 @@ func drink_potion() -> void:
 	_cooldown("potion", 1.0)
 	GameState.potions -= 1
 	Events.potions_changed.emit(GameState.potions)
-	var heal := roundi(GameState.max_hp() * Balance.POTION_HEAL_RATIO)
+	var heal := roundi(GameState.max_hp() * ItemDB.potion_heal_ratio())
 	GameState.heal_hero(heal)
 	Sfx.play("potion", -4.0)
 	DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), "+%d" % heal, Events.COLOR_GOOD)
@@ -413,10 +445,58 @@ func _no_mana() -> void:
 
 # --- Dégâts ----------------------------------------------------------------
 
+## Glissade sur les genoux (Espace) : 5 m dans la direction du déplacement (ou du regard),
+## le héros est intouchable pendant toute la glissade. Recharge : 20 s.
+func dash() -> void:
+	if not _ready_skill("dash"):
+		return
+	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var dir := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
+	if dir.length() < 0.1:
+		dir = facing
+	dir.y = 0.0
+	dir = dir.normalized()
+	var from := global_position
+	var target := from + dir * Balance.DASH_DISTANCE
+	# On s'arrête avant les murs.
+	var space := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(from + Vector3(0, 0.6, 0), target + Vector3(0, 0.6, 0), 1)
+	var hit := space.intersect_ray(query)
+	if not hit.is_empty():
+		var p: Vector3 = hit["position"]
+		target = Vector3(p.x, 0, p.z) - dir * (radius + 0.15)
+	_cooldown("dash", Balance.DASH_COOLDOWN)
+	dashing = true
+	facing = dir
+	model.rotation.y = atan2(dir.x, dir.z)
+	model.knee_slide(Balance.DASH_DURATION + 0.25)
+	Sfx.play("swoosh", -2.0, 0.0)
+	var tw := create_tween()
+	tw.tween_method(_dash_step.bind(from, target), 0.0, 1.0, Balance.DASH_DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_interval(0.2)
+	tw.tween_callback(func() -> void: dashing = false)
+
+
+func _dash_step(k: float, from: Vector3, target: Vector3) -> void:
+	global_position = from.lerp(target, k)
+
+
+## Esquive passive réussie (l'ennemi rate son jet d'attaque) : petit saut sur une jambe
+## façon Angus Young.
+func dodged() -> void:
+	if not dead and not casting_solo and not dashing:
+		model.angus_hop()
+
+
 func take_hit(amount: int, _from: Vector3, attacker: Node3D = null) -> void:
 	if dead or _invuln > 0.0 or leaping:
 		return
+	if dashing:
+		GameState.run_add("avoided", amount)
+		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), "Glissade !", Color(0.7, 0.85, 1.0))
+		return
 	if casting_solo:
+		GameState.run_add("avoided", amount)
 		# Invincible pendant le solo : les coups ricochent sur l'aura dorée.
 		_invuln = 0.35
 		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), "Invincible", Color(1.0, 0.85, 0.4))
@@ -428,11 +508,14 @@ func take_hit(amount: int, _from: Vector3, attacker: Node3D = null) -> void:
 		talents_caster.retaliate(attacker)
 	if GameState.has_talent("sustain"):
 		amount = ceili(amount * 0.9)
+	var before_shield := amount
 	amount = talents_caster.absorb(amount)
+	GameState.run_add("avoided", before_shield - amount)
 	if amount <= 0:
 		return
 	if amount >= GameState.hp and talents_caster.try_encore():
 		return
+	GameState.run_add("taken", mini(amount, GameState.hp))
 	GameState.damage_hero(amount)
 	model.flash()
 	DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.2, 0), str(amount), Events.COLOR_BAD)

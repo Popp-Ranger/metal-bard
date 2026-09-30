@@ -53,6 +53,9 @@ var seated := false
 var _seat_height := 0.49
 ## Rotation additionnelle de la tête (un PNJ qui regarde le héros).
 var head_turn := 0.0
+## Pose spéciale temporaire : "slide" (glissade à genoux) ou "hop" (saut sur une jambe, Angus Young).
+var _pose := ""
+var _pose_time := 0.0
 
 
 func _ready() -> void:
@@ -442,6 +445,7 @@ func _process(delta: float) -> void:
 		_strum = absf(sin(_t * 18.0))
 	else:
 		_strum = move_toward(_strum, 0.0, delta * 4.0)
+	_apply_special_pose(delta)
 	_aura.visible = _soloing
 	if _soloing:
 		_aura.rotation.y += delta * 2.0
@@ -553,3 +557,59 @@ func die() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(self, "rotation:x", -PI * 0.5, 0.6).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "position:y", 0.25, 0.6)
+
+
+# --- Poses spéciales ---------------------------------------------------------------
+
+## Glissade sur les genoux, guitare dressée, dos cambré (la glissade de scène du metal).
+func knee_slide(duration: float) -> void:
+	_pose = "slide"
+	_pose_time = duration
+	if _guitar != null:
+		create_tween().tween_property(_guitar, "rotation", GUITAR_SOLO, 0.08)
+
+
+## Petit saut sur une jambe façon Angus Young (esquive passive réussie).
+func angus_hop(duration: float = 0.6) -> void:
+	if _pose == "slide":
+		return
+	_pose = "hop"
+	_pose_time = duration
+
+
+func _apply_special_pose(delta: float) -> void:
+	if _pose.is_empty():
+		return
+	_pose_time -= delta
+	if _pose_time <= 0.0:
+		_pose = ""
+		if _guitar != null and not _soloing and not _busy:
+			create_tween().tween_property(_guitar, "rotation", GUITAR_REST, 0.2)
+		return
+	match _pose:
+		"slide":
+			# À genoux : cuisses verticales, tibias à plat vers l'arrière, bassin abaissé.
+			var y := 0.46
+			_hip_l.rotation.x = -0.15
+			_hip_r.rotation.x = -0.15
+			_knee_l.rotation.x = 1.55
+			_knee_r.rotation.x = 1.55
+			_torso.position.y = y
+			_hip_l.position.y = y
+			_hip_r.position.y = y
+			_torso.rotation.x = -0.45 # cambré en arrière
+			_head.rotation.x = -0.35
+			_strum = absf(sin(_t * 20.0))
+		"hop":
+			# Jambe gauche repliée, sautillements sur la jambe droite.
+			var hop := absf(sin(_t * 16.0)) * 0.16
+			_hip_l.rotation.x = -1.2
+			_knee_l.rotation.x = 1.5
+			_hip_r.rotation.x = 0.0
+			_knee_r.rotation.x = 0.1
+			_torso.position.y = 0.86 + hop
+			_hip_l.position.y = 0.86 + hop
+			_hip_r.position.y = 0.86 + hop
+			_torso.rotation.x = -0.05
+			_torso.rotation.z = sin(_t * 8.0) * 0.12
+			_head.rotation.x = absf(sin(_t * 16.0)) * 0.3

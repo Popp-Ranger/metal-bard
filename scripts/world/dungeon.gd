@@ -269,6 +269,10 @@ func _spawn_enemies() -> void:
 		var count := _rng.randi_range(2, 4)
 		for k in count:
 			_spawn_skeleton(cell_to_world(gen.random_cell_in_room(i, 2)), false)
+		# Premier donjon : des rats grouillent un peu partout.
+		if enemy_level <= 1:
+			for k in _rng.randi_range(1, 3):
+				_spawn_rat(cell_to_world(gen.random_cell_in_room(i, 1)))
 		if i == captain_room:
 			_spawn_skeleton(cell_to_world(gen.center(i)), true)
 
@@ -305,13 +309,23 @@ func _spawn_ambush(room: int) -> void:
 		Pickup.spawn(self, c + Vector3(0.8, 0, 1.0), "potion")
 		if _rng.randf() < 0.6:
 			var pool: Array[String] = []
-			for id: String in ItemDB.COMMON_DROPS:
+			for id: String in ItemDB.common_drops():
 				if not GameState.inventory.has(id):
 					pool.append(id)
 			if not pool.is_empty():
 				Pickup.spawn(self, c + Vector3(-0.8, 0, 1.0), "item", 0, pool.pick_random())
 		Events.notify("Coffre ouvert !", Events.COLOR_GOLD)
 	Interactable.create(self, c + Vector3(0, 0, 0.9), "Ouvrir le coffre", open_chest, 2.0)
+
+
+func _spawn_rat(pos: Vector3) -> Rat:
+	var r := Rat.new()
+	r.level = enemy_level
+	r.position = pos + Vector3(_rng.randf_range(-0.5, 0.5), 0, _rng.randf_range(-0.5, 0.5))
+	r.rotation.y = _rng.randf() * TAU
+	r.walkable_check = is_walkable
+	add_child(r)
+	return r
 
 
 func _spawn_skeleton(pos: Vector3, captain: bool) -> Skeleton:
@@ -328,13 +342,7 @@ func _spawn_skeleton(pos: Vector3, captain: bool) -> Skeleton:
 func _spawn_boss_room() -> void:
 	var r := gen.rooms[gen.boss_room]
 	var c := cell_to_world(gen.center(gen.boss_room))
-	# Mare croupie autour du trône de Gloubah (son « antre luxueuse »).
-	var pond := Visuals.mat(Color(0.14, 0.26, 0.18), 0.15, 0.1)
-	Visuals.cylinder(self, 4.5, 4.5, 0.03, c + Vector3(0, 0.02, 0), pond, Vector3.ZERO, 40)
-	for k in 6:
-		var a := TAU * k / 6.0
-		Visuals.cylinder(self, 0.45, 0.45, 0.04, c + Vector3(cos(a) * 3.2, 0.05, sin(a) * 3.2),
-			Visuals.mat(Color(0.12, 0.3, 0.12)), Vector3.ZERO, 12)
+	_build_pentagram(c)
 	var glow := Visuals.flicker_light(self, c + Vector3(0, 3.5, 0), Color(0.45, 0.9, 0.6), 2.0, 11.0)
 	glow.flicker_amount = 0.1
 	for k in 4:
@@ -501,6 +509,52 @@ func _spawn_flee_portal(pos: Vector3) -> void:
 ## Fin du passage au donjon : récapitulatif (victimes, dégâts) puis retour à la taverne.
 func _end_dungeon(title: String, victory: bool) -> void:
 	GameState.flags["in_dungeon"] = true
+	GameState.location = {"scene": Router.TAVERN}
 	if victory:
 		GameState.save_game()
 	hud.show_recap(title, func() -> void: Router.go_to(Router.TAVERN))
+
+
+## Pentagramme tracé à la bave verte luminescente sous Gloubah, cerclé de bave, avec des
+## flaques et éclaboussures de sang tout autour (ses « repas »).
+func _build_pentagram(c: Vector3) -> void:
+	var slime := Visuals.glow_mat(Color(0.3, 0.95, 0.2), 1.6)
+	var r := 4.2
+	Visuals.torus(self, r - 0.12, r + 0.12, c + Vector3(0, 0.03, 0), slime)
+	Visuals.torus(self, r + 0.45, r + 0.6, c + Vector3(0, 0.03, 0), slime)
+	var pts: Array[Vector3] = []
+	for k in 5:
+		var a := -PI * 0.5 + TAU * k / 5.0
+		pts.append(c + Vector3(cos(a), 0, sin(a)) * r)
+	for k in 5:
+		# Étoile à cinq branches : chaque pointe est reliée à l'avant-dernière suivante.
+		var a := pts[k]
+		var b := pts[(k + 2) % 5]
+		var mid := (a + b) * 0.5
+		var seg := b - a
+		var line := Visuals.box(self, Vector3(0.22, 0.02, seg.length()), mid + Vector3(0, 0.035, 0), slime)
+		line.rotation.y = atan2(seg.x, seg.z)
+		line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# Coulures de bave aux pointes.
+		Visuals.sphere(self, 0.28, a + Vector3(0, 0.02, 0), slime, Vector3(1.2, 0.08, 1.0))
+	# Petites runes entre les deux cercles.
+	for k in 10:
+		var a := TAU * k / 10.0
+		var rune := Visuals.box(self, Vector3(0.3, 0.02, 0.08), c + Vector3(cos(a), 0, sin(a)) * (r + 0.3) + Vector3(0, 0.035, 0), slime)
+		rune.rotation.y = -a + (0.5 if k % 2 == 0 else -0.5)
+	# Sang : grandes flaques sombres et éclaboussures.
+	var blood := Visuals.mat(Color(0.28, 0.0, 0.01), 0.12)
+	var fresh := Visuals.mat(Color(0.45, 0.01, 0.02), 0.08)
+	for k in 7:
+		var a := _rng.randf() * TAU
+		var d := _rng.randf_range(1.5, 6.5)
+		var p := c + Vector3(cos(a) * d, 0.02 + k * 0.001, sin(a) * d)
+		Visuals.cylinder(self, _rng.randf_range(0.3, 0.9), _rng.randf_range(0.4, 1.0), 0.01, p, blood if k % 2 == 0 else fresh, Vector3.ZERO, 12)
+		for s in 4:
+			var q := p + Vector3(_rng.randf_range(-1.2, 1.2), 0.004, _rng.randf_range(-1.2, 1.2))
+			Visuals.cylinder(self, 0.08, 0.1, 0.01, q, fresh, Vector3.ZERO, 8)
+	# Une traînée de sang qui mène au trône.
+	for k in 8:
+		Visuals.cylinder(self, 0.18 - k * 0.012, 0.2 - k * 0.012, 0.01, c + Vector3(2.0 + k * 0.6, 0.025, 1.0 + k * 0.35), fresh, Vector3.ZERO, 10)
+	var glow := Visuals.flicker_light(self, c + Vector3(0, 0.6, 0), Color(0.35, 1.0, 0.3), 1.2, 7.0)
+	glow.flicker_amount = 0.25

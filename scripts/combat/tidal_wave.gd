@@ -46,15 +46,15 @@ func _covers(angle: float) -> bool:
 func _check_hit() -> void:
 	if _hit:
 		return
-	for n in get_tree().get_nodes_in_group("hero"):
-		var h := n as Hero
-		if h == null or h.dead:
+	for n in get_tree().get_nodes_in_group("heroes"):
+		var h := n as Node3D
+		if Enemy.is_down(h):
 			continue
 		var to := h.global_position - center
 		to.y = 0.0
 		if absf(to.length() - _radius) < 0.55 and _covers(atan2(to.z, to.x)):
 			_hit = true
-			h.take_hit(damage, center)
+			h.call("take_hit", damage, center, null)
 			Events.notify("Emporté par la vague !", Events.COLOR_BAD)
 
 

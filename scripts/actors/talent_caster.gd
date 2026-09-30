@@ -12,10 +12,9 @@ const GROUP_HEAL_RADIUS := 10.0
 
 var hero: Hero
 var in_frenzy := false # Solo endiablé en cours
+var in_ballade := false # Ballade réparatrice (mini-jeu) en cours
 
 var _encore_cd := 0.0
-var _hot_time := 0.0
-var _hot_tick := 0.0
 var _zone_time := 0.0
 var _zone_tick := 0.0
 var _zone_pos := Vector3.ZERO
@@ -47,13 +46,6 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_encore_cd = maxf(0.0, _encore_cd - delta)
-	# Ballade réparatrice : soin continu.
-	if _hot_time > 0.0:
-		_hot_time -= delta
-		_hot_tick -= delta
-		if _hot_tick <= 0.0:
-			_hot_tick = 1.0
-			_heal_group(hero.global_position, GROUP_HEAL_RADIUS, 0.05)
 	# Hymne du Phénix : zone de soin.
 	if _zone_time > 0.0:
 		_zone_time -= delta
@@ -111,22 +103,25 @@ func cast(id: String) -> bool:
 
 
 func blocks_actions() -> bool:
-	return in_frenzy
+	return in_frenzy or in_ballade
+
+
+## Mini-jeu raté : la recharge du sort repart, 2,5 fois plus longue.
+func _fail_cooldown(id: String) -> void:
+	var base := float(TalentDB.get_talent(id).get("cooldown", 1.0))
+	hero.start_cooldown(id, base * Balance.MINIGAME_FAIL_COOLDOWN_MULT)
 
 
 # --- Ballade (soins) --------------------------------------------------------------
 
 func _cast_ballade_reparatrice() -> bool:
-	hero.model.strum()
-	var amount := roundi(Dice.roll(2, 8, GameState.mod("CHA")) * GameState.spell_power())
-	_heal(amount)
-	for ally in _allies_near(hero.global_position, GROUP_HEAL_RADIUS):
-		ally.call("receive_heal", amount)
-		_burst(ally.global_position, Color(0.45, 1.0, 0.5), 10)
-	_hot_time = 4.0
-	_hot_tick = 1.0
-	_burst(hero.global_position, Color(0.45, 1.0, 0.5), 18)
-	Sfx.play("levelup", -8.0, 0.0)
+	if in_ballade or hero.casting_solo:
+		return false
+	in_ballade = true
+	hero.planted = true
+	hero.model.solo_pose(true)
+	Events.notify("BALLADE RÉPARATRICE ! Chaque note juste soigne le groupe — touches 1 2 3 4", Color(0.5, 1.0, 0.55))
+	Events.solo_requested.emit("ballade", 0)
 	return true
 
 
@@ -318,6 +313,14 @@ func _cast_solo_endiable() -> bool:
 
 
 func _on_solo_note_hit(mode: String, _hits: int) -> void:
+	if mode == "ballade" and in_ballade:
+		# Un solo sans faute (toutes les notes) rend BALLADE_HEAL_TOTAL (90 %) des PV max.
+		var total := maxi(1, (SoloMinigame.ballade_chart().get("notes", []) as Array).size())
+		_heal_group(hero.global_position, GROUP_HEAL_RADIUS, Balance.BALLADE_HEAL_TOTAL / total)
+		_burst(hero.global_position, Color(0.45, 1.0, 0.5), 4)
+		for ally in _allies_near(hero.global_position, GROUP_HEAL_RADIUS):
+			_burst(ally.global_position, Color(0.45, 1.0, 0.5), 3)
+		return
 	if mode != "endiable" or not in_frenzy:
 		return
 	Sfx.play("zap", -16.0)
@@ -328,6 +331,17 @@ func _on_solo_note_hit(mode: String, _hits: int) -> void:
 
 
 func _on_solo_finished(mode: String, hits: int, total: int) -> void:
+	if mode == "ballade" and in_ballade:
+		in_ballade = false
+		hero.planted = false
+		hero.model.solo_pose(false)
+		if hits < total:
+			_fail_cooldown("ballade_reparatrice")
+			Sfx.play("dud", -4.0)
+			Events.notify("Fausse note : la ballade s'interrompt (%d/%d)" % [hits, total], Events.COLOR_BAD)
+		else:
+			Events.notify("BALLADE PARFAITE ! (%d/%d)" % [hits, total], Events.COLOR_GOLD)
+		return
 	if mode != "endiable" or not in_frenzy:
 		return
 	in_frenzy = false
@@ -339,6 +353,7 @@ func _on_solo_finished(mode: String, hits: int, total: int) -> void:
 	if hits >= total:
 		Events.notify("TRANSE TOTALE ! (%d/%d)" % [hits, total], Events.COLOR_GOLD)
 	else:
+		_fail_cooldown("solo_endiable")
 		Sfx.play("dud", -4.0)
 		Events.notify("Fausse note : la transe se brise (%d/%d)" % [hits, total], Events.COLOR_BAD)
 

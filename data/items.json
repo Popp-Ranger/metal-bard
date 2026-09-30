@@ -1,0 +1,90 @@
+{
+	"_aide": "Liste de TOUS les objets du jeu. Modifiez ce fichier pour les contrôler : noms, descriptions, bonus (FOR, DEX, CON, INT, SAG, CHA), rareté (commun, peu commun, rare, épique), s'ils tombent sur les ennemis ('butin': true), ou les désactiver ('actif': false). Prix et chances de butin sont aussi réglables ici. Voir docs/OBJETS.md.",
+	"monnaie": {
+		"nom": "Médiator",
+		"nom_pluriel": "médiators",
+		"desc": "La monnaie du royaume : des médiators de guitare, en écaille, en os ou en or.",
+		"chance_butin": 0.45,
+		"perte_a_la_mort": 0.25,
+		"depart": 30
+	},
+	"consommables": {
+		"potion_soin": {
+			"nom": "Potion de soin",
+			"desc": "Un breuvage rouge qui pique : rend 40 % des PV max.",
+			"prix": 25,
+			"soin": 0.4,
+			"chance_butin": 0.12,
+			"depart": 2
+		},
+		"chambre": {
+			"nom": "Nuit à l'auberge",
+			"desc": "Un lit, une couverture qui gratte : PV et dB restaurés.",
+			"prix": 10
+		}
+	},
+	"quete": {
+		"cle_cage": {
+			"nom": "Clé rouillée de la cage",
+			"desc": "Portée par Gloubah. Ouvre la cage de Plumeau."
+		}
+	},
+	"reliques": {
+		"mediator_os": {
+			"nom": "Médiator en os",
+			"desc": "Taillé dans la phalange d'un squelette trop bavard.",
+			"bonus": {"DEX": 1},
+			"rarete": "commun",
+			"butin": true,
+			"actif": true
+		},
+		"ceinture_cloutee": {
+			"nom": "Ceinture cloutée",
+			"desc": "Trente-deux clous, trente-deux raisons de ne pas mourir.",
+			"bonus": {"CON": 1},
+			"rarete": "commun",
+			"butin": true,
+			"actif": true
+		},
+		"bracelet_force": {
+			"nom": "Bracelet à pointes",
+			"desc": "Pour frapper plus fort et accessoirement faire peur.",
+			"bonus": {"FOR": 1},
+			"rarete": "commun",
+			"butin": true,
+			"actif": true
+		},
+		"cordes_dragon": {
+			"nom": "Cordes en boyau de dragon",
+			"desc": "Elles vibrent toutes seules quand un mort-vivant approche.",
+			"bonus": {"CHA": 1},
+			"rarete": "peu commun",
+			"butin": true,
+			"actif": true
+		},
+		"grimoire_tablatures": {
+			"nom": "Grimoire de tablatures",
+			"desc": "Des accords interdits notés à l'encre de seiche.",
+			"bonus": {"INT": 1, "SAG": 1},
+			"rarete": "peu commun",
+			"butin": true,
+			"actif": true
+		},
+		"pendentif_plume": {
+			"nom": "Pendentif de plume d'ours-hibou",
+			"desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
+			"bonus": {"CHA": 1, "SAG": 1},
+			"rarete": "rare",
+			"butin": false,
+			"actif": true
+		},
+		"couronne_gloubah": {
+			"nom": "Couronne de nénuphar de Gloubah",
+			"desc": "Encore humide. Toujours humide. Pour l'éternité, humide.",
+			"bonus": {"CON": 2, "CHA": 1},
+			"rarete": "épique",
+			"butin": false,
+			"actif": true
+		}
+	}
+}

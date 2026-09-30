@@ -13,6 +13,7 @@ func _ready() -> void:
 	_test_audio()
 	await _test_characters()
 	await _test_quest_flow()
+	await _test_new_features()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
 	else:
@@ -192,7 +193,7 @@ func _test_quest_flow() -> void:
 			victims[i].state = Enemy.State.CHASE
 	var actives: Array[String] = []
 	for id in TalentDB.all_ids():
-		if TalentDB.is_active(id) and id != "solo_endiable":
+		if TalentDB.is_active(id) and id != "solo_endiable" and id != "ballade_reparatrice":
 			actives.append(id)
 	var cast_ok := true
 	for id in actives:
@@ -207,8 +208,31 @@ func _test_quest_flow() -> void:
 		await _frames(3)
 		if id == "stage_diving":
 			await get_tree().create_timer(0.8).timeout
-	_check(cast_ok, "les 9 autres talents actifs se lancent")
+	_check(cast_ok, "les 8 autres talents actifs se lancent")
 	await get_tree().create_timer(1.5).timeout
+	# Ballade réparatrice : mini-jeu sur le solo extrait de la musique de la taverne.
+	var chart := SoloMinigame.ballade_chart()
+	var chart_notes: Array = chart.get("notes", [])
+	_check(chart_notes.size() >= 15 and is_equal_approx(float(chart.get("duration", 0.0)), 10.0),
+		"partition du solo de la taverne : %d notes sur 10 s" % chart_notes.size())
+	GameState.mana = GameState.max_mana()
+	hero.cooldowns["ballade_reparatrice"] = 0.0
+	hero.talents_caster.cast("ballade_reparatrice")
+	await _frames(2)
+	var ballade_solo := (dungeon as Level).hud.solo
+	_check(ballade_solo._active and ballade_solo.mode == "ballade" and ballade_solo._notes.size() == chart_notes.size()
+		and hero.planted and Sfx.clip_playing(), "Ballade : mini-jeu lancé sur l'extrait musical, héros planté")
+	GameState.hp = 1
+	for k in chart_notes.size():
+		Events.solo_note_hit.emit("ballade", k + 1)
+	var expected_heal := roundi(GameState.max_hp() * Balance.BALLADE_HEAL_TOTAL / chart_notes.size()) * chart_notes.size()
+	_check(absi(GameState.hp - 1 - expected_heal) <= chart_notes.size(), "solo sans faute ≈ 90 %% des PV max soignés (%d PV)" % (GameState.hp - 1))
+	ballade_solo._hits = 3
+	ballade_solo._finish()
+	var ballade_cd := 12.0 * Balance.MINIGAME_FAIL_COOLDOWN_MULT * GameState.cooldown_multiplier()
+	_check(not hero.planted and absf(float(hero.cooldowns["ballade_reparatrice"]) - ballade_cd) < 0.2,
+		"notes ratées : recharge ×2,5 (%.1f s)" % float(hero.cooldowns["ballade_reparatrice"]))
+	await _frames(2)
 	# Bouclier du Mur de Larsen.
 	hero.talents_caster.set_shield(20)
 	var hp_shield := GameState.hp
@@ -240,16 +264,49 @@ func _test_quest_flow() -> void:
 		"une fausse note brise la transe")
 	for e in victims:
 		e.hp = 1
-	# On élimine tout le monde, boss compris.
+	# On élimine tous les ennemis (sauf Gloubah, qui attend de parler).
 	var xp_before := GameState.stats.xp
+	var dlg := (dungeon as Level).hud.dialogue
+	var rats := 0
+	var rat_hp_ok := true
 	for n in get_tree().get_nodes_in_group("enemies"):
 		var e := n as Enemy
-		e.take_damage(9999, e.global_position + Vector3(1, 0, 0))
+		if e is Rat:
+			rats += 1
+			rat_hp_ok = rat_hp_ok and (e.max_hp == 3 or e.max_hp == 5000) # 5000 : rats pris comme cibles plus haut
+		if not e.is_boss:
+			e.take_damage(9999, e.global_position + Vector3(1, 0, 0))
 	await _frames(10)
+	_check(rats > 0 and rat_hp_ok, "des rats (3 PV) grouillent dans le premier donjon (%d)" % rats)
 	_check(GameState.stats.xp > xp_before, "les ennemis rapportent de l'XP")
-	_check(GameState.quest_state("plumeau") == QuestDB.State.OBJECTIVE_DONE, "boss vaincu → objectif accompli")
-	await get_tree().create_timer(3.2).timeout
+	_check(int(GameState.run.get("kills", 0)) > 10 and int(GameState.run.get("dealt", 0)) > 0, "compteur de victimes et dégâts infligés")
+	# Gloubah interpelle le héros quand il arrive à portée.
+	var d_level := dungeon as Node
+	var boss: FrogBoss = d_level.get("boss")
+	hero.global_position = boss.global_position + Vector3(4.0, 0, 4.0)
+	await _frames(5)
+	_check(dlg.visible and boss.passive, "Gloubah engage la conversation au lieu d'attaquer")
+	dlg.close()
+	# Réponse « il est kiki » : amicale, clé donnée, double XP, pas de combat.
+	var xp_friend := GameState.stats.xp
+	GameState.run_dialogue_action("story:gloubah_friend")
+	await _frames(3)
+	_check(boss.friendly and bool(d_level.get("_has_key")) and GameState.stats.xp >= xp_friend + boss.xp_reward * 2,
+		"« il est kiki » : Gloubah amicale, clé offerte, XP doublée")
+	d_level.call("_try_open_cage")
+	_check(GameState.quest_state("plumeau") == QuestDB.State.OBJECTIVE_DONE, "cage ouverte avec la clé → objectif accompli")
+	await get_tree().create_timer(2.4).timeout
 	_check(_count_portals(dungeon) == 2, "portail de retour apparu")
+	var recap_portal: Portal = null
+	for c in dungeon.get_children():
+		if c is Portal and (c as Portal).prompt.begins_with("Retourner"):
+			recap_portal = c
+	if recap_portal != null:
+		recap_portal.on_enter.call()
+	await _frames(2)
+	var d_hud := (dungeon as Level).hud
+	_check(d_hud.is_recap_open() and Hud.recap_text().contains("Dégâts subis"), "récapitulatif du donjon affiché")
+	get_tree().paused = false
 	dungeon.queue_free()
 	await _frames(5)
 	GameState.run_dialogue_action("turn_in:plumeau")
@@ -258,6 +315,152 @@ func _test_quest_flow() -> void:
 	_check(GameState.has_save(), "partie sauvegardée")
 	var level := GameState.stats.level
 	_check(GameState.load_game() and GameState.stats.level == level, "chargement de la sauvegarde")
+	await _test_boss_fight_and_surrender()
+
+
+## Autres issues du dialogue de Gloubah : combat (clé à ramasser) et reddition (cage).
+func _test_boss_fight_and_surrender() -> void:
+	GameState.new_game()
+	GameState.run_dialogue_action("accept:plumeau")
+	var dungeon: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(dungeon)
+	await _frames(20)
+	var boss: FrogBoss = dungeon.get("boss")
+	GameState.run_dialogue_action("story:gloubah_fight")
+	_check(not boss.passive and boss.state != Enemy.State.WANDER, "« combat à mort » : Gloubah attaque")
+	boss.take_damage(99999, boss.global_position + Vector3(1, 0, 0))
+	await _frames(5)
+	var key: Interactable = null
+	for n in get_tree().get_nodes_in_group("interactable"):
+		var i := n as Interactable
+		if i != null and i.prompt.begins_with("Ramasser la clé"):
+			key = i
+	_check(key != null and not bool(dungeon.get("_has_key")), "Gloubah vaincue : la clé tombe au sol")
+	if key != null:
+		key.interact(null)
+	_check(bool(dungeon.get("_has_key")), "clé ramassée ([E] ou clic)")
+	GameState.run_dialogue_action("story:gloubah_surrender")
+	var hero := get_tree().get_first_node_in_group("hero") as Hero
+	var prison: Vector3 = dungeon.get("_prison_pos")
+	_check(hero.captive and hero.global_position.distance_to(prison) < 0.5, "« je me rends » : enfermé dans la cage vide")
+	await _frames(10)
+	_check(hero.global_position.distance_to(prison) < 0.5, "prisonnier : impossible de bouger")
+	get_tree().paused = false
+	dungeon.queue_free()
+	await _frames(5)
+
+
+func _test_new_features() -> void:
+	print("[Taverne, intro, sauvegardes, coop, objets]")
+	GameState.new_game()
+	_check(ItemDB.common_drops().size() == 5 and ItemDB.potion_price() == 25 and ItemDB.get_item("couronne_gloubah").get("name", "") != "",
+		"objets lus dans data/items.json (5 reliques de butin)")
+	var tavern: Node = load("res://scenes/tavern.tscn").instantiate()
+	add_child(tavern)
+	await _frames(20)
+	var t_level := tavern as Level
+	var hero := t_level.hero
+	_check(t_level.hud._gold_label.text.ends_with("médiators"), "la monnaie : les médiators")
+	# Portes verrouillées.
+	var locked := false
+	for n in get_tree().get_nodes_in_group("interactable"):
+		var i := n as Interactable
+		if i != null and i.prompt == "Porte verrouillée":
+			locked = true
+	_check(locked, "les portes de la taverne sont verrouillées")
+	# Glissade sur les genoux : 5 m, intouchable, recharge 20 s.
+	hero.global_position = Vector3(-3.0, 0, 4.0)
+	hero.facing = Vector3(1, 0, 0)
+	var from := hero.global_position
+	hero.dash()
+	await _frames(3)
+	var hp0 := GameState.hp
+	hero._invuln = 0.0
+	hero.take_hit(10, Vector3.ZERO)
+	_check(hero.dashing and GameState.hp == hp0, "glissade : aucune attaque ne touche")
+	await get_tree().create_timer(0.8).timeout
+	var moved := hero.global_position.distance_to(from)
+	_check(moved > 1.0 and moved <= Balance.DASH_DISTANCE + 0.05 and not hero.dashing, "glissade de %.1f m (5 m max)" % moved)
+	_check(float(hero.cooldowns["dash"]) > Balance.DASH_COOLDOWN * GameState.cooldown_multiplier() - 1.5,
+		"recharge de la glissade : 20 s")
+	hero.dodged()
+	_check(hero.model._pose == "hop", "esquive passive : saut sur une jambe façon Angus Young")
+	# Clients : jamais plus de 2 debout ; chaises déplacées.
+	var patrons: Array[Patron] = []
+	for c in tavern.get_children():
+		if c is Patron:
+			patrons.append(c)
+			(c as Patron)._timer = 0.0
+	var max_up := 0
+	var chair_moved := false
+	for f in 60:
+		await get_tree().physics_frame
+		max_up = maxi(max_up, int(tavern.call("standing_count")))
+		for p in patrons:
+			if p.chair != null and p.chair.position.distance_to(p._chair_home) > 0.2:
+				chair_moved = true
+	_check(max_up >= 1 and max_up <= 2, "au plus 2 clients debout à la fois (%d)" % max_up)
+	_check(chair_moved, "les clients reculent leur chaise pour se lever")
+	var zarathos: Npc = null
+	for c in tavern.get_children():
+		if c is Npc and (c as Npc).npc_id == "zarathos":
+			zarathos = c
+	_check(zarathos != null and zarathos.wander_radius > 0.0, "Zarathos fait les cent pas près de son portail")
+	var demon_found := false
+	for c in tavern.get_children():
+		demon_found = demon_found or c is DemonPortal
+	_check(demon_found, "portail démoniaque dans le sous-sol")
+	# Sous-sol (zone décalée en x = 70) : décibels illimités.
+	hero.global_position = Vector3(70.0 - 9.0, 0, -3.0)
+	await _frames(3)
+	GameState.mana = 5.0
+	var spent := GameState.spend_mana(40.0)
+	_check(spent and GameState.infinite_mana and GameState.mana >= GameState.max_mana() - 0.01, "sous-sol : décibels toujours au maximum")
+	# Réinitialisation des talents (l'Inconnue encapuchonnée).
+	GameState.talent_points = 3
+	GameState.learn_talent("ballade_reparatrice")
+	GameState.learn_talent("rappel")
+	GameState.run_dialogue_action("reset_talents")
+	_check(GameState.talents.is_empty() and GameState.talent_points == 3 and GameState.spell_slots[0] == "", "l'Inconnue réinitialise l'arbre de talents")
+	# Sauvegardes : emplacement manuel, lieu, chargement ; pas en combat.
+	GameState.location = t_level.save_location()
+	_check(GameState.save_to_slot(1) and not GameState.slot_summary(1).is_empty(), "sauvegarde dans l'emplacement 1")
+	var lvl := GameState.stats.level
+	_check(GameState.load_slot(1) and GameState.stats.level == lvl and GameState.resume_scene() == Router.TAVERN
+		and GameState.pending_spawn != Vector3.INF, "chargement : retour à la taverne, à la même position")
+	GameState.pending_spawn = Vector3.INF
+	_check(not t_level.in_combat(), "hors combat : sauvegarde autorisée")
+	tavern.queue_free()
+	await _frames(5)
+	DirAccess.remove_absolute(GameState.slot_path(1))
+	# Coop : code d'invitation, hébergement.
+	var code := Net.encode_code("86.201.14.7", Net.PORT)
+	var back := Net.decode_code(code.to_lower())
+	_check(code.length() == 11 and back.get("ip", "") == "86.201.14.7" and int(back.get("port", 0)) == Net.PORT,
+		"code d'invitation %s ↔ 86.201.14.7:%d" % [code, Net.PORT])
+	_check(Net.decode_code("pas-un-code").is_empty(), "code invalide refusé")
+	var err := Net.host()
+	_check(err.is_empty() and Net.is_host() and Net.player_count() == 1, "partie ouverte en coop (hôte)")
+	Net.leave()
+	_check(not Net.is_online(), "partie coop fermée")
+	# Intro : cimetière, lune de sang, route d'environ 40 s.
+	var intro: Node = load("res://scenes/intro.tscn").instantiate()
+	add_child(intro)
+	await _frames(10)
+	var i_level := intro as Level
+	var road_time := 222.0 / Balance.HERO_SPEED
+	_check(i_level.hero.captive and bool(intro.get("_cinematic")), "intro : cinématique de la lune de sang, héros figé")
+	_check(road_time > 35.0 and road_time < 45.0, "route pavée d'environ 40 s de marche (%.0f s)" % road_time)
+	intro.set("_cinematic", false)
+	i_level.hero.captive = false
+	intro.call("_lightning")
+	await get_tree().create_timer(1.5).timeout
+	_check(true, "un éclair frappe le décor sans erreur")
+	var intro_lines: Array = DialogueDB.get_dialogue("intro_hero")["lines"]
+	_check(str(intro_lines[1][1]) == "Et si j'allais m'en jeter un !", "réplique du héros seul")
+	intro.queue_free()
+	await _frames(5)
+	get_tree().paused = false
 
 
 func _count_portals(root: Node) -> int:

@@ -1,0 +1,123 @@
+{
+	"duration": 10.0,
+	"info": "Solo de guitare extrait de la musique de la taverne (126 s - 136 s) par détection d'attaques (flux spectral 0,8-4 kHz) ; la corde dépend de la hauteur de la note.",
+	"notes": [
+		{
+			"hz": 603,
+			"lane": 2,
+			"t": 0.874
+		},
+		{
+			"hz": 301,
+			"lane": 0,
+			"t": 1.199
+		},
+		{
+			"hz": 301,
+			"lane": 0,
+			"t": 1.524
+		},
+		{
+			"hz": 431,
+			"lane": 1,
+			"t": 1.872
+		},
+		{
+			"hz": 603,
+			"lane": 2,
+			"t": 2.197
+		},
+		{
+			"hz": 345,
+			"lane": 0,
+			"t": 2.522
+		},
+		{
+			"hz": 345,
+			"lane": 0,
+			"t": 2.848
+		},
+		{
+			"hz": 581,
+			"lane": 2,
+			"t": 3.196
+		},
+		{
+			"hz": 517,
+			"lane": 1,
+			"t": 3.683
+		},
+		{
+			"hz": 668,
+			"lane": 3,
+			"t": 4.009
+		},
+		{
+			"hz": 517,
+			"lane": 1,
+			"t": 4.519
+		},
+		{
+			"hz": 431,
+			"lane": 1,
+			"t": 5.007
+		},
+		{
+			"hz": 345,
+			"lane": 0,
+			"t": 5.495
+		},
+		{
+			"hz": 581,
+			"lane": 2,
+			"t": 5.843
+		},
+		{
+			"hz": 689,
+			"lane": 3,
+			"t": 6.168
+		},
+		{
+			"hz": 668,
+			"lane": 3,
+			"t": 6.493
+		},
+		{
+			"hz": 345,
+			"lane": 0,
+			"t": 7.004
+		},
+		{
+			"hz": 603,
+			"lane": 2,
+			"t": 7.492
+		},
+		{
+			"hz": 431,
+			"lane": 1,
+			"t": 7.817
+		},
+		{
+			"hz": 431,
+			"lane": 1,
+			"t": 8.165
+		},
+		{
+			"hz": 301,
+			"lane": 0,
+			"t": 8.49
+		},
+		{
+			"hz": 603,
+			"lane": 2,
+			"t": 8.978
+		},
+		{
+			"hz": 581,
+			"lane": 2,
+			"t": 9.488
+		}
+	],
+	"source": "res://audio/music/tavern_theme.mp3",
+	"start": 126.0
+}

@@ -61,6 +61,10 @@ static func get_dialogue(id: String) -> Dictionary:
 			return _gloubah_mignon()
 		"katrkar_epee":
 			return _katrkar_epee()
+		"intro_hero":
+			return _intro_hero()
+		"inconnue_oubli":
+			return _inconnue_oubli()
 	if id.begins_with("client|"):
 		return _client(id.substr(7))
 	return {"lines": [["???", "..."]], "choices": []}
@@ -76,7 +80,7 @@ static func _gerald() -> Dictionary:
 					[g, "C'est Plumeau, mon petit ours-hibou. Une bande de squelettes l'a enlevé cette nuit, en plein poulailler !"],
 					[g, "Ils claquaient des dents en rythme et chantaient faux. Je les ai vus filer vers les Catacombes Suintantes."],
 					[hero(), "Des squelettes qui chantent faux ? Ça, c'est une offense personnelle."],
-					[g, "Je n'ai que 100 pièces d'or et le pendentif de sa mère... mais ramenez-le-moi, je vous en supplie !"],
+					[g, "Je n'ai que 100 médiators et le pendentif de sa mère... mais ramenez-le-moi, je vous en supplie !"],
 				],
 				"choices": [
 					["« Aucun os ne résiste à un bon riff. J'y vais. »", "accept:plumeau"],
@@ -153,12 +157,12 @@ static func _brunhilde() -> Dictionary:
 	return {
 		"lines": [
 			[b, "Bienvenue au Crâne Hurlant, barde. Ici on paie d'avance et on ne joue pas de ballades elfiques."],
-			[b, "Potion de soin à %d po, chambre à %d po la nuit. Tu as %d po." % [
-				Balance.POTION_PRICE, Balance.REST_PRICE, GameState.gold]],
+			[b, "Potion de soin à %d médiators, chambre à %d médiators la nuit. Tu as %d médiators." % [
+				ItemDB.potion_price(), ItemDB.rest_price(), GameState.gold]],
 		],
 		"choices": [
-			["Acheter une potion de soin (%d po)" % Balance.POTION_PRICE, "buy_potion", true],
-			["Louer une chambre et se reposer (%d po)" % Balance.REST_PRICE, "rest", true],
+			["Acheter une potion de soin (%d médiators)" % ItemDB.potion_price(), "buy_potion", true],
+			["Louer une chambre et se reposer (%d médiators)" % ItemDB.rest_price(), "rest", true],
 			["« Des rumeurs ? »", "goto:brunhilde_rumeurs"],
 			["« À plus tard. »", "close"],
 		],
@@ -185,14 +189,52 @@ static func _inconnue() -> Dictionary:
 				[i, "Tu as vaincu Gloubah. Elle n'était qu'une servante. Sa couronne portait le sceau de Morne."],
 				[i, "Quand le Silence viendra, barde, joue plus fort que lui. Nous nous reverrons."],
 			],
-			"choices": [["(Elle disparaît dans l'ombre...)", "close"]],
+			"choices": [
+				["« Efface mes talents, je veux réécrire ma partition. »", "goto:inconnue_oubli"],
+				["(Elle disparaît dans l'ombre...)", "close"],
+			],
 		}
 	return {
 		"lines": [
 			[i, "...Ton luth. Il est accordé en ré bémol, n'est-ce pas ? L'accordage des anciens rois-bardes."],
 			[i, "Les squelettes ne volent pas au hasard. Quelqu'un leur donne des ordres. Quelqu'un qui déteste la musique."],
 		],
-		"choices": [["« Qui es-tu ? »", "close"]],
+		"choices": [
+			["« Efface mes talents, je veux réécrire ma partition. »", "goto:inconnue_oubli"],
+			["« Qui es-tu ? »", "close"],
+		],
+	}
+
+
+## Début de partie, au cimetière : une seule réplique, au pluriel s'il y a plusieurs joueurs.
+static func _intro_hero() -> Dictionary:
+	var several := Net.player_count() > 1
+	return {
+		"lines": [
+			[hero(), "Aaaaaah... une bonne vieille balade par ce temps est si agréable."],
+			[hero(), "Et si nous allions nous en jeter un !" if several else "Et si j'allais m'en jeter un !"],
+		],
+		"choices": [["(Prendre la route du Crâne Hurlant)", "close"]],
+	}
+
+
+static func _inconnue_oubli() -> Dictionary:
+	var i := npc_name("inconnue")
+	var count := GameState.talents.size()
+	if count == 0:
+		return {
+			"lines": [[i, "Ta partition est encore vierge, barde. Il n'y a rien à effacer."]],
+			"choices": [["« Plus tard, alors. »", "close"]],
+		}
+	return {
+		"lines": [
+			[i, "Oublier ce que tes doigts savent... C'est possible. Je retire les notes, tu gardes le silence qu'elles laissent."],
+			[i, "Tes %d talent(s) seront effacés, et tu pourras redistribuer tous tes points." % count],
+		],
+		"choices": [
+			["Réinitialiser l'arbre de talents", "reset_talents"],
+			["« Non, je garde mon style. »", "close"],
+		],
 	}
 
 
@@ -277,6 +319,10 @@ const CLIENT_LINES := [
 	"Tu as essayé les mannequins au sous-sol ? Moi, j'ai perdu contre l'un d'eux.",
 	"Il paraît que les chambres de l'étage sont hantées. Enfin, surtout la n°4.",
 	"Un ogre, une tavernière et un troll entrent dans une taverne... ah, tu la connais ?",
+	"YEAH ! Enfer et damnation, cette bière arrache !",
+	"Bordel, barde, joue-nous un truc qui cogne ! Ça, c'est Metal !",
+	"Damnation... j'ai encore perdu ma chope. Ah non, elle est dans ma main. YEAH !",
+	"Les squelettes ? Qu'ils viennent, bordel ! J'ai un tabouret et de la rancune.",
 ]
 
 

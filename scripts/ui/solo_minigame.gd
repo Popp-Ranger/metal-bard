@@ -23,7 +23,9 @@ var _feedback_color := Color.WHITE
 var _feedback_t := 0.0
 var _lane_flash := [0.0, 0.0, 0.0, 0.0]
 var _end_t := 0.0
-## "foudre" (Solo de la Foudre, 5 notes) ou "endiable" (Solo endiablé : s'arrête à la 1re fausse note).
+## "foudre" (Solo de la Foudre, 5 notes), "endiable" (Solo endiablé) ou "ballade" (Ballade
+## réparatrice : le vrai solo de la musique de la taverne). Les deux derniers s'arrêtent
+## à la première fausse note.
 var mode := "foudre"
 
 
@@ -40,6 +42,15 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 	_notes.clear()
 	var t := LEAD_TIME
 	var last_lane := -1
+	if mode == "ballade":
+		note_count = 0
+		var chart := ballade_chart()
+		for n: Dictionary in chart.get("notes", []):
+			_notes.append({"lane": int(n["lane"]), "time": LEAD_TIME + float(n["t"]), "judged": false, "hit": false})
+		t = LEAD_TIME + float(chart.get("duration", 10.0))
+		# La musique démarre en avance pour que chaque note tombe sur la cible au moment où
+		# elle résonne dans le morceau.
+		Sfx.play_clip(str(chart.get("source", "")), float(chart.get("start", 0.0)) - LEAD_TIME)
 	for i in note_count:
 		var lane := randi_range(0, LANES - 1)
 		if lane == last_lane:
@@ -70,8 +81,8 @@ func _process(delta: float) -> void:
 			n["judged"] = true
 			_set_feedback("RATÉ", Color(1.0, 0.35, 0.3))
 			Sfx.play("dud", -10.0)
-			if mode == "endiable":
-				_finish() # fausse note : la transe se brise
+			if mode != "foudre":
+				_finish() # fausse note : la transe se brise / la ballade s'interrompt
 				return
 	if _t >= _end_t and _all_judged():
 		_finish()
@@ -113,7 +124,8 @@ func _press(lane: int) -> void:
 	best["hit"] = true
 	_hits += 1
 	Events.solo_note_hit.emit(mode, _hits)
-	Sfx.play("note_%d" % lane, -3.0, 0.0)
+	if mode != "ballade": # la ballade, elle, joue les vraies notes du morceau
+		Sfx.play("note_%d" % lane, -3.0, 0.0)
 	if best_err <= WINDOW_PERFECT:
 		_set_feedback("PARFAIT !", Color(1.0, 0.9, 0.3))
 	else:
@@ -127,6 +139,8 @@ func _set_feedback(text: String, color: Color) -> void:
 
 
 func _finish() -> void:
+	if mode == "ballade":
+		Sfx.stop_clip()
 	_active = false
 	visible = false
 	Events.solo_finished.emit(mode, _hits, _notes.size())
@@ -142,8 +156,10 @@ func _draw() -> void:
 	var panel := Rect2(origin, PANEL_SIZE)
 	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
-	draw_string(font, origin + Vector2(0, 42), "SOLO ENDIABLÉ" if mode == "endiable" else "SOLO DE LA FOUDRE", HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 30, Color(1.0, 0.8, 0.4))
-	draw_string(font, origin + Vector2(0, 70), ("%d / %d notes  •  TRANSE" if mode == "endiable" else "%d / %d notes  •  INVINCIBLE") % [_hits, _notes.size()], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, Color(1.0, 0.85, 0.45))
+	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE"}
+	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE"}
+	draw_string(font, origin + Vector2(0, 42), str(titles.get(mode, "SOLO")), HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 30, Color(1.0, 0.8, 0.4))
+	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits, _notes.size(), str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, Color(1.0, 0.85, 0.45))
 
 	var lane_w := 76.0
 	var lanes_x := origin.x + (PANEL_SIZE.x - lane_w * LANES) * 0.5
@@ -178,3 +194,16 @@ func _draw() -> void:
 		draw_string(font, Vector2(origin.x, origin.y + PANEL_SIZE.y * 0.45), _feedback, HORIZONTAL_ALIGNMENT_CENTER,
 			PANEL_SIZE.x, 40, Color(_feedback_color.r, _feedback_color.g, _feedback_color.b, a))
 
+
+
+const BALLADE_CHART_PATH := "res://data/ballade_solo.json"
+static var _ballade_cache := {}
+
+
+## Partition du solo de la Ballade réparatrice (voir data/ballade_solo.json).
+static func ballade_chart() -> Dictionary:
+	if _ballade_cache.is_empty():
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BALLADE_CHART_PATH))
+		if parsed is Dictionary:
+			_ballade_cache = parsed
+	return _ballade_cache

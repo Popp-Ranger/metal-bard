@@ -23,7 +23,7 @@ const BRANCHES := [
 const TALENTS := {
 	# --- Ballade (soins) ---
 	"ballade_reparatrice": {"name": "Ballade réparatrice", "active": true, "cost": 25.0, "cooldown": 12.0,
-		"desc": "Soin de groupe : vous et vos alliés à 10 m récupérez 2d8 + CHA, puis 5 % des PV max chaque seconde pendant 4 s."},
+		"desc": "Mini-jeu sur le vrai solo de guitare de la taverne (10 s, touches 1 2 3 4) : chaque note juste soigne tout le groupe à 10 m. Solo sans faute = 90 % des PV max. Une fausse note arrête la ballade (recharge ×2,5)."},
 	"rappel": {"name": "Rappel", "active": false,
 		"desc": "Le public en redemande : chaque ennemi vaincu rend 3 PV et 4 dB."},
 	"hymne_phenix": {"name": "Hymne du Phénix", "active": true, "cost": 35.0, "cooldown": 30.0,
@@ -50,7 +50,7 @@ const TALENTS := {
 		"desc": "Les ennemis que vous repoussez fortement restent assommés 1,5 s."},
 	# --- Transe (contrôle) ---
 	"solo_endiable": {"name": "Solo endiablé", "active": true, "cost": 30.0, "cooldown": 25.0,
-		"desc": "Mini-jeu du solo : tant que les notes sont réussies (jusqu'à 12), les ennemis à 12 m se figent et headbanguent. Une fausse note brise la transe. Vous pouvez vous déplacer."},
+		"desc": "Mini-jeu du solo : tant que les notes sont réussies (jusqu'à 12), les ennemis à 12 m se figent et headbanguent. Une fausse note brise la transe (recharge ×2,5). Vous pouvez vous déplacer."},
 	"tempo_hypnotique": {"name": "Tempo hypnotique", "active": false,
 		"desc": "Le Riff électrique ralentit sa cible de 40 % pendant 2 s."},
 	"growl": {"name": "Growl de l'Abîme", "active": true, "cost": 20.0, "cooldown": 16.0,

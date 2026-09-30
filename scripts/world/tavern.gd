@@ -20,6 +20,7 @@ const BAR_SPOTS := [Vector3(-3.0, 0, -6.4), Vector3(-1.4, 0, -6.4), Vector3(0.2,
 const TABLES := [Vector3(-9.0, 0, -4.0), Vector3(-9.5, 0, 5.0), Vector3(-3.0, 0, 1.0),
 	Vector3(3.0, 0, 1.5), Vector3(-2.5, 0, 7.0), Vector3(7.5, 0, 6.0)]
 const KATRKAR_TABLE := 3 # la table où une chaise est remplacée par le fauteuil roulant
+const MAX_STANDING := 2 # jamais plus de 2 clients debout en même temps
 
 var _wood_dark := Visuals.mat(Color(0.2, 0.11, 0.06), 0.8)
 var _wood := Visuals.mat(Color(0.33, 0.19, 0.1), 0.75)
@@ -30,10 +31,15 @@ var _cut_stone := Visuals.stone_material(true, Color(0.32, 0.28, 0.25))
 var _portal: Portal
 var _nav: NavigationRegion3D
 var _bar_taken: Array[bool] = [false, false, false, false, false, false]
+## Clients actuellement debout (jamais plus de MAX_STANDING à la fois).
+var _standing := 0
 var _seats: Array[Dictionary] = [] # {pos, yaw}
 var _katrkar_seat := {}
 var _gerald: Npc
 var _gerald_home := Vector3(-6.5, 0, 7.5)
+var _door_hinges: Array[Node3D] = []
+var _door_block: StaticBody3D
+var _door_interact: Interactable
 
 
 func _ready() -> void:
@@ -53,8 +59,11 @@ func _ready() -> void:
 		if GameState.flags.has("last_death_gold_lost"):
 			var lost: int = GameState.flags.get("last_death_gold_lost", 0)
 			GameState.flags.erase("last_death_gold_lost")
-			Events.notify("Zarathos vous a ramené inconscient à la taverne... (-%d po)" % lost, Events.COLOR_BAD)
+			Events.notify("Zarathos vous a ramené inconscient à la taverne... (-%d médiators)" % lost, Events.COLOR_BAD)
 	spawn_hero(spawn)
+	if GameState.flags.get("intro_arrival", false):
+		GameState.flags.erase("intro_arrival")
+		_close_doors_behind_hero()
 	if GameState.flags.get("portal_open", false) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE:
 		_open_portal()
 	Events.portal_opened.connect(_open_portal)
@@ -66,6 +75,15 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if hero != null:
 		_cut_stone.set_shader_parameter("hero_pos", hero.global_position)
+		# Sous-sol d'entraînement : décibels toujours au maximum.
+		var in_cellar := hero.global_position.x > CELLAR.x - 20.0
+		if in_cellar != GameState.infinite_mana:
+			GameState.infinite_mana = in_cellar
+			if in_cellar:
+				Events.notify("Salle d'entraînement : décibels illimités !", Events.COLOR_MAGIC)
+		if in_cellar and GameState.mana < GameState.max_mana():
+			GameState.mana = GameState.max_mana()
+			Events.hero_mana_changed.emit(GameState.mana, GameState.max_mana())
 
 
 # =====================================================================================
@@ -86,7 +104,7 @@ func _build_ground_floor() -> void:
 	_low_wall(self, Vector3(HALF_X, 0, 0), Vector3(0.4, 0.9, HALF_Z * 2.0))
 	for sx: float in [-1.0, 1.0]: # montants de la porte
 		Visuals.box(self, Vector3(0.3, 1.6, 0.5), Vector3(1.4 * sx, 0.8, HALF_Z), _wood_dark)
-	Visuals.label(self, "Sortie (fermée la nuit)", Vector3(0, 1.9, HALF_Z), Color(0.6, 0.55, 0.5), 22)
+	_build_front_doors()
 	_build_fireplace()
 	_build_counter()
 	for i in TABLES.size():
@@ -103,6 +121,47 @@ func _build_ground_floor() -> void:
 	_lantern(self, Vector3(-HALF_X + 0.45, 2.8, 3.0), false)
 	_build_ground_props()
 	_build_rune_circle()
+
+
+## Portes d'entrée à deux battants. Elles se referment derrière le héros à la fin de
+## l'intro et restent verrouillées jusqu'à une quête ultérieure (drapeau « tavern_doors_open »).
+func _build_front_doors() -> void:
+	var opened: bool = GameState.flags.get("tavern_doors_open", false)
+	var arriving: bool = GameState.flags.get("intro_arrival", false)
+	for side: float in [-1.0, 1.0]:
+		var hinge := Node3D.new()
+		hinge.position = Vector3(1.3 * side, 0, HALF_Z)
+		add_child(hinge)
+		Visuals.box(hinge, Vector3(1.3, 2.3, 0.12), Vector3(-0.65 * side, 1.15, 0), _wood)
+		for y: float in [0.5, 1.8]:
+			Visuals.box(hinge, Vector3(1.3, 0.1, 0.16), Vector3(-0.65 * side, y, 0), _iron)
+		Visuals.torus(hinge, 0.07, 0.1, Vector3(-1.05 * side, 1.15, -0.1), _iron, Vector3(90, 0, 0))
+		hinge.rotation.y = side * deg_to_rad(100.0) if (opened or arriving) else 0.0
+		_door_hinges.append(hinge)
+	_door_block = Visuals.solid(self, Vector3(2.6, 3.0, 0.3), Vector3(0, 1.5, HALF_Z))
+	_door_block.add_to_group("tavern_nav")
+	if opened:
+		_door_block.queue_free()
+	else:
+		_door_interact = Interactable.create(self, Vector3(0, 0, HALF_Z - 0.8), "Porte verrouillée", _on_locked_door, 1.6)
+
+
+func _on_locked_door() -> void:
+	Sfx.play("thud", -6.0)
+	Events.notify("Les portes du Crâne Hurlant sont verrouillées. Brunhilde : « Personne ne sort tant que la Lune de Sang est levée ! »", Events.COLOR_BAD)
+
+
+## Fin de l'intro : les portes claquent derrière le héros.
+func _close_doors_behind_hero() -> void:
+	await get_tree().create_timer(1.3, false).timeout
+	for i in _door_hinges.size():
+		var tw := _door_hinges[i].create_tween()
+		tw.tween_property(_door_hinges[i], "rotation:y", 0.0, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	await get_tree().create_timer(0.5, false).timeout
+	Sfx.play("boom", -4.0)
+	Sfx.play("thud", 0.0)
+	Events.camera_shake.emit(0.2, 0.3)
+	Events.notify("BLAM ! Les portes se referment lourdement derrière vous... Elles ne se rouvriront pas de sitôt.", Color(1.0, 0.7, 0.5))
 
 
 func _build_fireplace() -> void:
@@ -169,8 +228,8 @@ func _build_table(t: Vector3, index: int) -> void:
 		if index == KATRKAR_TABLE and k == 1:
 			_katrkar_seat = {"pos": pos + dir * 0.1, "yaw": yaw} # place laissée libre au fauteuil
 			continue
-		_chair(self, pos, yaw)
-		_seats.append({"pos": pos, "yaw": yaw})
+		var chair := _chair(self, pos, yaw)
+		_seats.append({"pos": pos, "yaw": yaw, "chair": chair})
 
 
 func _build_ground_props() -> void:
@@ -280,7 +339,7 @@ func _build_room(c: Vector3, index: int) -> void:
 				Visuals.box(self, Vector3(0.4, 0.08, 0.3), c + Vector3(1.5, 0.62 + k * 0.08, -2.2), Visuals.mat(Color(0.3 + k * 0.1, 0.1, 0.35)))
 			Visuals.sphere(self, 0.12, c + Vector3(1.9, 0.75, 1.0), Visuals.glow_mat(Color(0.6, 0.4, 1.0), 3.0))
 		1: # votre chambre : on peut y dormir
-			Interactable.create(self, bed + Vector3(1.0, 0, 0.3), "Dormir (%d po — PV et dB restaurés)" % Balance.REST_PRICE,
+			Interactable.create(self, bed + Vector3(1.0, 0, 0.3), "Dormir (%d médiators — PV et dB restaurés)" % ItemDB.rest_price(),
 				func() -> void: GameState.run_dialogue_action("rest"), 1.8)
 		2: # occupée : ronflements (une bosse sous la couverture)
 			Visuals.capsule(self, 0.3, 1.4, bed + Vector3(0, 0.75, 0.2), Visuals.mat(blankets[2]), Vector3(90, 0, 0))
@@ -336,6 +395,11 @@ func _build_cellar() -> void:
 	friend.position = o + Vector3(3.5, 0, 4.0)
 	add_child(friend)
 	Visuals.label(self, "Les soins de groupe soignent tous les alliés proches", o + Vector3(3.5, 3.1, 4.0), Color(0.6, 1.0, 0.6), 22)
+	# Coin sud-est : zone brumeuse et sombre où s'ouvre un portail démoniaque.
+	var demon := DemonPortal.new()
+	demon.position = o + Vector3(9.5, 0, 4.2)
+	demon.rotation.y = deg_to_rad(-35.0)
+	add_child(demon)
 
 
 func _dummy(pos: Vector3) -> void:
@@ -435,7 +499,7 @@ func _window(parent: Node3D, center: Vector3, size: Vector3, inward: Vector3) ->
 
 
 ## Chaise dont l'avant (+Z local) est orienté selon `yaw`.
-func _chair(parent: Node3D, pos: Vector3, yaw: float) -> void:
+func _chair(parent: Node3D, pos: Vector3, yaw: float) -> Node3D:
 	var chair := Node3D.new()
 	chair.position = pos
 	chair.rotation.y = yaw
@@ -445,6 +509,7 @@ func _chair(parent: Node3D, pos: Vector3, yaw: float) -> void:
 		for lz: float in [-0.19, 0.19]:
 			Visuals.box(chair, Vector3(0.05, 0.46, 0.05), Vector3(lx, 0.23, lz), _wood_dark)
 	Visuals.box(chair, Vector3(0.46, 0.55, 0.05), Vector3(0, 0.76, -0.21), _wood)
+	return chair
 
 
 func _lantern(parent: Node3D, pos: Vector3, shadows: bool) -> void:
@@ -479,14 +544,29 @@ func _bake_navigation() -> void:
 	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	nm.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_EXPLICIT
 	nm.geometry_source_group_name = "tavern_nav"
-	nm.agent_radius = 0.35
-	nm.agent_height = 1.6
-	nm.agent_max_climb = 0.2
+	nm.agent_radius = 0.25
+	nm.agent_height = 1.5
+	nm.agent_max_climb = 0.25
 	nm.cell_size = 0.25
 	nm.cell_height = 0.25
 	nm.filter_baking_aabb = AABB(Vector3(-HALF_X, -1.0, -HALF_Z), Vector3(HALF_X * 2.0, 3.0, HALF_Z * 2.0))
 	_nav.navigation_mesh = nm
 	_nav.bake_navigation_mesh(false)
+
+
+func claim_standing() -> bool:
+	if _standing >= MAX_STANDING:
+		return false
+	_standing += 1
+	return true
+
+
+func release_standing() -> void:
+	_standing = maxi(0, _standing - 1)
+
+
+func standing_count() -> int:
+	return _standing
 
 
 func claim_bar_spot() -> int:
@@ -517,7 +597,10 @@ func _spawn_npcs() -> void:
 	brunhilde.look = {"sex": "f", "race": "ogre", "horns": 0, "tusks": 1, "beard": 0, "hair": 0, "hair_color": 2, "width_mult": 1.5}
 	brunhilde.interact_radius = 3.2
 	add_child(brunhilde)
-	add_child(Npc.create("zarathos", Vector3(12.8, 0, 1.8), -120.0))
+	var zarathos := Npc.create("zarathos", Vector3(12.8, 0, 1.8), -120.0)
+	zarathos.wander_radius = 2.5 # quelques pas près de son cercle de runes
+	zarathos.walk_speed = 0.9
+	add_child(zarathos)
 	add_child(Npc.create("inconnue", Vector3(-13.5, 0, -9.3), 45.0))
 	_gerald = Npc.create("gerald", _gerald_home, 80.0)
 	add_child(_gerald)
@@ -537,6 +620,7 @@ func _spawn_npcs() -> void:
 		p.tavern = self
 		p.seat_pos = seat["pos"]
 		p.seat_yaw = seat["yaw"]
+		p.chair = seat["chair"]
 		p.position = seat["pos"]
 		if i < specials.size():
 			var sp: Dictionary = specials[i]

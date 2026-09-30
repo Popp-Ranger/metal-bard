@@ -6,6 +6,7 @@ extends CanvasLayer
 
 const SKILLS := [
 	{"id": "attack", "name": "Guitare", "action": "attack", "cost": 0.0, "color": Color(0.8, 0.6, 0.4)},
+	{"id": "dash", "name": "Glissade", "action": "dash", "cost": 0.0, "color": Color(0.7, 0.85, 1.0)},
 	{"id": "tuning", "name": "Accordage\nde cordes", "action": "spell_tuning", "cost": Balance.TUNING_COST, "color": Color(0.5, 0.8, 1.0)},
 	{"id": "riff", "name": "Riff\nélectrique", "action": "spell_riff", "cost": Balance.RIFF_COST, "color": Color(0.4, 0.95, 1.0)},
 	{"id": "wave", "name": "Onde\nde choc", "action": "spell_wave", "cost": Balance.WAVE_COST, "color": Color(0.75, 0.55, 1.0)},
@@ -21,6 +22,8 @@ var dialogue: DialogueBox
 var solo: SoloMinigame
 var sheet: CharacterSheet
 var options: OptionsMenu
+var save_menu: SaveMenu
+var coop_menu: CoopMenu
 
 var _root: Control
 var _hp_bar: ProgressBar
@@ -47,6 +50,9 @@ var _riff_combo_label: Label
 var _riff_time := -100.0
 var _talent_slot_of := {} # id de talent -> clé d'emplacement ("tslot_0"...)
 var talent_tree: TalentTree
+var _kills_label: Label
+var _recap: PanelContainer
+var _death_recap: Label
 
 
 func _ready() -> void:
@@ -74,6 +80,13 @@ func _ready() -> void:
 	options = OptionsMenu.new()
 	_root.add_child(options)
 	options.closed.connect(_on_options_closed)
+	save_menu = SaveMenu.new()
+	save_menu.level = get_parent() as Level
+	_root.add_child(save_menu)
+	save_menu.closed.connect(_on_options_closed)
+	coop_menu = CoopMenu.new()
+	_root.add_child(coop_menu)
+	coop_menu.closed.connect(_on_options_closed)
 	_build_pause_menu()
 	_build_death_screen()
 	_connect_events()
@@ -84,7 +97,7 @@ func _connect_events() -> void:
 	Events.hero_hp_changed.connect(_on_hp)
 	Events.hero_mana_changed.connect(_on_mana)
 	Events.xp_changed.connect(_on_xp)
-	Events.gold_changed.connect(func(g: int) -> void: _gold_label.text = "%d po" % g)
+	Events.gold_changed.connect(func(g: int) -> void: _gold_label.text = "%d médiators" % g)
 	Events.potions_changed.connect(_on_potions)
 	Events.toast.connect(_on_toast)
 	Events.interaction_prompt.connect(func(t: String) -> void: _prompt.text = t)
@@ -124,7 +137,7 @@ func _build_status() -> void:
 	head.add_child(UiStyle.label(GameState.hero_name, 22, Color(1.0, 0.8, 0.45)))
 	_level_label = UiStyle.label("Niv. 1", 18, UiStyle.BONE)
 	head.add_child(_level_label)
-	_gold_label = UiStyle.label("0 po", 18, Events.COLOR_GOLD)
+	_gold_label = UiStyle.label("0 médiators", 18, Events.COLOR_GOLD)
 	head.add_child(_gold_label)
 	_hp_bar = UiStyle.bar(Color(0.65, 0.08, 0.06), Vector2(300, 22))
 	vb.add_child(_hp_bar)
@@ -200,7 +213,7 @@ func _build_skills() -> void:
 	_riff_combo_label.position = Vector2(-10, -30)
 	_riff_combo_label.size = Vector2(104, 26)
 	riff_panel.add_child(_riff_combo_label)
-	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  %s : parler  •  %s : fiche  •  %s : talents  •  Échap : pause" % [
+	var help := UiStyle.label("ZQSD/WASD : se déplacer  •  Souris : viser  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : talents  •  Échap : pause" % [
 		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("talents")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
 	help.anchor_right = 0.5
@@ -288,8 +301,8 @@ func _build_pause_menu() -> void:
 	_pause_menu.anchor_bottom = 0.5
 	_pause_menu.offset_left = -170
 	_pause_menu.offset_right = 170
-	_pause_menu.offset_top = -205
-	_pause_menu.offset_bottom = 205
+	_pause_menu.offset_top = -290
+	_pause_menu.offset_bottom = 290
 	_root.add_child(_pause_menu)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
@@ -297,7 +310,8 @@ func _build_pause_menu() -> void:
 	var title := UiStyle.label("PAUSE", 32, Color(1.0, 0.8, 0.45))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(title)
-	for entry: Array in [["Reprendre", _toggle_pause], ["Fiche de personnage", _open_sheet_from_pause], ["Arbre de talents", _open_talents_from_pause], ["Options", _open_options_from_pause],
+	for entry: Array in [["Reprendre", _toggle_pause], ["Fiche de personnage", _open_sheet_from_pause], ["Arbre de talents", _open_talents_from_pause], ["Sauvegarder", _open_save_from_pause.bind("save")],
+			["Charger", _open_save_from_pause.bind("load")], ["Coopération (inviter des amis)", _open_coop_from_pause], ["Options", _open_options_from_pause],
 			["Menu principal", _to_main_menu], ["Quitter le jeu", func() -> void: get_tree().quit()]]:
 		var b := Button.new()
 		b.text = str(entry[0])
@@ -318,8 +332,8 @@ func _build_death_screen() -> void:
 	vb.add_theme_constant_override("separation", 16)
 	vb.offset_left = -300
 	vb.offset_right = 300
-	vb.offset_top = -120
-	vb.offset_bottom = 120
+	vb.offset_top = -190
+	vb.offset_bottom = 190
 	_death_screen.add_child(vb)
 	var t := UiStyle.label("VOUS ÊTES TOMBÉ", 54, Color(0.85, 0.15, 0.1))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -328,8 +342,11 @@ func _build_death_screen() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vb.add_child(sub)
+	_death_recap = UiStyle.label("", 17, Color(0.9, 0.75, 0.65))
+	_death_recap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(_death_recap)
 	var b := Button.new()
-	b.text = "Se réveiller à la taverne (-%d %% de l'or)" % roundi(Balance.DEATH_GOLD_PENALTY * 100.0)
+	b.text = "Se réveiller à la taverne (-%d %% des médiators)" % roundi(ItemDB.death_money_penalty() * 100.0)
 	b.custom_minimum_size = Vector2(0, 44)
 	b.pressed.connect(_revive)
 	vb.add_child(b)
@@ -354,7 +371,7 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _death_screen.visible or options.visible or talent_tree.visible:
+	if _death_screen.visible or options.visible or talent_tree.visible or _recap != null or save_menu.visible or coop_menu.visible:
 		return
 	if event.is_action_pressed("pause"):
 		if sheet.visible:
@@ -496,6 +513,16 @@ func _open_talents_from_pause() -> void:
 	talent_tree.open()
 
 
+func _open_save_from_pause(save_mode: String) -> void:
+	_pause_menu.visible = false
+	save_menu.open(save_mode)
+
+
+func _open_coop_from_pause() -> void:
+	_pause_menu.visible = false
+	coop_menu.open_host()
+
+
 func _open_options_from_pause() -> void:
 	_pause_menu.visible = false
 	options.open()
@@ -514,11 +541,14 @@ func _open_sheet_from_pause() -> void:
 
 func _to_main_menu() -> void:
 	GameState.save_game()
+	Net.leave()
 	Router.go_to(Router.MAIN_MENU)
 
 
 func _on_hero_died() -> void:
 	await get_tree().create_timer(1.2).timeout
+	if _kills_label != null:
+		_death_recap.text = recap_text()
 	_death_screen.visible = true
 	_death_screen.modulate.a = 0.0
 	create_tween().tween_property(_death_screen, "modulate:a", 1.0, 0.8)
@@ -527,6 +557,7 @@ func _on_hero_died() -> void:
 
 func _revive() -> void:
 	GameState.apply_death_penalty()
+	GameState.location = {"scene": Router.TAVERN}
 	GameState.flags["in_dungeon"] = true
 	GameState.save_game()
 	Router.go_to(Router.TAVERN)
@@ -557,3 +588,81 @@ func _refresh_talent_slots() -> void:
 		extra.text = "%d dB" % roundi(float(slot["cost"]))
 		panel.add_theme_stylebox_override("panel", UiStyle.box(Color(0.07, 0.05, 0.05, 0.92), color.darkened(0.3), 2))
 		_talent_slot_of[id] = key
+
+
+# --- Donjon : compteur de victimes et récapitulatif -----------------------------------
+
+## Compteur de victimes affiché sous la barre de vie du boss (donjons uniquement).
+func show_kill_counter() -> void:
+	if _kills_label != null:
+		return
+	var panel := PanelContainer.new()
+	panel.position = Vector2(16, 150)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(panel)
+	_kills_label = UiStyle.label("", 18, Color(1.0, 0.75, 0.6))
+	panel.add_child(_kills_label)
+	Events.run_stats_changed.connect(_refresh_kills)
+	_refresh_kills()
+
+
+func _refresh_kills() -> void:
+	if _kills_label != null:
+		_kills_label.text = "☠ Victimes : %d" % int(GameState.run.get("kills", 0))
+
+
+## Texte du récapitulatif : victimes, dégâts infligés / subis / évités, durée.
+static func recap_text() -> String:
+	var r := GameState.run
+	var secs := GameState.run_seconds()
+	return "\n".join(PackedStringArray([
+		"Ennemis vaincus : %d" % int(r.get("kills", 0)),
+		"Dégâts infligés : %d" % int(r.get("dealt", 0)),
+		"Dégâts subis : %d" % int(r.get("taken", 0)),
+		"Dégâts évités (esquives, glissades, boucliers, solos) : %d" % int(r.get("avoided", 0)),
+		"Durée : %d min %02d s" % [floori(secs / 60.0), secs % 60],
+	]))
+
+
+## Fenêtre de fin de donjon ; `on_continue` est appelé par le bouton « Continuer ».
+func show_recap(title: String, on_continue: Callable) -> void:
+	if _recap != null:
+		return
+	get_tree().paused = true
+	_recap = PanelContainer.new()
+	_recap.anchor_left = 0.5
+	_recap.anchor_right = 0.5
+	_recap.anchor_top = 0.5
+	_recap.anchor_bottom = 0.5
+	_recap.offset_left = -300
+	_recap.offset_right = 300
+	_recap.offset_top = -190
+	_recap.offset_bottom = 190
+	_root.add_child(_recap)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 14)
+	_recap.add_child(vb)
+	var t := UiStyle.label(title, 32, Color(1.0, 0.8, 0.45))
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(t)
+	var sub := UiStyle.label("Récapitulatif du donjon", 18, UiStyle.DIM)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(sub)
+	var body := UiStyle.label(recap_text(), 20, UiStyle.BONE)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.add_child(body)
+	var b := Button.new()
+	b.text = "Continuer"
+	b.custom_minimum_size = Vector2(0, 44)
+	b.pressed.connect(_close_recap.bind(on_continue))
+	vb.add_child(b)
+	b.grab_focus()
+
+
+func _close_recap(on_continue: Callable) -> void:
+	if on_continue.is_valid():
+		on_continue.call()
+
+
+func is_recap_open() -> bool:
+	return _recap != null

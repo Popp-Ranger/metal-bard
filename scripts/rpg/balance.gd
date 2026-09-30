@@ -54,9 +54,17 @@ const SOLO_COOLDOWN := 18.0
 const SOLO_NOTES := 5
 const SOLO_SCREEN_RADIUS := 20.0
 
-const POTION_HEAL_RATIO := 0.4
-const POTION_PRICE := 25
-const REST_PRICE := 10
+# Glissade sur les genoux (barre Espace) : esquive toutes les attaques.
+const DASH_DISTANCE := 5.0
+const DASH_DURATION := 0.42
+const DASH_COOLDOWN := 20.0
+
+## Mini-jeux ratés (fausse note) : la recharge du sort est 2,5 fois plus longue.
+const MINIGAME_FAIL_COOLDOWN_MULT := 2.5
+## Ballade réparatrice : un solo joué sans faute (10 s) soigne 90 % des PV max.
+const BALLADE_HEAL_TOTAL := 0.9
+
+# Potion, chambre, médiators : voir data/items.json (ItemDB).
 
 # --- Ennemis ---------------------------------------------------------------
 const ENEMY_DETECT_RADIUS := 4.0 # « une fois à 4 mètres du héros... »
@@ -65,8 +73,5 @@ const ENEMY_SPEED_RATIO := 0.25 # « ... ils se déplacent à 0,25 × la vitesse
 const ENEMY_ATTACK_COOLDOWN := 2.5 # « ... 1 attaque toutes les 2,5 secondes »
 const ENEMY_ATTACK_WINDUP := 0.45 # Temps d'élan (télégraphie) avant le coup
 
-const DROP_GOLD_CHANCE := 0.45
-const DROP_POTION_CHANCE := 0.12
 const DROP_ITEM_CHANCE := 0.08
 
-const DEATH_GOLD_PENALTY := 0.25

@@ -24,9 +24,11 @@ func _ready() -> void:
 	add_child(_visual)
 	match kind:
 		"gold":
+			# Médiators (la monnaie du jeu) : petits triangles arrondis, écaille, nacre et or.
+			var pick_colors: Array[Color] = [Color(1.0, 0.78, 0.2), Color(0.95, 0.35, 0.15), Color(0.9, 0.88, 0.95)]
 			for i in 3:
-				Visuals.cylinder(_visual, 0.14, 0.14, 0.04, Vector3(randf_range(-0.1, 0.1), 0.3 + i * 0.05, randf_range(-0.1, 0.1)),
-					Visuals.glow_mat(Color(1.0, 0.78, 0.2), 1.2), Vector3(randf_range(-20, 20), 0, 70))
+				Visuals.cylinder(_visual, 0.15, 0.15, 0.03, Vector3(randf_range(-0.1, 0.1), 0.3 + i * 0.05, randf_range(-0.1, 0.1)),
+					Visuals.glow_mat(pick_colors[i], 1.2), Vector3(randf_range(-20, 20), randf_range(0, 120), 70), 3)
 		"potion":
 			Visuals.sphere(_visual, 0.16, Vector3(0, 0.35, 0), Visuals.glow_mat(Color(0.9, 0.1, 0.15), 1.5))
 			Visuals.cylinder(_visual, 0.05, 0.05, 0.15, Vector3(0, 0.55, 0), Visuals.mat(Color(0.5, 0.35, 0.2)))
@@ -62,7 +64,7 @@ func _collect() -> void:
 		"gold":
 			GameState.add_gold(value)
 			Sfx.play("coin", -6.0)
-			DamageNumber.spawn(get_parent(), global_position + Vector3(0, 1.2, 0), "+%d po" % value, Events.COLOR_GOLD)
+			DamageNumber.spawn(get_parent(), global_position + Vector3(0, 1.2, 0), "+%d médiators" % value, Events.COLOR_GOLD)
 		"potion":
 			GameState.add_potion()
 			Sfx.play("coin", -6.0, 0.2)

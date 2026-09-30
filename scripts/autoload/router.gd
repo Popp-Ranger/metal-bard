@@ -3,6 +3,7 @@ extends CanvasLayer
 
 const MAIN_MENU := "res://scenes/main_menu.tscn"
 const CHARACTER_CREATION := "res://scenes/character_creation.tscn"
+const INTRO := "res://scenes/intro.tscn"
 const TAVERN := "res://scenes/tavern.tscn"
 const DUNGEON := "res://scenes/dungeon.tscn"
 
@@ -42,6 +43,7 @@ func fade(callback: Callable) -> void:
 func go_to(path: String) -> void:
 	if _busy:
 		return
+	Net.on_scene_change(path) # en coop, les autres joueurs suivent l'hôte
 	_busy = true
 	_fade.mouse_filter = Control.MOUSE_FILTER_STOP
 	var tw := create_tween()

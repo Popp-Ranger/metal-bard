@@ -13,10 +13,19 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 
 - **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon** (contours encrés, vignette, torches vacillantes).
 - **Héros** : un barde que vous créez (6 races, homme ou femme ; par défaut Riffald, inspiré de Dave Mustaine et Ronnie James Dio), armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
-- **Taverne-hub** « Le Crâne Hurlant » : 6 PNJ, dialogues à choix, boutique, repos, tableau des quêtes.
-- **Première quête complète** : retrouver Plumeau, le bébé ours-hibou de Gérald, dans de vastes **catacombes générées procéduralement** (salles de 16 à 26 m, couloirs de 6 m, torches espacées), jusqu'au **boss Gloubah**, grenouille géante aux vagues déferlantes.
+- **Intro** : la nuit de la **Lune de Sang**. Cinématique sur une lune sanglante dans la brume, puis un cimetière près d'une chapelle : tombes déterrées et vides, cadavres de toutes les races. Le héros lâche « Aaaaaah... une bonne vieille balade par ce temps est si agréable. Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un ! » en coop), puis ~40 s de marche sur une route pavée entre champs et prairies, cadavres ensanglantés et chauves-souris, sous un orage sans pluie (éclairs hors de la route, flashs, tremblements d'écran). Les portes de la taverne se referment derrière lui.
+- **Taverne-hub** « Le Crâne Hurlant » sur 3 niveaux :
+  - salle commune : clients générés aléatoirement qui reculent leur chaise, vont au comptoir et jurent (« Yeah ! », « Enfer et damnation ! », « Bordel ! », « Ça, c'est Metal ! ») ; jamais plus de 2 debout à la fois ;
+  - étage avec les chambres ;
+  - **sous-sol d'entraînement** : mannequins, cible amicale, **dB illimités**, et un **portail démoniaque rouge sang** dans une zone brumeuse, d'où sortent cinq tentacules.
+  - Zarathos fait les cent pas près de son cercle de runes. L'Inconnue encapuchonnée **réinitialise l'arbre de talents**.
+- **Première quête complète** : retrouver Plumeau, le bébé ours-hibou de Gérald, dans de vastes **catacombes générées procéduralement** (salles de 16 à 26 m, couloirs de 6 m, torches espacées).
+  - **Rats** (3 PV) un peu partout ; salles cul-de-sac gardées par une douzaine de squelettes.
+  - **Boss Gloubah**, grenouille géante trônant sur un **pentagramme de bave verte**, la gueule ensanglantée. Elle vous parle d'abord : selon vos réponses (rien n'indique lesquelles mènent au combat), elle se bat, vous enferme dans une cage… ou devient amicale et vous donne la clé (XP doublée).
+  - Compteur de victimes, puis **récapitulatif** en fin de donjon (dégâts infligés, subis, évités).
 - **Arsenal** :
-  - **Coup de guitare** au corps-à-corps (empoignée par le manche) ;
+  - **Coup de guitare** au corps-à-corps (clic gauche, empoignée par le manche) ;
+  - **Glissade sur les genoux** (Espace) : 5 m, **esquive toutes les attaques**, recharge 20 s. Une esquive passive réussie déclenche un petit saut sur une jambe façon **Angus Young** ;
   - **Accordage de cordes** (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis ;
   - **Riff électrique** (1) : une seule cible ; en appuyant **en rythme**, les dégâts montent en 4 paliers jusqu'à **×3**, et restent au maximum tant qu'on garde le tempo (métronome dans le HUD) ;
   - **Onde de choc** sonore (2) : tous les ennemis dans un rayon ;
@@ -24,7 +33,10 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 - **Règles Donjons & Dragons 5e** : FOR / DEX / CON / INT / SAG / CHA, jets d'attaque d20 contre la CA, sauvegardes, table d'XP officielle, points à répartir à chaque niveau.
 - **IA des squelettes** : errance aléatoire, détection à 4 m, vitesse = 25 % du héros, 1 attaque toutes les 2,5 s (avec élan visible pour esquiver).
 - **Musiques metal** en boucle pour la taverne et le donjon (`audio/music/`), bruitages **synthétisés par code**, « voix » babillées pendant les dialogues.
-- **Menu Options > Audio** (écran titre et menu pause) : volumes indépendants **Musique**, **Sorts et effets**, **Dialogues**, sauvegardés automatiquement. Sauvegarde de partie automatique.
+- **Menu Options > Audio** (écran titre et menu pause) : volumes indépendants **Musique** (50 % plus bas par défaut), **Sorts et effets**, **Dialogues**.
+- **Sauvegarder / Charger** : 5 emplacements + la sauvegarde automatique, dans le menu pause (impossible en plein combat) et sur l'écran titre ; on reprend au même endroit.
+- **Monnaie : les médiators.**
+- **Coopération en ligne** jusqu'à 6 joueurs avec un **code d'invitation** (voir plus bas).
 
 ## Création de personnage
 
@@ -57,11 +69,29 @@ Pour tous : **3 barbes** (hommes : courte, longue tressée, bouc), **4 coiffures
 | **Transe** (contrôle) | **Solo endiablé** | Tempo hypnotique *(passif)* | Growl de l'Abîme | Maître du tempo *(passif)* |
 | **Thrash** (destruction) | Distorsion *(passif)* | Enceinte de façade | Overdrive *(passif)* | Pyrotechnie |
 
+**Ballade réparatrice** : mini-jeu sur le **vrai solo de guitare de la musique de la taverne**, extrait par analyse du morceau (126 s → 136 s, 23 notes). Chaque note juste soigne tout le groupe ; un solo sans faute (10 s) rend 90 % des PV max ; une fausse note arrête la ballade.
+
+Tout mini-jeu raté (Solo de la Foudre, Solo endiablé, Ballade) rend la recharge du sort **2,5 fois plus longue**.
+
 **Solo endiablé** : le mini-jeu du solo se lance ; tant que les notes sont réussies (jusqu'à 12, ou 16 avec *Maître du tempo*), les ennemis à 12 m se figent et **headbanguent** sans bouger. La première fausse note brise la transe. Le héros peut se déplacer pendant ce solo.
 
 | Arbre de talents | Solo endiablé |
 |---|---|
 | ![Arbre](docs/screenshots/12_arbre_talents.png) | ![Transe](docs/screenshots/13_solo_endiable.png) |
+
+## Coopération (code d'invitation)
+
+1. L'hôte lance sa partie, puis **Échap → Coopération (inviter des amis) → Ouvrir ma partie**. Un code du type **`3F7QK-2M9XA`** s'affiche, avec un bouton « Copier le code ».
+2. Les amis choisissent **Rejoindre une partie (coop)** sur l'écran titre et collent le code. Ils arrivent avec **leur propre personnage** (celui de leur dernière sauvegarde), quel que soit leur niveau.
+3. L'hôte fait autorité (ennemis, boss). Chacun voit les autres joueurs, gagne l'XP et ramasse son propre butin ; les soins de groupe soignent tout le monde ; quand l'hôte change de lieu, le groupe le suit.
+
+Le jeu ouvre le port **UDP 24565** sur la box par UPnP. Si la box refuse, le code fonctionne en réseau local ou via un VPN (Tailscale, ZeroTier) ; sinon, il faut ouvrir ce port à la main.
+
+*Première version :* les dialogues de quête, la clé et la cage de Gloubah sont gérés chez l'hôte.
+
+## Objets
+
+Tous les objets du jeu (reliques, potion, chambre, médiators, clé de la cage) sont listés dans **[`data/items.json`](data/items.json)**. Vous y contrôlez noms, descriptions, bonus, rareté, butin, prix et activation. Détails : **[docs/OBJETS.md](docs/OBJETS.md)**.
 
 ## Lancer le jeu
 
@@ -78,7 +108,8 @@ Pour tous : **3 barbes** (hommes : courte, longue tressée, bouc), **4 coiffures
 |---|---|
 | Se déplacer | **ZQSD** (AZERTY) / **WASD** (QWERTY) / flèches |
 | Viser | Souris |
-| Coup de guitare | **Espace** ou clic gauche |
+| Coup de guitare (ou parler / interagir en cliquant sur quelqu'un) | **Clic gauche** |
+| Glissade sur les genoux | **Espace** |
 | Accordage de cordes | **Clic droit** |
 | Riff électrique (en rythme !) / Onde de choc / Solo | **1** / **2** / **3** |
 | Mini-jeu du solo | **1 2 3 4** |
@@ -106,7 +137,11 @@ Toutes les valeurs (vitesses, dégâts, recharges, rayon de détection, prix…)
 ```bash
 Godot_v4.7.2-stable_win64_console.exe --headless --path . res://tests/smoke_test.tscn
 ```
-Le test vérifie les règles D&D, génère 50 donjons et joue toute la quête (taverne → donjon → boss → récompense → sauvegarde).
+Le test (100 vérifications) contrôle :
+- les règles D&D et la génération de 50 donjons ;
+- toute la quête, avec les trois issues du dialogue de Gloubah ;
+- la Ballade, la glissade, la taverne (clients, portes, sous-sol) ;
+- les sauvegardes, le code de coop et l'intro.
 
 ## État du projet
 

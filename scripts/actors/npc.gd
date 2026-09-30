@@ -18,6 +18,12 @@ var seated := false
 ## Apparence façon création de personnage (RaceDB) ; vide = modèle dédié.
 var look := {}
 var walk_speed := 1.4
+## Errance autour du point de départ (Zarathos fait les cent pas près de son portail).
+var wander_radius := 0.0
+var _home := Vector3.ZERO
+var _home_yaw := 0.0
+var _wander_timer := randf_range(4.0, 9.0)
+var _going_home := false
 
 var model: HeroModel
 var walker: NavWalker
@@ -58,6 +64,9 @@ func _ready() -> void:
 	walker = NavWalker.new()
 	add_child(walker)
 	walker.arrived.connect(func() -> void: arrived.emit())
+	_home = position
+	_home_yaw = rotation.y
+	arrived.connect(_on_walk_arrived)
 	_labels = Node3D.new()
 	add_child(_labels)
 	var top := _top_height()
@@ -111,6 +120,10 @@ func get_prompt() -> String:
 
 
 func interact(_by: Node3D) -> void:
+	if wander_radius > 0.0 and global_position.distance_to(_home) > 0.3:
+		# Il revient à sa place (près du cercle de runes) pour ouvrir le portail.
+		_going_home = true
+		walk_to(_home, walk_speed * 1.5)
 	Events.dialogue_requested.emit(dialogue_id if not dialogue_id.is_empty() else npc_id)
 
 
@@ -149,6 +162,7 @@ func say(text: String, duration: float = 3.5) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	_update_wander(delta)
 	if _bubble != null and _bubble.visible:
 		_bubble_time -= delta
 		if _bubble_time <= 0.0:
@@ -257,3 +271,28 @@ func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
 	p.position = pos
 	parent.add_child(p)
 	return p
+
+
+# --- Errance (Zarathos) ------------------------------------------------------------
+
+func _update_wander(delta: float) -> void:
+	if wander_radius <= 0.0 or walker == null or walker.walking:
+		return
+	_wander_timer -= delta
+	if _wander_timer > 0.0:
+		return
+	_wander_timer = randf_range(6.0, 12.0)
+	# Pas d'errance pendant une conversation ou quand le héros est tout près.
+	if _hero != null and is_instance_valid(_hero) and _hero.global_position.distance_to(global_position) < 3.0:
+		return
+	if randf() < 0.4 and global_position.distance_to(_home) > 0.3:
+		walk_to(_home)
+		return
+	var a := randf() * TAU
+	walk_to(_home + Vector3(cos(a), 0, sin(a)) * randf_range(0.8, wander_radius))
+
+
+func _on_walk_arrived() -> void:
+	if wander_radius > 0.0 and global_position.distance_to(_home) < 0.5:
+		_going_home = false
+		create_tween().tween_property(self, "rotation:y", _home_yaw, 0.4)

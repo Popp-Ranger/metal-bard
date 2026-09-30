@@ -35,7 +35,14 @@ var is_boss := false
 var walkable_check: Callable
 
 var state: State = State.WANDER
-var hero: Hero
+## Cible : le héros le plus proche (le héros local ou, en coop chez l'hôte, un autre joueur).
+var hero: Node3D
+## Coopération : identifiant réseau (ordre d'apparition) et pilotage par l'hôte chez les clients.
+var net_id := -1
+var remote_controlled := false
+var _net_pos := Vector3.ZERO
+var _net_yaw := 0.0
+var _retarget := 0.0
 var model: Node3D
 
 var _home := Vector3.ZERO
@@ -59,6 +66,8 @@ var _trance_label: Label3D
 
 func _ready() -> void:
 	add_to_group("enemies")
+	net_id = Net.register_enemy(self)
+	remote_controlled = Net.is_client() and not (self is TrainingDummy)
 	collision_layer = 4
 	collision_mask = 1 | 2 | 4
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
@@ -117,8 +126,13 @@ func is_alive() -> bool:
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:
 		return
-	if hero == null or not is_instance_valid(hero):
-		hero = get_tree().get_first_node_in_group("hero") as Hero
+	if remote_controlled:
+		_net_follow(delta)
+		return
+	_retarget -= delta
+	if hero == null or not is_instance_valid(hero) or _retarget <= 0.0:
+		_retarget = 0.5
+		hero = nearest_hero(self)
 	_attack_timer = maxf(0.0, _attack_timer - delta)
 	_slow_time = maxf(0.0, _slow_time - delta)
 	if _slow_time <= 0.0:
@@ -126,7 +140,7 @@ func _physics_process(delta: float) -> void:
 	var speed := move_speed * _slow_factor
 	var dist := INF
 	var to_hero := Vector3.ZERO
-	if hero != null and not hero.dead:
+	if hero != null and not is_down(hero):
 		to_hero = hero.global_position - global_position
 		to_hero.y = 0.0
 		dist = to_hero.length()
@@ -301,20 +315,22 @@ func _begin_attack() -> void:
 	_attack_anim(Balance.ENEMY_ATTACK_WINDUP)
 	await get_tree().create_timer(Balance.ENEMY_ATTACK_WINDUP, false).timeout
 	_attacking = false
-	if state == State.DEAD or state == State.TRANCE or state == State.FEAR or hero == null or not is_instance_valid(hero) or hero.dead:
+	if state == State.DEAD or state == State.TRANCE or state == State.FEAR or hero == null or not is_instance_valid(hero) or is_down(hero):
 		return
 	var to := hero.global_position - global_position
 	to.y = 0.0
 	var dmg := Dice.roll(damage_dice.x, damage_dice.y, damage_dice.z)
-	if to.length() > attack_range + radius + hero.radius + 0.6:
+	if to.length() > attack_range + radius + float(hero.get("radius")) + 0.6:
 		GameState.run_add("avoided", dmg) # le héros a esquivé en reculant
 		return
 	Sfx.play("clack", -10.0)
 	if Dice.attack_roll(attack_bonus, GameState.armor_class()) > 0:
-		hero.take_hit(dmg, global_position, self)
+		hero.call("take_hit", dmg, global_position, self)
 	else:
 		GameState.run_add("avoided", dmg)
 		DamageNumber.spawn(get_parent(), hero.global_position + Vector3(0, 2.2, 0), "Esquive", Color(0.7, 0.8, 1.0))
+		if hero.has_method("dodged"):
+			hero.call("dodged")
 
 
 func saving_throw(dc: int) -> bool:
@@ -328,6 +344,12 @@ func show_miss() -> void:
 
 func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool = false, kind: String = "phys") -> void:
 	if state == State.DEAD:
+		return
+	if remote_controlled:
+		# Coop (client) : l'hôte fait autorité, on lui transmet le coup.
+		GameState.run_add("dealt", mini(amount, maxi(hp, 0)))
+		DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.3, 0), "%d%s" % [amount, "!" if crit else ""], Color(1.0, 0.95, 0.85), crit)
+		Net.send_enemy_damage(net_id, amount, from, knockback, crit, kind)
 		return
 	GameState.run_add("dealt", mini(amount, maxi(hp, 0)))
 	hp -= amount
@@ -383,13 +405,13 @@ func _die() -> void:
 
 func _drop_loot() -> void:
 	var parent := get_parent()
-	if randf() < Balance.DROP_GOLD_CHANCE:
+	if randf() < ItemDB.money_drop_chance():
 		Pickup.spawn(parent, global_position, "gold", randi_range(gold_range.x, gold_range.y))
-	if randf() < Balance.DROP_POTION_CHANCE:
+	if randf() < ItemDB.potion_drop_chance():
 		Pickup.spawn(parent, global_position, "potion")
 	if randf() < Balance.DROP_ITEM_CHANCE:
 		var pool: Array[String] = []
-		for id: String in ItemDB.COMMON_DROPS:
+		for id: String in ItemDB.common_drops():
 			if not GameState.inventory.has(id):
 				pool.append(id)
 		if not pool.is_empty():
@@ -443,3 +465,56 @@ func _update_hp_bar() -> void:
 		return
 	_hp_bar.visible = hp > 0
 	_hp_fill.scale.x = clampf(float(hp) / max_hp, 0.001, 1.0)
+
+
+# --- Cibles et coopération ----------------------------------------------------------
+
+## Héros (local ou distant) le plus proche et encore debout.
+static func nearest_hero(from: Node3D) -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for n in from.get_tree().get_nodes_in_group("heroes"):
+		var h := n as Node3D
+		if h == null or is_down(h):
+			continue
+		var d := h.global_position.distance_squared_to(from.global_position)
+		if d < best_d:
+			best_d = d
+			best = h
+	return best
+
+
+static func is_down(h: Node3D) -> bool:
+	return h == null or not is_instance_valid(h) or bool(h.get("dead"))
+
+
+## Chez un client : l'ennemi suit l'état envoyé par l'hôte (position, orientation, PV).
+func apply_net_state(pos: Vector3, yaw: float, net_hp: int, net_state: int) -> void:
+	_net_pos = pos
+	_net_yaw = yaw
+	if net_hp < hp and hp > 0:
+		_flash()
+	hp = net_hp
+	_update_hp_bar()
+	if hp <= 0 and state != State.DEAD:
+		_die()
+	elif state != State.DEAD:
+		if net_state == State.TRANCE and state != State.TRANCE:
+			enter_trance()
+		elif net_state != State.TRANCE and state == State.TRANCE:
+			exit_trance()
+		elif state != State.TRANCE:
+			state = net_state as State
+
+
+func _net_follow(delta: float) -> void:
+	if state == State.DEAD:
+		return
+	var prev := global_position
+	global_position = global_position.lerp(Vector3(_net_pos.x, 0.0, _net_pos.z), 1.0 - exp(-12.0 * delta))
+	model.rotation.y = lerp_angle(model.rotation.y, _net_yaw, 1.0 - exp(-12.0 * delta))
+	_anim_t += delta
+	if state == State.TRANCE:
+		model.rotation.x = absf(sin(_anim_t * 11.0)) * 0.45
+	else:
+		_animate(delta, prev.distance_to(global_position) > 0.2 * delta)

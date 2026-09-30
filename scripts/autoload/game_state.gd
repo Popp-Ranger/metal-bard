@@ -25,6 +25,8 @@ var talent_points := 1
 var spell_slots: Array[String] = ["", "", "", ""] # talents actifs sur les touches 4 à 7
 ## Bouclier temporaire (Mur de Larsen), non sauvegardé.
 var shield := 0
+## Décibels illimités (sous-sol d'entraînement de la taverne), non sauvegardé.
+var infinite_mana := false
 ## Statistiques du passage en cours au donjon (compteur de victimes, récapitulatif).
 var run := {"kills": 0, "dealt": 0, "taken": 0, "avoided": 0, "start": 0}
 
@@ -36,8 +38,8 @@ func _ready() -> void:
 
 func new_game() -> void:
 	stats = CharacterStats.new()
-	gold = 30
-	potions = 2
+	gold = ItemDB.starting_money()
+	potions = ItemDB.starting_potions()
 	inventory.clear()
 	flags = {}
 	quests = {}
@@ -52,6 +54,8 @@ func new_game() -> void:
 	talent_points = 1
 	spell_slots = ["", "", "", ""]
 	shield = 0
+	location = {}
+	pending_spawn = Vector3.INF
 	hp = max_hp()
 	mana = max_mana()
 
@@ -62,7 +66,7 @@ func new_game() -> void:
 func ability(ab: String) -> int:
 	var total := stats.base(ab) + RaceDB.bonus(race(), ab)
 	for item_id in inventory:
-		var bonus: Dictionary = ItemDB.get_item(item_id).get("bonus", {})
+		var bonus: Dictionary = ItemDB.active_bonus(item_id)
 		total += int(bonus.get(ab, 0))
 	return mini(total, 30)
 
@@ -129,6 +133,11 @@ func heal_hero(amount: int) -> void:
 
 
 func spend_mana(cost: float) -> bool:
+	if infinite_mana:
+		# Salle d'entraînement : les décibels restent au maximum.
+		mana = max_mana()
+		Events.hero_mana_changed.emit(mana, max_mana())
+		return true
 	if mana < cost:
 		return false
 	mana -= cost
@@ -209,7 +218,7 @@ func broadcast_all() -> void:
 
 
 func apply_death_penalty() -> void:
-	var lost := floori(gold * Balance.DEATH_GOLD_PENALTY)
+	var lost := floori(gold * ItemDB.death_money_penalty())
 	gold -= lost
 	hp = max_hp()
 	mana = max_mana()
@@ -265,6 +274,20 @@ func learn_talent(id: String) -> bool:
 	Events.talents_changed.emit()
 	_on_stats_changed()
 	return true
+
+
+## L'Inconnue encapuchonnée efface l'arbre de talents : tous les points sont rendus.
+func reset_talents() -> void:
+	if talents.is_empty():
+		Events.notify("Vous n'avez aucun talent à oublier.", Events.COLOR_BAD)
+		return
+	talent_points += talents.size()
+	talents.clear()
+	spell_slots = ["", "", "", ""]
+	Events.notify("Vos talents s'effacent comme un vieux vinyle rayé... %d point(s) de talent à redistribuer [%s]." % [
+		talent_points, Controls.key_label("talents")], Events.COLOR_MAGIC)
+	Events.talents_changed.emit()
+	_on_stats_changed()
 
 
 ## Place un talent actif sur l'emplacement `slot` (0..3) ; échange si déjà placé ailleurs.
@@ -347,22 +370,24 @@ func run_dialogue_action(action: String) -> void:
 			dungeon_seed = randi_range(1, 999999)
 			Events.portal_opened.emit()
 		"buy_potion":
-			if gold >= Balance.POTION_PRICE:
-				add_gold(-Balance.POTION_PRICE)
+			if gold >= ItemDB.potion_price():
+				add_gold(-ItemDB.potion_price())
 				add_potion()
 				Sfx.play("coin")
 				Events.notify("Potion de soin achetée (%d en stock)" % potions, Events.COLOR_GOOD)
 			else:
-				Events.notify("Pas assez d'or (il faut %d po)." % Balance.POTION_PRICE, Events.COLOR_BAD)
+				Events.notify("Pas assez de médiators (il en faut %d)." % ItemDB.potion_price(), Events.COLOR_BAD)
 		"rest":
-			if gold >= Balance.REST_PRICE:
-				add_gold(-Balance.REST_PRICE)
+			if gold >= ItemDB.rest_price():
+				add_gold(-ItemDB.rest_price())
 				hp = max_hp()
 				mana = max_mana()
 				broadcast_all()
 				Events.notify("Vous dormez comme un roadie après un concert. PV et dB restaurés.", Events.COLOR_GOOD)
 			else:
-				Events.notify("Pas assez d'or pour une chambre.", Events.COLOR_BAD)
+				Events.notify("Pas assez de médiators pour une chambre.", Events.COLOR_BAD)
+		"reset_talents":
+			reset_talents()
 		"flag":
 			flags[arg] = true
 		"story":
@@ -371,13 +396,38 @@ func run_dialogue_action(action: String) -> void:
 
 # --- Sauvegarde ------------------------------------------------------------
 
+## Emplacements de sauvegarde manuelle (1 à SLOT_COUNT) ; l'emplacement 0 est la
+## sauvegarde automatique (SAVE_PATH), faite à chaque étape importante.
+const SAVE_SLOTS := 5
+const SAVE_DIR := "user://saves/"
+
+## Où reprendre la partie au chargement : {"scene": chemin, "pos": [x, z]} (voir Level).
+var location := {}
+## Position où placer le héros à l'arrivée dans la scène (après un chargement).
+var pending_spawn := Vector3.INF
+
+
 func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
 
 
+func slot_path(slot: int) -> String:
+	return SAVE_PATH if slot <= 0 else SAVE_DIR + "slot_%d.json" % slot
+
+
+func has_slot(slot: int) -> bool:
+	return FileAccess.file_exists(slot_path(slot))
+
+
+## Sauvegarde automatique (emplacement 0).
 func save_game() -> void:
-	var data := {
-		"version": 1,
+	save_to_slot(0)
+
+
+func _snapshot() -> Dictionary:
+	return {
+		"version": 2,
+		"saved_at": Time.get_datetime_string_from_system(false, true),
 		"stats": stats.to_dict(),
 		"hero_name": hero_name,
 		"appearance": appearance,
@@ -392,22 +442,61 @@ func save_game() -> void:
 		"quests": quests,
 		"flags": flags,
 		"active_quest": active_quest,
+		"dungeon_seed": dungeon_seed,
+		"location": location,
 	}
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+
+
+func save_to_slot(slot: int) -> bool:
+	if slot > 0:
+		DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	var file := FileAccess.open(slot_path(slot), FileAccess.WRITE)
 	if file == null:
 		push_warning("Sauvegarde impossible : %s" % error_string(FileAccess.get_open_error()))
-		return
-	file.store_string(JSON.stringify(data, "\t"))
+		return false
+	file.store_string(JSON.stringify(_snapshot(), "\t"))
+	return true
+
+
+func _read_slot(slot: int) -> Dictionary:
+	if not has_slot(slot):
+		return {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(slot_path(slot)))
+	if parsed is Dictionary:
+		return parsed
+	return {}
+
+
+## Résumé affiché dans le menu Charger : nom, race, niveau, lieu, date.
+func slot_summary(slot: int) -> String:
+	var data := _read_slot(slot)
+	if data.is_empty():
+		return ""
+	var look: Dictionary = data.get("appearance", {})
+	var st: Dictionary = data.get("stats", {})
+	var loc: Dictionary = data.get("location", {})
+	return "%s — %s niv. %d — %s — %s" % [
+		str(data.get("hero_name", DEFAULT_NAME)), RaceDB.title(look), int(st.get("level", 1)),
+		location_label(str(loc.get("scene", ""))), str(data.get("saved_at", "?")).replace("T", " ").left(16)]
+
+
+static func location_label(scene: String) -> String:
+	match scene:
+		Router.INTRO:
+			return "Route du Crâne Hurlant"
+		Router.DUNGEON:
+			return "Catacombes Suintantes"
+	return "Le Crâne Hurlant"
 
 
 func load_game() -> bool:
-	if not has_save():
+	return load_slot(0)
+
+
+func load_slot(slot: int) -> bool:
+	var data := _read_slot(slot)
+	if data.is_empty():
 		return false
-	var text := FileAccess.get_file_as_string(SAVE_PATH)
-	var parsed: Variant = JSON.parse_string(text)
-	if not (parsed is Dictionary):
-		return false
-	var data: Dictionary = parsed
 	new_game()
 	stats.from_dict(data.get("stats", {}))
 	gold = int(data.get("gold", 0))
@@ -435,7 +524,23 @@ func load_game() -> bool:
 		spell_slots[i] = str(saved_slots[i]) if i < saved_slots.size() else ""
 	hp = clampi(int(data.get("hp", max_hp())), 1, max_hp())
 	mana = clampf(float(data.get("mana", max_mana())), 0.0, max_mana())
+	dungeon_seed = int(data.get("dungeon_seed", 0))
+	location = data.get("location", {})
 	return true
+
+
+## Scène où reprendre après un chargement (et position du héros si elle est connue).
+func resume_scene() -> String:
+	var scene := str(location.get("scene", ""))
+	if scene.is_empty():
+		scene = Router.TAVERN if flags.get("intro_done", false) or quest_state("plumeau") != QuestDB.State.AVAILABLE else Router.INTRO
+	var pos: Array = location.get("pos", [])
+	pending_spawn = Vector3(float(pos[0]), 0.0, float(pos[1])) if pos.size() == 2 and scene != Router.INTRO else Vector3.INF
+	if scene == Router.DUNGEON:
+		flags["in_dungeon"] = true
+	else:
+		flags.erase("in_dungeon")
+	return scene
 
 
 # --- Statistiques du donjon ---------------------------------------------------------

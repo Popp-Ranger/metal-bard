@@ -98,7 +98,7 @@ func _refresh() -> void:
 		"Riff électrique : 1d10%+d (×3 en rythme)" % GameState.mod("CHA"),
 		"Onde de choc : 2d8%+d" % GameState.mod("CHA"),
 		"Solo de la Foudre : 4d10%+d" % GameState.mod("CHA"),
-		"Or : %d po   •   Potions : %d" % [GameState.gold, GameState.potions],
+		"Médiators : %d   •   Potions : %d" % [GameState.gold, GameState.potions],
 	]:
 		right.add_child(UiStyle.label(line, 16))
 	right.add_child(HSeparator.new())

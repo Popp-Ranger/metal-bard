@@ -1,6 +1,11 @@
 class_name ItemDB
 extends RefCounted
-## Objets et reliques. Chaque relique possédée ajoute ses bonus aux caractéristiques.
+## Objets du jeu, lus dans data/items.json (fichier modifiable à la main, voir
+## docs/OBJETS.md) : reliques (bonus aux caractéristiques), consommables (potion, chambre),
+## monnaie (médiators) et objets de quête. Si le fichier est absent ou abîmé, les valeurs
+## par défaut ci-dessous sont utilisées.
+
+const DATA_PATH := "res://data/items.json"
 
 const RARITY_COLORS := {
 	"commun": Color(0.85, 0.85, 0.8),
@@ -9,57 +14,75 @@ const RARITY_COLORS := {
 	"épique": Color(0.8, 0.45, 1.0),
 }
 
-const ITEMS := {
-	"mediator_os": {
-		"name": "Médiator en os",
-		"desc": "Taillé dans la phalange d'un squelette trop bavard.",
-		"bonus": {"DEX": 1},
-		"rarity": "commun",
-	},
-	"ceinture_cloutee": {
-		"name": "Ceinture cloutée",
-		"desc": "Trente-deux clous, trente-deux raisons de ne pas mourir.",
-		"bonus": {"CON": 1},
-		"rarity": "commun",
-	},
-	"bracelet_force": {
-		"name": "Bracelet à pointes",
-		"desc": "Pour frapper plus fort et accessoirement faire peur.",
-		"bonus": {"FOR": 1},
-		"rarity": "commun",
-	},
-	"cordes_dragon": {
-		"name": "Cordes en boyau de dragon",
-		"desc": "Elles vibrent toutes seules quand un mort-vivant approche.",
-		"bonus": {"CHA": 1},
-		"rarity": "peu commun",
-	},
-	"grimoire_tablatures": {
-		"name": "Grimoire de tablatures",
-		"desc": "Des accords interdits notés à l'encre de seiche.",
-		"bonus": {"INT": 1, "SAG": 1},
-		"rarity": "peu commun",
-	},
-	"pendentif_plume": {
-		"name": "Pendentif de plume d'ours-hibou",
-		"desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
-		"bonus": {"CHA": 1, "SAG": 1},
-		"rarity": "rare",
-	},
-	"couronne_gloubah": {
-		"name": "Couronne de nénuphar de Gloubah",
-		"desc": "Encore humide. Toujours humide. Pour l'éternité, humide.",
-		"bonus": {"CON": 2, "CHA": 1},
-		"rarity": "épique",
-	},
+## Valeurs de secours (identiques au fichier livré).
+const DEFAULT_RELICS := {
+	"mediator_os": {"nom": "Médiator en os", "desc": "Taillé dans la phalange d'un squelette trop bavard.",
+		"bonus": {"DEX": 1}, "rarete": "commun", "butin": true},
+	"ceinture_cloutee": {"nom": "Ceinture cloutée", "desc": "Trente-deux clous, trente-deux raisons de ne pas mourir.",
+		"bonus": {"CON": 1}, "rarete": "commun", "butin": true},
+	"bracelet_force": {"nom": "Bracelet à pointes", "desc": "Pour frapper plus fort et accessoirement faire peur.",
+		"bonus": {"FOR": 1}, "rarete": "commun", "butin": true},
+	"cordes_dragon": {"nom": "Cordes en boyau de dragon", "desc": "Elles vibrent toutes seules quand un mort-vivant approche.",
+		"bonus": {"CHA": 1}, "rarete": "peu commun", "butin": true},
+	"grimoire_tablatures": {"nom": "Grimoire de tablatures", "desc": "Des accords interdits notés à l'encre de seiche.",
+		"bonus": {"INT": 1, "SAG": 1}, "rarete": "peu commun", "butin": true},
+	"pendentif_plume": {"nom": "Pendentif de plume d'ours-hibou", "desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
+		"bonus": {"CHA": 1, "SAG": 1}, "rarete": "rare", "butin": false},
+	"couronne_gloubah": {"nom": "Couronne de nénuphar de Gloubah", "desc": "Encore humide. Toujours humide. Pour l'éternité, humide.",
+		"bonus": {"CON": 2, "CHA": 1}, "rarete": "épique", "butin": false},
 }
 
-const COMMON_DROPS := ["mediator_os", "ceinture_cloutee", "bracelet_force", "cordes_dragon", "grimoire_tablatures"]
+static var _data := {}
 
 
+static func data() -> Dictionary:
+	if _data.is_empty():
+		var parsed: Variant = null
+		if FileAccess.file_exists(DATA_PATH):
+			parsed = JSON.parse_string(FileAccess.get_file_as_string(DATA_PATH))
+		if parsed is Dictionary:
+			_data = parsed
+		else:
+			push_warning("data/items.json illisible : objets par défaut.")
+			_data = {"reliques": DEFAULT_RELICS}
+	return _data
+
+
+## Recharge le fichier (après une modification pendant que le jeu tourne).
+static func reload() -> void:
+	_data = {}
+	data()
+
+
+# --- Reliques ---------------------------------------------------------------------------
+
+static func relics() -> Dictionary:
+	var r: Dictionary = data().get("reliques", DEFAULT_RELICS)
+	return r
+
+
+## Relique au format utilisé par le jeu : name, desc, bonus, rarity.
 static func get_item(id: String) -> Dictionary:
-	var item: Dictionary = ITEMS.get(id, {})
-	return item
+	var raw: Dictionary = relics().get(id, {})
+	if raw.is_empty():
+		return {}
+	return {
+		"name": str(raw.get("nom", id)),
+		"desc": str(raw.get("desc", "")),
+		"bonus": raw.get("bonus", {}),
+		"rarity": str(raw.get("rarete", "commun")),
+		"enabled": bool(raw.get("actif", true)),
+	}
+
+
+## Reliques qui peuvent tomber sur les ennemis et dans les coffres.
+static func common_drops() -> Array[String]:
+	var out: Array[String] = []
+	for id: String in relics():
+		var raw: Dictionary = relics()[id]
+		if bool(raw.get("butin", false)) and bool(raw.get("actif", true)):
+			out.append(id)
+	return out
 
 
 static func color_of(id: String) -> Color:
@@ -70,7 +93,67 @@ static func color_of(id: String) -> Color:
 
 static func bonus_text(id: String) -> String:
 	var parts: PackedStringArray = []
+	if not bool(get_item(id).get("enabled", true)):
+		return "désactivé"
 	var bonus: Dictionary = get_item(id).get("bonus", {})
 	for ab: String in bonus:
 		parts.append("+%d %s" % [int(bonus[ab]), ab])
 	return ", ".join(parts)
+
+
+## Bonus réellement appliqués (une relique désactivée ne donne plus rien).
+static func active_bonus(id: String) -> Dictionary:
+	var item := get_item(id)
+	if not bool(item.get("enabled", true)):
+		return {}
+	var b: Dictionary = item.get("bonus", {})
+	return b
+
+
+# --- Consommables et monnaie ---------------------------------------------------------------
+
+static func _consumable(id: String, key: String, fallback: float) -> float:
+	var c: Dictionary = data().get("consommables", {}).get(id, {})
+	return float(c.get(key, fallback))
+
+
+static func potion_price() -> int:
+	return int(_consumable("potion_soin", "prix", 25))
+
+
+static func potion_heal_ratio() -> float:
+	return _consumable("potion_soin", "soin", 0.4)
+
+
+static func potion_drop_chance() -> float:
+	return _consumable("potion_soin", "chance_butin", 0.12)
+
+
+static func starting_potions() -> int:
+	return int(_consumable("potion_soin", "depart", 2))
+
+
+static func rest_price() -> int:
+	return int(_consumable("chambre", "prix", 10))
+
+
+static func _money(key: String, fallback: float) -> float:
+	var m: Dictionary = data().get("monnaie", {})
+	return float(m.get(key, fallback))
+
+
+static func money_drop_chance() -> float:
+	return _money("chance_butin", 0.45)
+
+
+static func death_money_penalty() -> float:
+	return _money("perte_a_la_mort", 0.25)
+
+
+static func starting_money() -> int:
+	return int(_money("depart", 30))
+
+
+## Chance qu'un ennemi lâche une relique (réglée dans Balance).
+static func relic_drop_chance() -> float:
+	return Balance.DROP_ITEM_CHANCE

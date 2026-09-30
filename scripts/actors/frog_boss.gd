@@ -69,6 +69,15 @@ func _build_model() -> void:
 			Vector3(cos(a) * 1.1, 1.0 + randf_range(-0.2, 0.5), sin(a) * 1.0 - 0.1), dark)
 	# Bouche et langue.
 	Visuals.box(model, Vector3(1.3, 0.06, 0.1), Vector3(0, 1.25, 1.12), Visuals.mat(Color(0.05, 0.02, 0.02)), Vector3(10, 0, 0))
+	# Sang frais sur la bouche : commissures, coulures sur le menton et le jabot.
+	var blood := Visuals.mat(Color(0.5, 0.02, 0.03), 0.1)
+	for side: float in [-1.0, 1.0]:
+		Visuals.sphere(model, 0.1, Vector3(0.6 * side, 1.23, 1.05), blood, Vector3(1.3, 0.7, 0.6))
+	for k in 5:
+		var x := -0.45 + k * 0.22
+		var drip := 0.12 + fmod(k * 0.37, 0.2)
+		Visuals.capsule(model, 0.035, drip, Vector3(x, 1.2 - drip * 0.5, 1.13 - absf(x) * 0.15), blood)
+	Visuals.sphere(model, 0.2, Vector3(0.15, 0.95, 1.12), blood, Vector3(1.2, 0.6, 0.3))
 	_tongue = Visuals.box(model, Vector3(0.18, 0.06, 1.0), Vector3(0, 1.2, 1.1), own_mat(Color(0.8, 0.3, 0.35)))
 	_tongue.scale = Vector3(1, 1, 0.05)
 	# Couronne de nénuphar rongée + fleur.
@@ -189,10 +198,13 @@ func _leap() -> void:
 	Sfx.play("splash", -4.0)
 	Events.camera_shake.emit(0.45, 0.4)
 	Shockwave.spawn(get_parent(), global_position, zone)
-	if hero != null and is_instance_valid(hero) and not hero.dead:
-		var d := Vector2(hero.global_position.x - global_position.x, hero.global_position.z - global_position.z).length()
-		if d <= zone + hero.radius:
-			hero.take_hit(Dice.roll(2, 8, 2), global_position)
+	for h in get_tree().get_nodes_in_group("heroes"):
+		var target_hero := h as Node3D
+		if is_down(target_hero):
+			continue
+		var d := Vector2(target_hero.global_position.x - global_position.x, target_hero.global_position.z - global_position.z).length()
+		if d <= zone + float(target_hero.get("radius")):
+			target_hero.call("take_hit", Dice.roll(2, 8, 2), global_position, self)
 	await get_tree().create_timer(0.4, false).timeout
 	_busy = false
 
@@ -218,16 +230,19 @@ func _death_anim() -> void:
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:
 		return
+	if remote_controlled:
+		super._physics_process(delta)
+		return
 	if passive or friendly:
 		if hero == null or not is_instance_valid(hero):
-			hero = get_tree().get_first_node_in_group("hero") as Hero
+			hero = get_tree().get_first_node_in_group("hero") as Node3D
 		if hero != null:
 			var to := hero.global_position - global_position
 			to.y = 0.0
 			if to.length() < 14.0:
 				model.rotation.y = lerp_angle(model.rotation.y, atan2(to.x, to.z), 1.0 - exp(-4.0 * delta))
 			# Le héros entre à portée : Gloubah l'interpelle.
-			if passive and not _talked and to.length() <= detect_radius and not hero.dead:
+			if passive and not _talked and to.length() <= detect_radius and not is_down(hero):
 				_talked = true
 				Sfx.play("croak", 0.0)
 				Events.dialogue_requested.emit("gloubah")

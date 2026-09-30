@@ -250,4 +250,4 @@ func _confirm() -> void:
 	GameState.mana = GameState.max_mana()
 	GameState.save_game()
 	Sfx.play("levelup", -4.0, 0.0)
-	Router.go_to(Router.TAVERN)
+	Router.go_to(Router.INTRO) # la partie commence au cimetière, par la nuit de la Lune de Sang

@@ -8,7 +8,8 @@ const KEY_ACTIONS := {
 	"move_down": [KEY_S, KEY_DOWN],
 	"move_left": [KEY_A, KEY_LEFT],
 	"move_right": [KEY_D, KEY_RIGHT],
-	"attack": [KEY_SPACE],
+	"attack": [], # clic gauche (ajouté plus bas)
+	"dash": [KEY_SPACE], # Glissade sur les genoux
 	"spell_tuning": [], # clic droit (ajouté plus bas)
 	"spell_riff": [KEY_1, KEY_KP_1],
 	"spell_wave": [KEY_2, KEY_KP_2],
@@ -54,8 +55,8 @@ func key_label(action: String) -> String:
 		return "?"
 	for ev: InputEvent in InputMap.action_get_events(action):
 		var mouse_ev := ev as InputEventMouseButton
-		if mouse_ev != null and action == "spell_tuning":
-			return "Clic D"
+		if mouse_ev != null:
+			return "Clic D" if mouse_ev.button_index == MOUSE_BUTTON_RIGHT else "Clic G"
 		var key_ev := ev as InputEventKey
 		if key_ev == null:
 			continue

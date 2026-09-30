@@ -23,7 +23,10 @@ var _players: Array[AudioStreamPlayer] = []
 var _next := 0
 var _ambience: AudioStreamPlayer
 var _voice: AudioStreamPlayer
-var _volumes := {BUS_MUSIC: 0.8, BUS_SFX: 0.8, BUS_DIALOGUE: 0.8} # linéaire 0..1
+## Musique à 40 % par défaut (50 % de moins que les autres canaux).
+var _volumes := {BUS_MUSIC: 0.4, BUS_SFX: 0.8, BUS_DIALOGUE: 0.8} # linéaire 0..1
+## Extrait de musique joué par un sort (solo de la Ballade réparatrice).
+var _clip: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -40,6 +43,9 @@ func _ready() -> void:
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = BUS_DIALOGUE
 	add_child(_voice)
+	_clip = AudioStreamPlayer.new()
+	_clip.bus = BUS_SFX
+	add_child(_clip)
 	_build_all()
 	load_settings()
 
@@ -77,6 +83,7 @@ func save_settings() -> void:
 	cfg.load(SETTINGS_PATH) # conserve les autres sections éventuelles
 	for bus_name: String in _volumes:
 		cfg.set_value("audio", bus_name, _volumes[bus_name])
+	cfg.set_value("audio", "music_halved", true)
 	cfg.save(SETTINGS_PATH)
 
 
@@ -86,6 +93,10 @@ func load_settings() -> void:
 	for bus_name: String in _volumes.keys():
 		var v := float(cfg.get_value("audio", bus_name, _volumes[bus_name]))
 		set_volume(bus_name, v)
+	# Réglages d'une ancienne version : la musique est baissée de 50 % une fois.
+	if cfg.has_section_key("audio", BUS_MUSIC) and not cfg.has_section_key("audio", "music_halved"):
+		set_volume(BUS_MUSIC, get_volume(BUS_MUSIC) * 0.5)
+		save_settings()
 
 
 # --- Lecture ------------------------------------------------------------------------
@@ -444,3 +455,34 @@ func _voice_blip(f1: float, f2: float) -> PackedFloat32Array:
 		var env := sin(PI * t / 0.075)
 		b[i] = tanh((o1 * 0.05 + o2 * 0.03) * env)
 	return b
+
+
+# --- Extraits musicaux (mini-jeu de la Ballade) ------------------------------------------
+
+## Joue un passage d'un morceau à partir de `from_seconds` (sur le canal des sorts) et met
+## la musique de fond en sourdine pendant ce temps.
+func play_clip(path: String, from_seconds: float, volume_db: float = -4.0) -> void:
+	var stream := load(path) as AudioStream
+	if stream == null:
+		return
+	var mp3 := stream as AudioStreamMP3
+	if mp3 != null:
+		mp3 = mp3.duplicate() as AudioStreamMP3 # ne pas toucher au bouclage de la musique de fond
+		mp3.loop = false
+		stream = mp3
+	_clip.stream = stream
+	_clip.volume_db = volume_db
+	_clip.play(maxf(0.0, from_seconds))
+	_ambience.stream_paused = true
+
+
+func stop_clip() -> void:
+	if _clip.playing:
+		var tw := create_tween()
+		tw.tween_property(_clip, "volume_db", -40.0, 0.4)
+		tw.tween_callback(_clip.stop)
+	_ambience.stream_paused = false
+
+
+func clip_playing() -> bool:
+	return _clip.playing

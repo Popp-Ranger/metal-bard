@@ -190,6 +190,15 @@ static func make_environment(kind: String) -> WorldEnvironment:
 	if kind == "dungeon":
 		env.ambient_light_color = Color(0.42, 0.44, 0.55)
 		env.ambient_light_energy = 0.65
+	elif kind == "night":
+		# Nuit d'orage sous la lune de sang : ambiance bleu nuit, brume rougeâtre.
+		env.background_color = Color(0.06, 0.015, 0.02)
+		env.ambient_light_color = Color(0.5, 0.47, 0.65)
+		env.ambient_light_energy = 0.85
+		env.fog_enabled = true
+		env.fog_light_color = Color(0.12, 0.05, 0.08)
+		env.fog_density = 0.004
+		env.fog_sky_affect = 0.0
 	else:
 		env.ambient_light_color = Color(0.6, 0.55, 0.5)
 		env.ambient_light_energy = 0.8

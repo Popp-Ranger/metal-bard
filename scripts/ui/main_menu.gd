@@ -1,9 +1,12 @@
 extends Control
-## Écran titre : Nouvelle partie / Continuer / Contrôles / Quitter.
+## Écran titre : Nouvelle partie / Continuer / Charger / Rejoindre une partie (coop) /
+## Contrôles / Options / Quitter.
 
 var _flash: ColorRect
 var _controls_panel: PanelContainer
 var _options: OptionsMenu
+var _saves: SaveMenu
+var _coop: CoopMenu
 var _bolt_timer := 2.0
 
 
@@ -24,8 +27,8 @@ func _ready() -> void:
 	vb.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	vb.offset_left = -320
 	vb.offset_right = 320
-	vb.offset_top = -260
-	vb.offset_bottom = 260
+	vb.offset_top = -320
+	vb.offset_bottom = 320
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER
 	vb.add_theme_constant_override("separation", 14)
 	add_child(vb)
@@ -46,6 +49,13 @@ func _ready() -> void:
 	var cont := _button("Continuer", _on_continue)
 	cont.disabled = not GameState.has_save()
 	vb.add_child(cont)
+	var load_button := _button("Charger", func() -> void: _saves.open("load"))
+	var any_save := false
+	for slot in range(0, GameState.SAVE_SLOTS + 1):
+		any_save = any_save or GameState.has_slot(slot)
+	load_button.disabled = not any_save
+	vb.add_child(load_button)
+	vb.add_child(_button("Rejoindre une partie (coop)", func() -> void: _coop.open_join()))
 	vb.add_child(_button("Contrôles", func() -> void: _controls_panel.visible = not _controls_panel.visible))
 	vb.add_child(_button("Options", func() -> void: _options.open()))
 	vb.add_child(_button("Quitter", func() -> void: get_tree().quit()))
@@ -67,7 +77,8 @@ func _ready() -> void:
 		"%s %s %s %s / flèches : se déplacer" % [Controls.key_label("move_up"), Controls.key_label("move_left"),
 			Controls.key_label("move_down"), Controls.key_label("move_right")],
 		"Souris : viser   •   Molette : zoom",
-		"Espace / clic gauche : coup de guitare",
+		"Clic gauche : coup de guitare (ou parler / interagir si on vise quelqu'un)",
+		"Espace : Glissade sur les genoux (5 m, esquive tout, recharge 20 s)",
 		"Clic droit : Accordage de cordes (jusqu'à 5 cibles)",
 		"%s : Riff électrique (en rythme : jusqu'à ×3)" % Controls.key_label("spell_riff"),
 		"%s : Onde de choc sonore (zone)" % Controls.key_label("spell_wave"),
@@ -81,13 +92,17 @@ func _ready() -> void:
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v0.1 — Godot 4.7", 13, UiStyle.DIM)
+	var credits := UiStyle.label("Prototype v0.1.5 — Godot 4.7", 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30
 	add_child(credits)
 	_options = OptionsMenu.new()
 	add_child(_options)
+	_saves = SaveMenu.new()
+	add_child(_saves)
+	_coop = CoopMenu.new()
+	add_child(_coop)
 	Sfx.play_ambience("amb_dungeon", -18.0)
 
 
@@ -116,5 +131,4 @@ func _on_new_game() -> void:
 
 func _on_continue() -> void:
 	if GameState.load_game():
-		GameState.flags.erase("in_dungeon")
-		Router.go_to(Router.TAVERN)
+		Router.go_to(GameState.resume_scene())

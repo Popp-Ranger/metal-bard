@@ -35,6 +35,29 @@
 - [x] 10 sorts actifs sur les touches 4 à 7 dont le Solo endiablé (headbang des ennemis)
 - [x] Ennemis : états transe, peur, ralentissement, étourdissement
 
+## ✅ v0.1.4 — Taverne vivante et donjon scénarisé
+- [x] Taverne sur 3 niveaux : étage et chambres, sous-sol d'entraînement (3 mannequins groupés, 1 isolé, cible amicale pour les soins de groupe)
+- [x] Clients générés avec l'outil de création de personnage : comptoir (≤ 20 s), table (≥ 40 s)
+- [x] Brunhilde, ogresse 1,5 fois plus large ; Katrkar en fauteuil roulant
+- [x] « ! » / « ? » verts au-dessus des donneurs de quête
+- [x] Ennemis qui fixent le héros, salles cul-de-sac à 12 squelettes, compteur de victimes, récapitulatif des dégâts
+- [x] Cage de Plumeau, clé de Gloubah ([E] ou clic), retrouvailles avec Gérald
+- [x] Dialogue de Gloubah à 3 issues (combat, capture, amitié et XP doublée)
+
+## ✅ v0.1.5 — Lune de Sang, coop et confort
+- [x] Intro : cinématique de la lune de sang, cimetière et chapelle, route pavée d'environ 40 s sous l'orage (éclairs, flashs, tremblements, chauves-souris, cadavres)
+- [x] Portes de la taverne qui se referment après l'intro (à rouvrir par une quête future : drapeau `tavern_doors_open`)
+- [x] Glissade sur les genoux (Espace, 5 m, esquive totale, 20 s), saut à la Angus Young sur esquive passive
+- [x] Ballade réparatrice : mini-jeu sur le solo extrait de la musique de la taverne
+- [x] Mini-jeux ratés : recharge ×2,5
+- [x] Médiators comme monnaie ; objets dans `data/items.json`
+- [x] Sous-sol : dB illimités et portail démoniaque à tentacules ; l'Inconnue réinitialise les talents
+- [x] Clients qui déplacent leur chaise, 2 debout au maximum, jurons ; Zarathos fait les cent pas
+- [x] Gloubah sur un pentagramme de bave, sang au sol et sur la bouche ; rats (3 PV)
+- [x] Sauvegarder (hors combat) et Charger : 5 emplacements + automatique
+- [x] Coop en ligne par code d'invitation (ENet + UPnP), chacun avec son personnage
+- [x] Musique par défaut à 50 %
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
@@ -52,9 +75,10 @@
 - [ ] Forgeron-luthier
 
 ## v0.4 — Multijoueur
-- [ ] Refonte `GameState` → état par joueur
-- [ ] Hébergement / connexion ENet, lobby dans la taverne
-- [ ] Synchronisation héros / ennemis / butin, compétences en RPC validées par le serveur
+- [x] Hébergement / connexion ENet par code d'invitation, chacun avec son personnage (v0.1.5)
+- [x] Synchronisation des héros et des ennemis ; coups des clients validés par l'hôte (v0.1.5)
+- [ ] Effets visuels des sorts des autres joueurs, dialogues et coffres partagés
+- [ ] Relais en ligne (sans ouverture de port), lobby dans la taverne
 - [ ] 2 nouvelles classes (Batteur-guerrier, Chanteur-clerc)
 
 ## v0.5 → v1.0
