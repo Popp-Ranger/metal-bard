@@ -94,6 +94,16 @@
 - [x] Synchronisation des ennemis découpée en paquets sous le MTU (grands donjons)
 - [x] Test réseau réel à deux instances (tests/coop_net_test.tscn)
 
+## ✅ v0.1.14 — Vraies animations (Mixamo + AnimationTree)
+- [x] 16 animations Mixamo transférées sur le squelette de Riffald dans Blender (art/riffald/retarget_mixamo.py)
+- [x] AnimationTree : repos (voûté quand la vie est basse), marche, course accélérée à la vitesse du héros
+- [x] Coups de guitare alternés (vertical / diagonal), guitare empoignée par le manche
+- [x] Onde de choc (frappe du sol), sorts de soutien, solo en headbang, glissade, Stage Diving (vol + réception), victoire, mort, lit
+- [x] Sursaut du haut du corps quand il est touché, hochement de tête sur les accords
+- [x] IK après l'animation (SkeletonModifier3D) : guitare à la sangle, mains sur le manche et les cordes
+- [ ] Doigts, cape et cheveux animés (os supplémentaires + SpringBoneSimulator3D)
+- [ ] Animations des héros personnalisés et des PNJ (reciblage)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

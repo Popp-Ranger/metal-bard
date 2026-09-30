@@ -57,10 +57,40 @@ pas redistribués, ils sont convertis dans Blender puis intégrés à `riffald.g
 
 Les noms exacts peuvent varier : prendre l'animation la plus proche de la description.
 
-## Étapes suivantes (faites par Claude)
+## Étapes suivantes (faites par Claude, voir « État actuel »)
 
 1. Conversion dans Blender : transfert de chaque animation Mixamo sur le squelette de Riffald,
    suppression du déplacement de la racine, export dans `riffald.glb`.
 2. Godot : AnimationTree (machine à états, BlendSpace repos/marche/course selon la vitesse,
    frappe superposée sur le haut du corps), IK des mains sur la guitare, SpringBones cape/cheveux.
 3. Le héros personnalisé garde l'animation procédurale en attendant un vrai modèle.
+
+## État actuel (v0.1.14)
+
+Conversion : `blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- export`
+(les passages retenus de chaque clip sont dans le dictionnaire `ANIMS` du script ;
+`-- sheets <dossier> [noms]` produit des planches de contrôle image par image).
+
+| Dans le jeu | Clip Mixamo (images) | Déclenché par |
+|---|---|---|
+| Repos | Happy Idle | immobile |
+| Repos épuisé | Mutant Breathing Idle | vie ≤ 30 % |
+| Marche / course | Walking, Running (en place) | vitesse (BlendSpace1D, accéléré au-delà de 2,9 m/s) |
+| Frappe verticale | Great Sword High Spin Attack (26-47) | coup de guitare, en alternance |
+| Coup diagonal | Great Sword Slash (4-34) | coup de guitare, en alternance |
+| Onde de choc | Standing 2H Magic Area Attack 01 (21-62) | Onde de choc |
+| Sort de soutien | Standing 2H Cast Spell 01 (8-60) | bouclier, amplis, phénix, growl, enceinte, pyrotechnie |
+| Solo | headbang | mini-jeux de solo |
+| Hochement de tête | headbang (extrait, tête et cou) | Riff, Accordage, esquive |
+| Sursaut | Reaction (1-20, haut du corps) | coup reçu |
+| Glissade | Running Slide (7-45) | Espace |
+| Stage Diving | Falling Idle puis Falling To Landing (8-33) | talent Stage Diving |
+| Victoire | Victory (10-115) | boss vaincu, Plumeau libéré |
+| Allongé | Sleeping Idle (1-110) | lit de la taverne |
+| Mort | Dying | mort |
+
+Non utilisés : Guitar Playing, Jump, Standing 1H Magic Attack 02 (vrille), T-Pose.
+
+Après l'animation, `HeroAnimator` (SkeletonModifier3D) porte la guitare à la sangle sur l'os
+« chest » et ramène les mains dessus par IK à deux os ; pendant les frappes, la guitare passe dans
+les mains, dans le prolongement des bras. Les héros personnalisés gardent l'animation procédurale.

@@ -246,7 +246,7 @@ func _cast_stage_diving() -> bool:
 		var p: Vector3 = hit["position"]
 		target = Vector3(p.x, 0, p.z) - dir.normalized() * 0.8
 	hero.leaping = true
-	hero.model.solo_pose(true)
+	hero.model.dive(true)
 	SpellFx.cast(hero, "stage_dive", {"from": from, "to": target}) # vol et atterrissage visibles par tous
 	var tw := hero.create_tween()
 	var hop := func(k: float) -> void:
@@ -260,7 +260,7 @@ func _cast_stage_diving() -> bool:
 func _land_stage_dive() -> void:
 	hero.leaping = false
 	hero.model.position.y = 0.0
-	hero.model.solo_pose(false)
+	hero.model.dive(false)
 	Shockwave.spawn(hero.get_parent(), hero.global_position, 4.0)
 	Sfx.play("boom", 0.0)
 	Events.camera_shake.emit(0.4, 0.35)

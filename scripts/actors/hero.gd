@@ -122,6 +122,7 @@ func _physics_process(delta: float) -> void:
 		facing = move.normalized()
 	model.rotation.y = lerp_angle(model.rotation.y, atan2(facing.x, facing.z), 1.0 - exp(-20.0 * delta))
 	model.set_moving(move.length() > 0.1)
+	model.tired = GameState.hp <= GameState.max_hp() * 0.3 # posture épuisée (modèle animé)
 
 	# Maj + clic : frapper sur place (sans bouger), comme dans Diablo.
 	if Input.is_action_pressed("attack") and Input.is_key_pressed(KEY_SHIFT):
@@ -721,8 +722,13 @@ func lie_down(bed_center: Vector3, yaw: float = 0.0) -> void:
 	global_position = Vector3(bed_center.x, 0.0, bed_center.z)
 	model.set_moving(false)
 	# Allongé sur le dos : pieds au bout du lit, tête sur l'oreiller.
-	model.rotation = Vector3(-PI * 0.5, yaw, 0.0)
-	model.position = Basis(Vector3.UP, yaw) * Vector3(0, 0.62, 0.95)
+	if model.lie(true):
+		# Modèle animé : animation « sleep », tournée pour que la tête soit sur l'oreiller.
+		model.rotation = Vector3(0, yaw + HeroModel.SLEEP_YAW, 0.0)
+		model.position = Basis(Vector3.UP, yaw) * HeroModel.SLEEP_OFFSET
+	else:
+		model.rotation = Vector3(-PI * 0.5, yaw, 0.0)
+		model.position = Basis(Vector3.UP, yaw) * Vector3(0, 0.62, 0.95)
 	Events.notify("Vous vous allongez... (bougez pour vous lever)", Events.COLOR_GOOD)
 
 
@@ -730,6 +736,7 @@ func get_up() -> void:
 	if not resting:
 		return
 	resting = false
+	model.lie(false)
 	model.rotation = Vector3(0, atan2(facing.x, facing.z), 0)
 	model.position = Vector3.ZERO
 	global_position = _rest_from

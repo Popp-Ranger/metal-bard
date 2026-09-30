@@ -1,6 +1,7 @@
 class_name RiggedSkin
 extends Node3D
-## Modèle 3D importé de Blender (maillage à squelette), piloté par les pivots procéduraux
+## Modèle 3D importé de Blender (maillage à squelette). S'il contient ses animations, elles sont
+## jouées par HeroAnimator (AnimationTree) ; sinon il est piloté par les pivots procéduraux
 ## de HeroModel : toutes les animations existantes (marche, course, frappe, solo, glissade,
 ## saut à la Angus Young, lit...) restent calculées par HeroModel sur son squelette invisible,
 ## puis recopiées ici os par os à chaque image.
@@ -154,12 +155,12 @@ func _arm(upper: Node3D, fore: Node3D, hand: Node3D, side: String) -> void:
 	var l2 := (_rest_l[bh] as Transform3D).origin.length()
 	var target := _rel(hand).origin
 	var pole := _rel(fore).origin - _rel(upper).origin
-	var joints := _ik(shoulder, target, l1, l2, pole)
-	_desired[bu] = Transform3D(_aim((_rest_g[bu] as Transform3D).basis, joints[0] - shoulder), shoulder)
-	_desired[bf] = Transform3D(_aim((_rest_g[bf] as Transform3D).basis, joints[1] - joints[0]), joints[0])
+	var joints := ik(shoulder, target, l1, l2, pole)
+	_desired[bu] = Transform3D(aim((_rest_g[bu] as Transform3D).basis, joints[0] - shoulder), shoulder)
+	_desired[bf] = Transform3D(aim((_rest_g[bf] as Transform3D).basis, joints[1] - joints[0]), joints[0])
 	# Main : dans le prolongement des doigts du pivot procédural (doigts vers -Y).
 	var fingers := -_rel(hand).basis.orthonormalized().y
-	_desired[bh] = Transform3D(_aim((_rest_g[bh] as Transform3D).basis, fingers), joints[1])
+	_desired[bh] = Transform3D(aim((_rest_g[bh] as Transform3D).basis, fingers), joints[1])
 
 
 func _leg(hip: Node3D, knee: Node3D, ankle: Node3D, side: String, key: String) -> void:
@@ -173,16 +174,16 @@ func _leg(hip: Node3D, knee: Node3D, ankle: Node3D, side: String, key: String) -
 	var target: Vector3 = ankle_t.origin + (_leg_offset[key] as Vector3)
 	var pole := _rel(knee).origin - _rel(hip).origin
 	pole += Vector3(0, 0, 0.15) # les genoux plient toujours vers l'avant
-	var joints := _ik(top, target, l1, l2, pole)
-	_desired[bt] = Transform3D(_aim((_rest_g[bt] as Transform3D).basis, joints[0] - top), top)
-	_desired[bs] = Transform3D(_aim((_rest_g[bs] as Transform3D).basis, joints[1] - joints[0]), joints[0])
+	var joints := ik(top, target, l1, l2, pole)
+	_desired[bt] = Transform3D(aim((_rest_g[bt] as Transform3D).basis, joints[0] - top), top)
+	_desired[bs] = Transform3D(aim((_rest_g[bs] as Transform3D).basis, joints[1] - joints[0]), joints[0])
 	var base_key := "_ankle_" + key
 	var foot_delta := ankle_t.basis.orthonormalized() * (_base[base_key] as Basis).inverse()
 	_desired[bfoot] = Transform3D(foot_delta * (_rest_g[bfoot] as Transform3D).basis, joints[1])
 
 
 ## IK analytique à deux segments : renvoie [coude, extrémité].
-func _ik(a: Vector3, target: Vector3, l1: float, l2: float, pole: Vector3) -> Array[Vector3]:
+static func ik(a: Vector3, target: Vector3, l1: float, l2: float, pole: Vector3) -> Array[Vector3]:
 	var to := target - a
 	var d := clampf(to.length(), 0.01, (l1 + l2) * 0.999)
 	var dir := to.normalized() if to.length() > 0.0001 else Vector3.DOWN
@@ -197,7 +198,7 @@ func _ik(a: Vector3, target: Vector3, l1: float, l2: float, pole: Vector3) -> Ar
 
 
 ## Tourne une base de repos pour que son axe +Y (sens de l'os) pointe vers `dir`.
-func _aim(rest: Basis, dir: Vector3) -> Basis:
+static func aim(rest: Basis, dir: Vector3) -> Basis:
 	var from := rest.y.normalized()
 	var to := dir.normalized()
 	var d := from.dot(to)

@@ -56,7 +56,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 				data.get("color", Color(0.55, 0.85, 1.0)))
 		"wave":
 			if model != null:
-				model.strum()
+				model.act("area")
 			Shockwave.spawn(level, data["pos"], float(data["radius"]))
 			_sound(level, "wave", -2.0, data["pos"], remote, 0.0)
 		"shockwave":
@@ -73,7 +73,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 				_sound(level, str(data["sound"]), float(data.get("volume", 0.0)), _first(points), remote, 0.0)
 		"phoenix":
 			if model != null:
-				model.strum()
+				model.act("cast")
 			var zone := phoenix_zone(level, data["pos"])
 			zone.get_tree().create_timer(PHOENIX_TIME, false).timeout.connect(zone.queue_free)
 			_sound(level, "portal", -6.0, data["pos"], remote)
@@ -82,7 +82,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 				caster.call("set_shield_visible", bool(data.get("on", false)))
 			if bool(data.get("on", false)):
 				if model != null:
-					model.strum()
+					model.act("cast")
 				_sound(level, "zap", -10.0, _pos(caster), remote)
 				_sound(level, "boom", -14.0, _pos(caster), remote)
 		"amps":
@@ -90,7 +90,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 				var amps := build_amps(caster)
 				amps.get_tree().create_timer(AMPS_TIME, false).timeout.connect(amps.queue_free)
 			if model != null:
-				model.strum()
+				model.act("cast")
 			_sound(level, "thud", -2.0, _pos(caster), remote)
 		"wall_of_death":
 			if model != null:
@@ -106,7 +106,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			_sound(level, "swoosh", -2.0, data["from"], remote)
 		"growl":
 			if model != null:
-				model.strum()
+				model.act("cast")
 			var ring := Shockwave.new()
 			ring.position = (data["pos"] as Vector3) + Vector3(0, 0.4, 0)
 			ring.radius = 6.0
@@ -115,7 +115,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			_sound(level, "boom", -4.0, data["pos"], remote)
 		"speaker":
 			if model != null:
-				model.strum()
+				model.act("cast")
 			var sp := SpeakerFx.new()
 			sp.position = data["pos"]
 			sp.rotation.y = float(data.get("yaw", 0.0))
@@ -123,7 +123,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			level.add_child(sp)
 		"pyro":
 			if model != null:
-				model.strum()
+				model.act("cast")
 			var pyro := PyroFx.new()
 			pyro.center = data["pos"]
 			pyro.yaw = float(data.get("yaw", 0.0))
@@ -235,7 +235,7 @@ static func shield_bubble(owner: Node3D, height_scale: float) -> MeshInstance3D:
 
 ## Stage Diving d'un autre joueur : sa position suit le réseau, on ajoute le vol et l'atterrissage.
 static func _remote_dive(model: HeroModel, level: Node, target: Vector3) -> void:
-	model.solo_pose(true)
+	model.dive(true)
 	var tw := model.create_tween()
 	tw.tween_method(func(k: float) -> void: model.position.y = sin(k * PI) * 2.5, 0.0, 1.0, 0.55).set_trans(Tween.TRANS_SINE)
 	tw.tween_callback(func() -> void: SpellFx._dive_land(model, level, target))
@@ -243,7 +243,7 @@ static func _remote_dive(model: HeroModel, level: Node, target: Vector3) -> void
 
 static func _dive_land(model: HeroModel, level: Node, target: Vector3) -> void:
 	model.position.y = 0.0
-	model.solo_pose(false)
+	model.dive(false)
 	Shockwave.spawn(level, target, 4.0)
 	_sound(level, "boom", 0.0, target, true)
 

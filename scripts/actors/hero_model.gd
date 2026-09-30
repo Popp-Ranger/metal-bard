@@ -29,6 +29,10 @@ const RIFFALD_MODEL := "res://assets/models/riffald/riffald.glb"
 const GUITAR_MODEL := "res://assets/models/guitare/guitare_heros.glb"
 ## Longueur du manche de la Flying V procédurale (sillet), pour placer la main gauche.
 const PROC_NUT := 0.64
+## Animation « sleep » (allongé sur le dos) : rotation et décalage du modèle pour que le corps
+## soit dans l'axe du lit, tête sur l'oreiller (-Z), dos sur le matelas (voir Hero.lie_down).
+const SLEEP_YAW := -1.97
+const SLEEP_OFFSET := Vector3(0.06, 0.6, -0.04)
 
 ## Apparence à afficher (clés de RaceDB.DEFAULT_APPEARANCE). Vide = celle de GameState.
 var appearance := {}
@@ -61,6 +65,10 @@ var _strings_mat: StandardMaterial3D
 var _flash_mats: Array[StandardMaterial3D] = []
 ## Modèle importé piloté par le squelette procédural (héros prédéfini Riffald), ou null.
 var _skin: RiggedSkin
+## Animations du modèle importé (AnimationTree + IK de la guitare), ou null : voir HeroAnimator.
+var _anim: HeroAnimator
+## Vie basse : posture de repos voûtée, à bout de souffle (modèle animé).
+var tired := false
 ## Rapport de longueur du manche de la guitare utilisée / Flying V procédurale.
 var _neck_scale := 1.0
 
@@ -486,9 +494,12 @@ func _use_skin(path: String) -> void:
 		n.visible = false
 	add_child(skin)
 	_skin = skin
-	_skin.capture_rest()
 	_flash_mats.append_array(_skin.flash_materials)
-	_skin.drive()
+	# Modèle avec ses propres animations : AnimationTree. Sinon, il recopie le squelette procédural.
+	_anim = HeroAnimator.attach(self, skin)
+	if _anim == null:
+		_skin.capture_rest()
+		_skin.drive()
 
 
 ## Guitare des héros modélisée dans Blender (même repère que la Flying V procédurale :
@@ -627,7 +638,7 @@ func _process(delta: float) -> void:
 		_aura.rotation.y += delta * 2.0
 		_aura_light.light_energy = 2.2 + sin(_t * 10.0) * 0.5
 	_update_arms()
-	if _skin != null:
+	if _skin != null and _anim == null:
 		_skin.drive()
 
 
@@ -718,6 +729,10 @@ func _basis_pointing(v: Vector3) -> Basis:
 
 ## Coup de guitare : empoignée par le manche, levée au-dessus de l'épaule puis abattue.
 func swing() -> void:
+	if _anim != null:
+		if not _soloing:
+			_anim.attack()
+		return
 	if _busy or _soloing or _guitar == null:
 		return
 	_busy = true
@@ -738,6 +753,13 @@ func swing() -> void:
 func strum() -> void:
 	if _soloing or _guitar == null:
 		return
+	if _anim != null:
+		# Grattage appuyé (IK de la main droite) et hochement de tête.
+		var st := create_tween()
+		st.tween_property(self, "_strum", 1.0, 0.06)
+		st.tween_property(self, "_strum", 0.0, 0.12)
+		_anim.nod()
+		return
 	var tw := create_tween()
 	tw.tween_property(_guitar, "rotation", GUITAR_SOLO, 0.06)
 	tw.parallel().tween_property(self, "_strum", 1.0, 0.06)
@@ -750,12 +772,18 @@ func solo_pose(active: bool) -> void:
 	if _guitar == null:
 		return
 	_soloing = active
+	if _anim != null:
+		_anim.play("solo" if active else "loco")
+		_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else Color(0.55, 0.85, 1.0)
+		return
 	var tw := create_tween()
 	tw.tween_property(_guitar, "rotation", GUITAR_SOLO if active else GUITAR_REST, 0.15)
 	_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else Color(0.55, 0.85, 1.0)
 
 
 func flash(color: Color = Color(1.0, 0.1, 0.05)) -> void:
+	if _anim != null:
+		_anim.hurt()
 	for m in _flash_mats:
 		m.emission = color
 	await get_tree().create_timer(0.1, false).timeout
@@ -766,6 +794,9 @@ func flash(color: Color = Color(1.0, 0.1, 0.05)) -> void:
 func die() -> void:
 	_soloing = false
 	_moving = false
+	if _anim != null:
+		_anim.play("die")
+		return
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(self, "rotation:x", -PI * 0.5, 0.6).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(self, "position:y", 0.25, 0.6)
@@ -775,6 +806,9 @@ func die() -> void:
 
 ## Glissade sur les genoux, guitare dressée, dos cambré (la glissade de scène du metal).
 func knee_slide(duration: float) -> void:
+	if _anim != null:
+		_anim.play("slide")
+		return
 	_pose = "slide"
 	_pose_time = duration
 	if _guitar != null:
@@ -783,10 +817,45 @@ func knee_slide(duration: float) -> void:
 
 ## Petit saut sur une jambe façon Angus Young (esquive passive réussie).
 func angus_hop(duration: float = 0.6) -> void:
+	if _anim != null:
+		_anim.nod()
+		return
 	if _pose == "slide":
 		return
 	_pose = "hop"
 	_pose_time = duration
+
+
+## Sort lancé : `kind` = "area" (onde de choc, frappe du sol) ou "cast" (sort de soutien).
+## Sans animations importées : simple accord rageur.
+func act(kind: String) -> void:
+	if _anim != null and not _soloing:
+		_anim.play(kind)
+	else:
+		strum()
+
+
+## Stage Diving : vol bras écartés au-dessus de la foule, puis réception.
+func dive(flying: bool) -> void:
+	if _anim != null:
+		_anim.play("fall" if flying else "land")
+		return
+	solo_pose(flying)
+
+
+## Poings levés (boss vaincu, prisonnier libéré).
+func victory() -> void:
+	if _anim != null and not _soloing:
+		_anim.play("victory")
+
+
+## Allongé sur un lit : renvoie true si le modèle a sa propre animation (il reste alors debout
+## dans son repère, voir SLEEP_YAW) ; sinon l'appelant couche le modèle entier.
+func lie(active: bool) -> bool:
+	if _anim == null:
+		return false
+	_anim.play("sleep" if active else "loco")
+	return true
 
 
 func _apply_special_pose(delta: float) -> void:

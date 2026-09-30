@@ -661,7 +661,7 @@ func _test_characters() -> void:
 		"création : Riffald prédéfini proposé par défaut (roux flamboyant, rasé, nom verrouillé)")
 	var rig: HeroModel = creation._model
 	_check(rig._skin != null and rig._skin.skeleton != null and rig._skin.skeleton.get_bone_count() == 17,
-		"Riffald : modèle Blender à squelette (17 os) piloté par le squelette procédural")
+		"Riffald : modèle Blender à squelette (17 os)")
 	_check(rig._neck_scale < 1.0 and rig._strings_mat != null and rig._guitar.find_children("*", "MeshInstance3D", true, false).size() >= 1,
 		"guitare des héros importée de Blender (cordes lumineuses)")
 	var sk := rig._skin.skeleton
@@ -671,8 +671,44 @@ func _test_characters() -> void:
 	for f in 20:
 		await get_tree().process_frame
 	_check(sk.get_bone_global_pose(sk.find_bone("shin.L")).origin.distance_to(knee_before) > 0.03, "Riffald : les jambes du modèle suivent la foulée")
-	var hand_err := (rig._skin.skeleton.get_bone_global_pose(sk.find_bone("hand.R")).origin - rig._skin._rel(rig._hand_l).origin).length()
-	_check(hand_err < 0.02, "Riffald : la main du manche reste sur la guitare (écart %.3f m)" % hand_err)
+	var anim := rig._anim
+	_check(anim != null and anim.tree.active and anim.lengths.size() >= 15 and anim.lengths.has("run") and anim.lengths.has("sleep"),
+		"Riffald : animations Mixamo (transférées dans Blender) jouées par un AnimationTree")
+	# IK après l'animation : la main du manche (os « hand.R ») est posée sur la case de la guitare.
+	# La pose modifiée n'existe qu'au moment du rendu : on la lit au signal skeleton_updated.
+	await sk.skeleton_updated
+	var gt := anim._skel_to_model().affine_inverse() * rig._guitar.transform.orthonormalized()
+	var fret_target := gt * Vector3(-0.02, 0.42 * rig._neck_scale, -0.025)
+	var hand_err := (sk.get_bone_global_pose(sk.find_bone("hand.R")).origin - fret_target).length()
+	_check(hand_err < 0.03, "Riffald : la main du manche reste sur la guitare (écart %.3f m)" % hand_err)
+	_check(anim._playback.get_current_node() == "loco"
+		and float(anim.tree.get("parameters/sm/loco/pace/scale")) > 1.0, "Riffald : course accélérée à la vitesse du héros")
+	# Actions : coups alternés (guitare empoignée), sorts, lit, mort.
+	rig.set_moving(false)
+	rig.swing()
+	var first := anim.state
+	await get_tree().create_timer(0.2).timeout
+	await sk.skeleton_updated
+	var hands_mid := (sk.get_bone_global_pose(sk.find_bone("hand.L")).origin + sk.get_bone_global_pose(sk.find_bone("hand.R")).origin) * 0.5
+	var grip_err := (anim._skel_to_model() * hands_mid).distance_to(rig._guitar.transform * Vector3(0, HeroAnimator.GRIP, 0))
+	_check(first == "smash" and float(anim._weights[2]) > 0.99 and grip_err < 0.05,
+		"Riffald : frappe, guitare empoignée par le manche (écart %.3f m)" % grip_err)
+	rig.swing()
+	_check(anim.state == "slash", "Riffald : coups de guitare alternés (vertical puis diagonal)")
+	await get_tree().create_timer(0.8).timeout
+	_check(anim.state == "loco", "Riffald : retour au repos après la frappe")
+	rig.act("area")
+	_check(anim.state == "area", "Riffald : onde de choc = frappe du sol")
+	rig.set_moving(true)
+	await get_tree().create_timer(0.4).timeout
+	_check(anim.state == "loco", "Riffald : se déplacer interrompt le sort")
+	rig.set_moving(false)
+	_check(rig.lie(true) and anim.state == "sleep", "Riffald : allongé sur le lit (animation)")
+	rig.lie(false)
+	rig.die()
+	await _frames(5)
+	rig.swing()
+	_check(anim.state == "die" and anim._playback.get_current_node() == "die", "Riffald : mort, plus aucune action ensuite")
 	rig.set_moving(false)
 	creation._set_hero_mode(1)
 	creation._refresh()

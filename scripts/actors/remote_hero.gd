@@ -55,6 +55,7 @@ func apply_state(pos: Vector3, yaw: float, flags: int, net_hp: int, net_max_hp: 
 	_flags = flags
 	hp = net_hp
 	max_hp = maxi(1, net_max_hp)
+	model.tired = hp <= max_hp * 0.3
 	_hp_label.text = "%d / %d PV" % [hp, max_hp]
 	var now_dead := (flags & 8) != 0
 	if now_dead and not dead:

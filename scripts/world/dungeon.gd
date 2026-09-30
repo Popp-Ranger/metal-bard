@@ -542,6 +542,8 @@ func _on_boss_defeated(_boss_id: String) -> void:
 	var key_pos := boss.global_position + Vector3(0.8, 0, 0.8)
 	_spawn_key(key_pos)
 	Events.notify("Gloubah a laissé tomber une clé rouillée...", Events.COLOR_GOLD)
+	if hero != null:
+		hero.model.victory()
 
 
 func _spawn_key(pos: Vector3) -> void:
@@ -588,6 +590,8 @@ func _try_open_cage() -> void:
 	if cub != null:
 		cub.follow()
 		cub.celebrate()
+	if hero != null:
+		hero.model.victory()
 	Sfx.play("levelup", -4.0)
 	Events.notify("Plumeau est libre ! Hou-hou !", Color(0.95, 0.8, 0.5))
 	await get_tree().create_timer(1.2, false).timeout
