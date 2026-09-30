@@ -45,6 +45,7 @@ func _run_host() -> void:
 	GameState.dungeon_state = {}
 	GameState.active_quest = "plumeau"
 	Net.upnp_enabled = false # pas d'ouverture de port sur la box pendant le test
+	Net.public_lookup_enabled = false
 	var err := Net.host()
 	if not err.is_empty():
 		_finish(false, err)

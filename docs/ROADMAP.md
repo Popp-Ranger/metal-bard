@@ -110,6 +110,10 @@
 - [x] Ombres courtes : seule une lumière presque au zénith en projette (plus les lampes basses)
 - [x] Export Windows (.pck) pour tester le multijoueur entre amis
 
+## ✅ v0.1.16 — Coop par Internet sans UPnP
+- [x] Plusieurs codes pour l'hôte : Internet (adresse publique, port ouvert à la main), VPN (Radmin VPN, Tailscale, ZeroTier...), réseau local
+- [x] Rejoindre en tapant une adresse IP ; abandon au bout de 12 s sans réponse, avec des pistes
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

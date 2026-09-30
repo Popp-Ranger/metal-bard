@@ -563,10 +563,43 @@ func _test_new_features() -> void:
 	_check(code.length() == 11 and back.get("ip", "") == "86.201.14.7" and int(back.get("port", 0)) == Net.PORT,
 		"code d'invitation %s ↔ 86.201.14.7:%d" % [code, Net.PORT])
 	_check(Net.decode_code("pas-un-code").is_empty(), "code invalide refusé")
+	# Rejoindre avec une adresse IP tapée à la main (VPN) ou un code.
+	var by_ip := Net.parse_invite(" 26.12.34.56 ")
+	var by_port := Net.parse_invite("26.12.34.56:4000")
+	_check(by_ip.get("ip", "") == "26.12.34.56" and int(by_ip.get("port", 0)) == Net.PORT
+		and int(by_port.get("port", 0)) == 4000 and Net.parse_invite(code).get("ip", "") == "86.201.14.7",
+		"rejoindre avec une adresse IP (avec ou sans port) ou un code")
+	# Codes proposés à l'hôte sans UPnP : VPN d'abord, puis Internet (port à ouvrir), puis local.
+	var vpns: Array[Dictionary] = [{"name": "Radmin VPN", "ip": "26.1.2.3"}]
+	var no_upnp := Net.build_codes("86.201.14.7", false, vpns, "192.168.1.16")
+	var labels := no_upnp.map(func(c: Dictionary) -> String: return str(c["label"]))
+	_check(labels == ["Radmin VPN", "Internet", "Réseau local"]
+		and Net.decode_code(str(no_upnp[0]["code"]))["ip"] == "26.1.2.3"
+		and Net.decode_code(str(no_upnp[1]["code"]))["ip"] == "86.201.14.7"
+		and Net.decode_code(str(no_upnp[2]["code"]))["ip"] == "192.168.1.16"
+		and str(no_upnp[1]["hint"]).contains("24565"), "sans UPnP : codes VPN, Internet (port à ouvrir) et local")
+	var with_upnp := Net.build_codes("86.201.14.7", true, vpns, "192.168.1.16")
+	_check(str(with_upnp[0]["label"]) == "Internet" and Net.build_codes("", false, [] as Array[Dictionary], "192.168.1.16").size() == 1,
+		"port ouvert par UPnP : code Internet en premier ; adresse publique inconnue : code local seul")
+	_check(Net._is_vpn_interface({"friendly": "Radmin VPN", "addresses": ["26.5.6.7"]})
+		and Net._is_vpn_interface({"friendly": "Ethernet 3", "addresses": ["100.101.2.3"]})
+		and not Net._is_vpn_interface({"friendly": "Wi-Fi", "addresses": ["192.168.1.16"]})
+		and not Net.local_ip().begins_with("26."), "cartes VPN reconnues (Radmin, Tailscale), exclues de l'adresse locale")
 	Net.upnp_enabled = false # les tests ne touchent pas à la box
+	Net.public_lookup_enabled = false # ni au service d'adresse publique
 	var err := Net.host()
-	_check(err.is_empty() and Net.is_host() and Net.player_count() == 1, "partie ouverte en coop (hôte)")
+	_check(err.is_empty() and Net.is_host() and Net.player_count() == 1 and not Net.codes.is_empty()
+		and str(Net.codes[-1]["label"]) == "Réseau local", "partie ouverte en coop (hôte) avec ses codes")
 	Net.leave()
+	# Hôte injoignable : abandon avec un message d'aide au lieu d'attendre indéfiniment.
+	var statuses: Array[String] = []
+	var on_status := func(t: String) -> void: statuses.append(t)
+	Net.status_changed.connect(on_status)
+	_check(Net.join("127.0.0.1:1").is_empty(), "tentative de connexion lancée")
+	Net._on_join_timeout(Net._join_attempt)
+	Net.status_changed.disconnect(on_status)
+	_check(not Net.is_online() and multiplayer.multiplayer_peer is OfflineMultiplayerPeer and not statuses.is_empty()
+		and statuses[-1] == Net.NO_ANSWER, "hôte injoignable : abandon au bout de %d s avec des pistes" % int(Net.JOIN_TIMEOUT))
 	_check(not Net.is_online(), "partie coop fermée")
 	# Intro : cimetière, lune de sang, route sinueuse d'environ 20 s.
 	var intro: Node = load("res://scenes/intro.tscn").instantiate()

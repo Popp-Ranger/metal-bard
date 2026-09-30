@@ -139,8 +139,8 @@ func _build_tree(skel_path: String) -> AnimationNodeBlendTree:
 	bs.min_space = 0.0
 	bs.max_space = RUN_SPEED
 	bs.sync = true
-	bs.add_blend_point(_clip("walk", true), WALK_SPEED)
-	bs.add_blend_point(_clip("run", true), RUN_SPEED)
+	bs.add_blend_point(_clip("walk", true), WALK_SPEED, -1, "walk")
+	bs.add_blend_point(_clip("run", true), RUN_SPEED, -1, "run")
 	loco.add_node("gait", bs)
 	loco.add_node("pace", AnimationNodeTimeScale.new())
 	loco.add_node("move", AnimationNodeBlend2.new())

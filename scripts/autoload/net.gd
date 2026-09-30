@@ -12,9 +12,9 @@ extends Node
 ##   gagne l'XP et ramasse son propre butin. Les sorts de chacun (éclairs, ondes, enceintes,
 ##   amplis, bouclier, pyrotechnie...) sont visibles et audibles par tous (SpellFx).
 ##   Quand l'hôte change de lieu (portail, escalier de scène...), tout le groupe le suit.
-## Si l'UPnP est indisponible, le code contient l'adresse locale : il marche alors en
-## réseau local (ou via un VPN type Tailscale / ZeroTier), sinon il faut ouvrir le port
-## 24565 (UDP) sur la box.
+## Si l'UPnP est indisponible, l'hôte reçoit plusieurs codes (build_codes) : Internet (adresse
+## publique, valable si le port 24565 UDP est ouvert à la main sur la box), VPN (Radmin VPN,
+## Tailscale, ZeroTier...) et réseau local. On peut aussi rejoindre en tapant une adresse IP.
 
 signal status_changed(text: String)
 signal code_ready(code: String, note: String)
@@ -29,12 +29,25 @@ const ENEMY_RATE := 0.1
 ## Ennemis par paquet de synchronisation (6 nombres de 4 octets chacun, sous le MTU d'ENet).
 const ENEMIES_PER_PACKET := 50
 const CODE_ALPHABET := "0123456789ABCDEFGHJKMNPQRSTVWXYZ" # base 32 de Crockford (pas de I, L, O, U)
+## Service qui renvoie l'adresse IP publique (texte brut), quand la box ne répond pas en UPnP.
+const PUBLIC_IP_URL := "https://api.ipify.org"
+## Abandon d'une connexion restée sans réponse de l'hôte (s).
+const JOIN_TIMEOUT := 12.0
+const NO_ANSWER := "Aucune réponse de l'hôte. Vérifiez qu'il est en jeu, sa partie ouverte, et le code. Par Internet, son port 24565 (UDP) doit être ouvert sur sa box ; sinon, installez tous les deux Radmin VPN ou Tailscale et utilisez son code VPN."
+## Mots-clés des cartes réseau VPN -> nom affiché.
+const VPN_NAMES := {"radmin": "Radmin VPN", "tailscale": "Tailscale", "zerotier": "ZeroTier", "hamachi": "Hamachi",
+	"wireguard": "WireGuard", "openvpn": "OpenVPN"}
 
 ## peer_id -> {"name", "appearance", "level"} (tous les joueurs, hôte compris).
 var players := {}
 var code := ""
+## Codes d'invitation de l'hôte, le plus utile en premier : [{"label", "code", "hint"}].
+var codes: Array[Dictionary] = []
 ## false : pas d'ouverture automatique du port sur la box (tests automatiques).
 var upnp_enabled := true
+## false : pas de requête vers PUBLIC_IP_URL (tests automatiques).
+var public_lookup_enabled := true
+var _join_attempt := 0
 
 var _upnp: UPNP
 var _thread: Thread
@@ -120,11 +133,109 @@ static func decode_code(text: String) -> Dictionary:
 	return {"ip": ip, "port": port}
 
 
+## Adresse du PC sur le réseau local (Wi-Fi / Ethernet), hors cartes VPN.
 static func local_ip() -> String:
-	for a in IP.get_local_addresses():
-		if a.begins_with("192.168.") or a.begins_with("10.") or (a.begins_with("172.") and a.split(".").size() == 4):
-			return a
-	return "127.0.0.1"
+	var best := ""
+	for iface: Dictionary in IP.get_local_interfaces():
+		if _is_vpn_interface(iface):
+			continue
+		for a: String in iface.get("addresses", []):
+			if a.begins_with("192.168."):
+				return a
+			if best.is_empty() and (a.begins_with("10.") or _in_172_private(a)):
+				best = a
+	return best if not best.is_empty() else "127.0.0.1"
+
+
+## Adresses IPv4 des VPN installés (Radmin VPN, Tailscale, ZeroTier, Hamachi, WireGuard...) :
+## [{"name", "ip"}]. Un ami connecté au même VPN rejoint avec ce code, sans toucher à la box.
+static func vpn_addresses() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for iface: Dictionary in IP.get_local_interfaces():
+		if not _is_vpn_interface(iface):
+			continue
+		for a: String in iface.get("addresses", []):
+			if _is_ipv4(a) and not a.begins_with("169.254.") and not a.begins_with("127."):
+				out.append({"name": _vpn_name(iface), "ip": a})
+	return out
+
+
+static func _is_vpn_interface(iface: Dictionary) -> bool:
+	var n := str(iface.get("friendly", "")).to_lower()
+	for key: String in VPN_NAMES:
+		if n.contains(key):
+			return true
+	for a: String in iface.get("addresses", []):
+		if a.begins_with("26.") or _in_cgnat(a): # Radmin VPN (26.x), Tailscale (100.64/10)
+			return true
+	return false
+
+
+static func _vpn_name(iface: Dictionary) -> String:
+	var n := str(iface.get("friendly", "")).to_lower()
+	for key: String in VPN_NAMES:
+		if n.contains(key):
+			return str(VPN_NAMES[key])
+	for a: String in iface.get("addresses", []):
+		if a.begins_with("26."):
+			return "Radmin VPN"
+		if _in_cgnat(a):
+			return "Tailscale"
+	return "VPN"
+
+
+static func _is_ipv4(a: String) -> bool:
+	return a.is_valid_ip_address() and a.split(".").size() == 4
+
+
+static func _in_172_private(a: String) -> bool:
+	var p := a.split(".")
+	return p.size() == 4 and p[0] == "172" and int(p[1]) >= 16 and int(p[1]) <= 31
+
+
+static func _in_cgnat(a: String) -> bool:
+	var p := a.split(".")
+	return p.size() == 4 and p[0] == "100" and int(p[1]) >= 64 and int(p[1]) <= 127
+
+
+## Codes proposés à l'hôte, le plus utile en premier : [{"label", "code", "hint"}].
+## `internet_ip` : adresse publique (vide si inconnue) ; `port_open` : port ouvert par UPnP.
+static func build_codes(internet_ip: String, port_open: bool, vpns: Array[Dictionary], lan_ip: String) -> Array[Dictionary]:
+	var internet: Array[Dictionary] = []
+	if _is_ipv4(internet_ip):
+		var hint := "Pour les amis n'importe où : le port a été ouvert automatiquement."
+		if not port_open:
+			hint = "Pour les amis n'importe où, SEULEMENT si le port %d (UDP) est ouvert vers ce PC (%s) sur votre box." % [PORT, lan_ip]
+		internet.append({"label": "Internet", "code": encode_code(internet_ip, PORT), "hint": hint})
+	var vpn: Array[Dictionary] = []
+	for v: Dictionary in vpns:
+		vpn.append({"label": str(v["name"]), "code": encode_code(str(v["ip"]), PORT),
+			"hint": "Pour les amis connectés au même réseau %s." % str(v["name"])})
+	var lan: Array[Dictionary] = [{"label": "Réseau local", "code": encode_code(lan_ip, PORT),
+		"hint": "Pour les joueurs sur la même box (même Wi-Fi ou câble)."}]
+	# Port ouvert : le code Internet marche à coup sûr ; sinon un VPN est plus fiable.
+	var out: Array[Dictionary] = []
+	if port_open:
+		out.append_array(internet)
+		out.append_array(vpn)
+	else:
+		out.append_array(vpn)
+		out.append_array(internet)
+	out.append_array(lan)
+	return out
+
+
+## Code ou adresse saisis par un ami : « XXXXX-XXXXX », « 26.1.2.3 » ou « 26.1.2.3:24565 ».
+static func parse_invite(text: String) -> Dictionary:
+	var t := text.strip_edges()
+	var ip := t
+	var port := PORT
+	if t.count(":") == 1:
+		ip = t.get_slice(":", 0)
+		port = int(t.get_slice(":", 1))
+	if _is_ipv4(ip) and port > 0 and port < 65536:
+		return {"ip": ip, "port": port}
+	return decode_code(t)
 
 
 # --- Héberger / rejoindre ----------------------------------------------------------------
@@ -139,7 +250,8 @@ func host() -> String:
 	multiplayer.multiplayer_peer = peer
 	players = {1: my_profile()}
 	roster_changed.emit()
-	code = encode_code(local_ip(), PORT)
+	codes = build_codes("", false, vpn_addresses(), local_ip())
+	code = str(codes[0]["code"])
 	if not upnp_enabled:
 		_on_upnp_done.call_deferred(null, "")
 		return ""
@@ -165,20 +277,49 @@ func _on_upnp_done(upnp: UPNP, external: String) -> void:
 		_thread = null
 	if not is_host():
 		return
-	var note := ""
 	if not external.is_empty():
 		_upnp = upnp
-		code = encode_code(external, PORT)
-		note = "Port %d ouvert automatiquement : vos amis peuvent vous rejoindre par Internet." % PORT
+		_publish_codes(external, true)
+	elif public_lookup_enabled:
+		# Pas d'UPnP : on demande l'adresse publique pour un code Internet (valable si le
+		# port a été ouvert à la main sur la box).
+		status_changed.emit("La box n'ouvre pas le port automatiquement : recherche de l'adresse publique...")
+		_lookup_public_ip()
 	else:
-		code = encode_code(local_ip(), PORT)
-		note = "La box n'a pas répondu (UPnP) : ce code marche en réseau local ou via un VPN (Tailscale, ZeroTier). Pour Internet, ouvrez le port %d en UDP sur votre box." % PORT
+		_publish_codes("", false)
+
+
+func _lookup_public_ip() -> void:
+	var http := HTTPRequest.new()
+	http.timeout = 6.0
+	add_child(http)
+	http.request_completed.connect(func(result: int, response: int, _h: PackedStringArray, body: PackedByteArray) -> void: _on_public_ip(http, result, response, body))
+	if http.request(PUBLIC_IP_URL) != OK:
+		http.queue_free()
+		_publish_codes("", false)
+
+
+func _on_public_ip(http: HTTPRequest, result: int, response: int, body: PackedByteArray) -> void:
+	http.queue_free()
+	var ip := body.get_string_from_utf8().strip_edges()
+	if result != HTTPRequest.RESULT_SUCCESS or response != 200 or not _is_ipv4(ip):
+		ip = ""
+	if is_host():
+		_publish_codes(ip, false)
+
+
+func _publish_codes(internet_ip: String, port_open: bool) -> void:
+	codes = build_codes(internet_ip, port_open, vpn_addresses(), local_ip())
+	code = str(codes[0]["code"])
+	var note := "Port %d ouvert automatiquement : vos amis peuvent vous rejoindre par Internet." % PORT
+	if not port_open:
+		note = "Votre box n'a pas ouvert le port automatiquement (UPnP désactivé). Par Internet : ouvrez le port %d (UDP) vers %s sur la box, ou installez tous les deux un VPN (Radmin VPN, Tailscale) — voir LISEZMOI." % [PORT, local_ip()]
 	code_ready.emit(code, note)
 	status_changed.emit("Partie ouverte — code : %s" % code)
 
 
 func join(invite: String) -> String:
-	var target := decode_code(invite)
+	var target := parse_invite(invite)
 	if target.is_empty():
 		return "Code invalide."
 	var peer := ENetMultiplayerPeer.new()
@@ -186,8 +327,23 @@ func join(invite: String) -> String:
 	if err != OK:
 		return "Connexion impossible (%s)." % error_string(err)
 	multiplayer.multiplayer_peer = peer
-	status_changed.emit("Connexion à %s..." % invite.to_upper())
+	status_changed.emit("Connexion à %s..." % invite.strip_edges().to_upper())
+	_join_attempt += 1
+	var attempt := _join_attempt
+	get_tree().create_timer(JOIN_TIMEOUT, true, false, true).timeout.connect(func() -> void: _on_join_timeout(attempt))
 	return ""
+
+
+## Pas de réponse de l'hôte : on abandonne avec des pistes (ENet attendrait bien plus longtemps).
+func _on_join_timeout(attempt: int) -> void:
+	var peer := multiplayer.multiplayer_peer
+	if attempt != _join_attempt or peer == null or peer is OfflineMultiplayerPeer:
+		return
+	if peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTING:
+		return
+	peer.close()
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	status_changed.emit(NO_ANSWER)
 
 
 func leave() -> void:
@@ -202,6 +358,7 @@ func leave() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
 	code = ""
+	codes.clear()
 	_clear_remotes()
 	roster_changed.emit()
 	status_changed.emit("Hors ligne")
@@ -237,7 +394,7 @@ func _on_connected() -> void:
 
 func _on_connection_failed() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
-	status_changed.emit("Échec de la connexion : vérifiez le code, et que l'hôte a bien ouvert sa partie.")
+	status_changed.emit(NO_ANSWER)
 
 
 func _on_server_disconnected() -> void:

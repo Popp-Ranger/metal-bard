@@ -24,10 +24,10 @@ func _ready() -> void:
 	anchor_right = 0.5
 	anchor_top = 0.5
 	anchor_bottom = 0.5
-	offset_left = -360
-	offset_right = 360
-	offset_top = -250
-	offset_bottom = 250
+	offset_left = -400
+	offset_right = 400
+	offset_top = -320
+	offset_bottom = 320
 	var style := UiStyle.box(Color(0.07, 0.055, 0.055, 1.0), UiStyle.BORDER, 3)
 	style.shadow_size = 2000
 	style.shadow_color = Color(0, 0, 0, 0.7)
@@ -78,11 +78,28 @@ func open_host() -> void:
 		_body.add_child(_button("Quitter la partie", _leave))
 		_refresh_players()
 		return
-	_body.add_child(_text("Invitez jusqu'à 5 amis : envoyez-leur ce code. Ils le collent dans « Rejoindre une partie » sur l'écran titre et arrivent avec leur propre personnage.", 17, UiStyle.BONE))
-	_code_label = _text(Net.code if not Net.code.is_empty() else "—", 46, Color(1.0, 0.85, 0.35))
-	_code_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_body.add_child(_code_label)
-	_note = _text("", 14, UiStyle.DIM)
+	_body.add_child(_text("Invitez jusqu'à 5 amis : envoyez-leur le code qui correspond à leur situation. Ils le collent dans « Rejoindre une partie » sur l'écran titre et arrivent avec leur propre personnage.", 16, UiStyle.BONE))
+	if Net.is_online() and not Net.codes.is_empty():
+		# Un code par façon de se connecter (Internet, VPN, réseau local), avec son usage.
+		for entry: Dictionary in Net.codes:
+			var line := HBoxContainer.new()
+			line.add_theme_constant_override("separation", 12)
+			_body.add_child(line)
+			var name_label := _text(str(entry["label"]), 18, UiStyle.BONE)
+			name_label.custom_minimum_size = Vector2(150, 0)
+			line.add_child(name_label)
+			var code_label := _text(str(entry["code"]), 30, Color(1.0, 0.85, 0.35))
+			code_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			line.add_child(code_label)
+			if _code_label == null:
+				_code_label = code_label
+			line.add_child(_button("Copier", _copy.bind(str(entry["code"]))))
+			_body.add_child(_text(str(entry["hint"]), 13, UiStyle.DIM))
+	else:
+		_code_label = _text(Net.code if not Net.code.is_empty() else "—", 40, Color(1.0, 0.85, 0.35))
+		_code_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_body.add_child(_code_label)
+	_note = _text("", 13, Color(1.0, 0.7, 0.45))
 	_body.add_child(_note)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -90,7 +107,6 @@ func open_host() -> void:
 	if not Net.is_online():
 		row.add_child(_button("Ouvrir ma partie", _open_game))
 	else:
-		row.add_child(_button("Copier le code", _copy_code))
 		row.add_child(_button("Fermer la partie", _leave))
 	_players = _text("", 18, Color(0.55, 0.85, 1.0))
 	_body.add_child(_players)
@@ -106,11 +122,11 @@ func open_join() -> void:
 	if not GameState.has_save():
 		_body.add_child(_text("Créez d'abord un personnage (Nouvelle partie) : c'est lui qui rejoindra la partie de votre ami.", 18, Events.COLOR_BAD))
 		return
-	_body.add_child(_text("Collez le code d'invitation envoyé par l'hôte. Vous jouerez avec le personnage de votre dernière sauvegarde :", 17, UiStyle.BONE))
+	_body.add_child(_text("Collez le code d'invitation envoyé par l'hôte (ou son adresse IP). Vous jouerez avec le personnage de votre dernière sauvegarde :", 17, UiStyle.BONE))
 	_body.add_child(_text(GameState.slot_summary(0), 17, Color(1.0, 0.8, 0.45)))
 	_code_edit = LineEdit.new()
-	_code_edit.placeholder_text = "XXXXX-XXXXX"
-	_code_edit.max_length = 16
+	_code_edit.placeholder_text = "XXXXX-XXXXX ou adresse IP"
+	_code_edit.max_length = 24
 	_code_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_code_edit.custom_minimum_size = Vector2(0, 50)
 	_code_edit.add_theme_font_size_override("font_size", 28)
@@ -144,9 +160,9 @@ func _on_code_ready(new_code: String, note: String) -> void:
 		_note.text = note
 
 
-func _copy_code() -> void:
-	DisplayServer.clipboard_set(Net.code)
-	_status.text = "Code copié dans le presse-papiers : %s" % Net.code
+func _copy(value: String) -> void:
+	DisplayServer.clipboard_set(value)
+	_status.text = "Code copié dans le presse-papiers : %s" % value
 
 
 func _leave() -> void:
