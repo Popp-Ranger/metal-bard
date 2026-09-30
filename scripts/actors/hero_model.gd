@@ -296,8 +296,10 @@ func _build_beard(kind: int, hair: Material) -> void:
 			Visuals.cylinder(_head, 0.02, 0.05, 0.36, Vector3(0, -0.07, 0.15), hair, Vector3(-10, 0, 0), 8)
 			for i in 2:
 				Visuals.torus(_head, 0.035, 0.05, Vector3(0, -0.02 - i * 0.12, 0.155), Visuals.mat(Color(0.5, 0.5, 0.55), 0.3, 0.8))
-		_: # bouc
+		2: # bouc
 			Visuals.cylinder(_head, 0.01, 0.04, 0.12, Vector3(0, 0.04, 0.15), hair, Vector3(180, 0, 0), 8)
+		_: # rasé de près
+			pass
 
 
 ## Coiffures (toujours longues) : tresses, queue de cheval, longs lâchés, glam-metal.

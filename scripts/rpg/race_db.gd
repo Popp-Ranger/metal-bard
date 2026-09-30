@@ -50,14 +50,15 @@ const RACE_ORDER := ["humain", "squelette", "orc", "troll", "ogre", "demon"]
 
 const HORNS := ["Cornes de bélier", "Cornes de taureau", "Cornes infernales"]
 const TUSKS := ["Petites défenses", "Grandes défenses", "Défenses brisées"]
-const BEARDS := ["Barbe courte", "Longue barbe tressée", "Bouc"]
+const BEARDS := ["Barbe courte", "Longue barbe tressée", "Bouc", "Rasé de près"]
 const HAIRSTYLES := ["Tresses", "Queue de cheval", "Longs lâchés", "Glam-metal"]
 const HAIR_COLORS := [Color(0.42, 0.11, 0.05), Color(0.05, 0.04, 0.04), Color(0.9, 0.82, 0.55),
-	Color(0.85, 0.85, 0.88), Color(0.4, 0.15, 0.55)]
-const HAIR_COLOR_NAMES := ["Roux sombre", "Noir corbeau", "Blond platine", "Blanc d'argent", "Violet"]
+	Color(0.85, 0.85, 0.88), Color(0.4, 0.15, 0.55), Color(0.95, 0.42, 0.08)]
+const HAIR_COLOR_NAMES := ["Roux sombre", "Noir corbeau", "Blond platine", "Blanc d'argent", "Violet", "Roux flamboyant"]
 
 const DEFAULT_APPEARANCE := {
 	"sex": "m", "race": "humain", "horns": 0, "tusks": 0, "beard": 0, "hair": 2, "hair_color": 0,
+	"preset": "", # héros prédéfini ("riffald") ou personnage personnalisé ("")
 }
 
 
@@ -107,3 +108,23 @@ static func random_appearance(sex: String = "") -> Dictionary:
 		"hair": randi_range(0, HAIRSTYLES.size() - 1),
 		"hair_color": randi_range(0, HAIR_COLORS.size() - 1),
 	}
+
+
+## Héros prédéfinis proposés à la création de personnage. Riffald suit la planche de
+## référence docs/concept/riffald_turnaround.jpg (voir docs/RIFFALD.md) ; son modèle
+## détaillé viendra de Blender, en attendant il utilise le modèle généré le plus proche.
+const PRESETS := {
+	"riffald": {
+		"name": "Riffald",
+		"title": "Riffald, le barde de la Lune de Sang",
+		"desc": "Humain, longue crinière rousse et bouclée, cuir noir clouté, épaulières à pointes, cape bordeaux en lambeaux, gemme rouge au col, bottes cloutées et mitaines. Armé de sa Flying V.",
+		"appearance": {"sex": "m", "race": "humain", "horns": 0, "tusks": 0, "beard": 3, "hair": 3, "hair_color": 5, "preset": "riffald"},
+	},
+}
+
+
+static func preset_appearance(id: String) -> Dictionary:
+	var base: Dictionary = DEFAULT_APPEARANCE.duplicate()
+	var p: Dictionary = PRESETS.get(id, {})
+	base.merge(p.get("appearance", {}), true)
+	return base

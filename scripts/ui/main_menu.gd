@@ -97,7 +97,7 @@ func _ready() -> void:
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v0.1.10 — Godot 4.7", 13, UiStyle.DIM)
+	var credits := UiStyle.label("Prototype v0.1.11 — Godot 4.7", 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30

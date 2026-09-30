@@ -1,9 +1,11 @@
 extends Node3D
-## Création du personnage (après « Nouvelle partie ») : nom, sexe, race, cornes (démon),
+## Création du personnage (après « Nouvelle partie ») : héros prédéfini (Riffald) ou
+## personnage personnalisé : nom, sexe, race, cornes (démon),
 ## défenses (orc, troll, ogre), barbe (hommes), coiffure longue, couleur de cheveux.
 ## Aperçu 3D sur une petite scène : le modèle tourne, on peut le faire pivoter à la souris.
 
-var appearance := RaceDB.DEFAULT_APPEARANCE.duplicate()
+## Par défaut : Riffald, le héros prédéfini (on peut passer en personnage personnalisé).
+var appearance := RaceDB.preset_appearance("riffald")
 
 var _model: HeroModel
 var _camera: Camera3D
@@ -147,6 +149,20 @@ func _refresh() -> void:
 	for c in _rows.get_children():
 		_rows.remove_child(c)
 		c.queue_free()
+	var preset := str(appearance.get("preset", ""))
+	_rows.add_child(_selector("Héros", ["Riffald (prédéfini)", "Personnalisé"], 0 if preset == "riffald" else 1, _set_hero_mode))
+	_name_edit.editable = preset.is_empty()
+	if not preset.is_empty():
+		var p: Dictionary = RaceDB.PRESETS[preset]
+		_name_edit.text = str(p["name"])
+		var desc := UiStyle.label("%s
+%s" % [p["title"], p["desc"]], 16, Color(0.9, 0.82, 0.7))
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc.custom_minimum_size = Vector2(520, 0)
+		_rows.add_child(desc)
+		_update_info()
+		_update_model()
+		return
 	var race_id := str(appearance["race"])
 	var race := RaceDB.get_race(race_id)
 	_rows.add_child(_selector("Sexe", ["Homme", "Femme"], 0 if appearance["sex"] == "m" else 1,
@@ -227,7 +243,16 @@ func _update_model() -> void:
 	_place_camera()
 
 
+## « Héros » : 0 = Riffald prédéfini, 1 = personnage personnalisé (part de l'apparence actuelle).
+func _set_hero_mode(i: int) -> void:
+	if i == 0:
+		appearance = RaceDB.preset_appearance("riffald")
+	else:
+		appearance["preset"] = ""
+
+
 func _randomize() -> void:
+	appearance["preset"] = ""
 	appearance["sex"] = ["m", "f"].pick_random()
 	appearance["race"] = RaceDB.RACE_ORDER.pick_random()
 	appearance["horns"] = randi_range(0, RaceDB.HORNS.size() - 1)

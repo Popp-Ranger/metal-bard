@@ -84,6 +84,10 @@
 - [x] Clic sur le sol : le héros y va (zone lumineuse au sol) ; clic maintenu : il suit la souris
 - [x] Clic sur un ennemi : il va le frapper ; clic sur un PNJ ou un objet : il va interagir ; Maj + clic : frappe sur place
 
+## ✅ v0.1.11 — Héros prédéfini
+- [x] Création : choix « Riffald (prédéfini) » ou « Personnalisé » ; planche de référence et fiche dans docs/RIFFALD.md
+- [ ] Modèle Blender de Riffald d'après la planche (à venir)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

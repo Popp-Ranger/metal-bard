@@ -654,6 +654,12 @@ func _test_characters() -> void:
 	var creation: Node = load("res://scenes/character_creation.tscn").instantiate()
 	add_child(creation)
 	await _frames(3)
+	_check(str(creation.appearance.get("preset", "")) == "riffald" and creation._name_edit.text == "Riffald"
+		and not creation._name_edit.editable and int(creation.appearance["hair_color"]) == 5 and int(creation.appearance["beard"]) == 3,
+		"création : Riffald prédéfini proposé par défaut (roux flamboyant, rasé, nom verrouillé)")
+	creation._set_hero_mode(1)
+	creation._refresh()
+	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")
 	var heights := {}
 	var built := true
 	for race_id: String in RaceDB.RACE_ORDER:
