@@ -3,6 +3,7 @@
 # Usage (sans interface) :
 #   blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- export
 #   blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- sheets <dossier>
+# Même chose avec art/persof1/persof1.blend pour l'héroïne (personnage choisi d'après le .blend ouvert).
 #
 # Principe : pour chaque image, chaque os de Riffald prend la rotation monde de l'os Mixamo
 # correspondant, relative à sa pose de repos :
@@ -17,8 +18,12 @@ from mathutils import Matrix, Quaternion, Vector
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(bpy.data.filepath), "..", ".."))
 SRC = os.path.join(ROOT, "assets", "animations", "mixamo")
-OUT_GLB = os.path.join(ROOT, "assets", "models", "riffald", "riffald.glb")
-RIG = "Riffald_rig"
+# Personnage choisi d'après le fichier .blend ouvert : (armature, collection exportée, glb du jeu).
+CHARACTERS = {
+    "riffald": ("Riffald_rig", "Riffald", os.path.join(ROOT, "assets", "models", "riffald", "riffald.glb")),
+    "persof1": ("PersoF1_rig", "PersoF1", os.path.join(ROOT, "assets", "models", "persof1", "persof1.glb")),
+}
+RIG, COLLECTION, OUT_GLB = CHARACTERS[os.path.splitext(os.path.basename(bpy.data.filepath))[0].lower()]
 FPS = 30
 
 # Os de Riffald -> os Mixamo (sans le préfixe « mixamorigN: »).
@@ -179,7 +184,7 @@ def export(rig, actions):
         tr.strips.new(action.name, 1, action)
         tr.mute = True
     bpy.ops.object.select_all(action="DESELECT")
-    for o in bpy.data.collections["Riffald"].objects:
+    for o in bpy.data.collections[COLLECTION].objects:
         o.select_set(True)
     bpy.context.scene.render.fps = FPS
     bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format="GLB", use_selection=True, export_apply=False,
@@ -201,7 +206,7 @@ def sheets(rig, actions, out_dir, per_row=int(os.environ.get("PER_ROW", 10)), w=
     sc.camera = cam
     sc.render.engine = "BLENDER_WORKBENCH"
     sc.display.shading.light = "STUDIO"
-    sc.display.shading.color_type = "MATERIAL"
+    sc.display.shading.color_type = "TEXTURE"
     sc.render.resolution_x = w
     sc.render.resolution_y = h
     sc.render.resolution_percentage = 100

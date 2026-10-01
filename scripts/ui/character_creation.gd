@@ -1,5 +1,5 @@
 extends Node3D
-## Création du personnage (après « Nouvelle partie ») : héros prédéfini (Riffald) ou
+## Création du personnage (après « Nouvelle partie ») : héros prédéfini (Riffald, l'héroïne...) ou
 ## personnage personnalisé : nom, sexe, race, cornes (démon),
 ## défenses (orc, troll, ogre), barbe (hommes), coiffure longue, couleur de cheveux.
 ## Aperçu 3D sur une petite scène : le modèle tourne, on peut le faire pivoter à la souris.
@@ -149,7 +149,12 @@ func _refresh() -> void:
 		_rows.remove_child(c)
 		c.queue_free()
 	var preset := str(appearance.get("preset", ""))
-	_rows.add_child(_selector("Héros", ["Riffald (prédéfini)", "Personnalisé"], 0 if preset == "riffald" else 1, _set_hero_mode))
+	var heroes: Array[String] = []
+	for id: String in RaceDB.PRESET_ORDER:
+		heroes.append("%s (prédéfini%s)" % [RaceDB.PRESETS[id]["name"], "e" if RaceDB.PRESETS[id]["appearance"]["sex"] == "f" else ""])
+	heroes.append("Personnalisé")
+	var hero_index := RaceDB.PRESET_ORDER.find(preset)
+	_rows.add_child(_selector("Héros", heroes, hero_index if hero_index >= 0 else heroes.size() - 1, _set_hero_mode))
 	_name_edit.editable = preset.is_empty()
 	if not preset.is_empty():
 		var p: Dictionary = RaceDB.PRESETS[preset]
@@ -228,7 +233,7 @@ func _update_info() -> void:
 		if bonus.has(ab):
 			parts.append("%s %+d" % [ab, int(bonus[ab])])
 	_info.text = "%s — %s m\nBonus de caractéristiques : %s\nTrait racial : %s\n\nClasse : Barde (Charisme, Flying V électrique). Vous choisirez vos talents dans l'arbre (touche %s)." % [
-		RaceDB.title(appearance), String.num(float(race["height"]), 1).replace(".", ","), ", ".join(parts),
+		RaceDB.title(appearance), String.num(RaceDB.hero_height(appearance), 2 if not str(appearance.get("preset", "")).is_empty() else 1).replace(".", ","), ", ".join(parts),
 		race.get("trait", ""), Controls.key_label("talents")]
 
 
@@ -242,10 +247,11 @@ func _update_model() -> void:
 	_place_camera()
 
 
-## « Héros » : 0 = Riffald prédéfini, 1 = personnage personnalisé (part de l'apparence actuelle).
+## « Héros » : un des héros prédéfinis (RaceDB.PRESET_ORDER), ou le dernier choix = personnage
+## personnalisé (part de l'apparence actuelle).
 func _set_hero_mode(i: int) -> void:
-	if i == 0:
-		appearance = RaceDB.preset_appearance("riffald")
+	if i < RaceDB.PRESET_ORDER.size():
+		appearance = RaceDB.preset_appearance(RaceDB.PRESET_ORDER[i])
 	else:
 		appearance["preset"] = ""
 

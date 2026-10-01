@@ -110,17 +110,51 @@ static func random_appearance(sex: String = "") -> Dictionary:
 	}
 
 
-## Héros prédéfinis proposés à la création de personnage. Riffald suit la planche de
-## référence docs/concept/riffald_turnaround.jpg (voir docs/RIFFALD.md) ; son modèle
-## détaillé viendra de Blender, en attendant il utilise le modèle généré le plus proche.
+## Héros prédéfinis proposés à la création de personnage, dans l'ordre de PRESET_ORDER.
+##  - "height" : taille réelle du modèle (m), affichée à la création et utilisée pour les étiquettes ;
+##  - "model" : modèle Blender à squelette (17 os) contenant les animations Mixamo (voir docs/ANIMATIONS.md) ;
+##  - "rig" : réglages de la guitare pour ce modèle (voir HeroAnimator) : "guitar_scale" (taille de la
+##    guitare, à l'échelle des mains), "play_pick" (point de grattage, repère du squelette au repos) et
+##    "back_pos" (guitare dans le dos).
+## Riffald suit la planche docs/concept/riffald_turnaround.jpg (voir docs/RIFFALD.md) ; l'héroïne est le
+## modèle fourni par Ulysse (art/persof1, voir docs/PERSOF1.md).
 const PRESETS := {
 	"riffald": {
 		"name": "Riffald",
 		"title": "Riffald, le barde de la Lune de Sang",
 		"desc": "Humain, longue crinière rousse et bouclée, cuir noir clouté, épaulières à pointes, cape bordeaux en lambeaux, gemme rouge au col, bottes cloutées et mitaines. Armé de sa Flying V.",
 		"appearance": {"sex": "m", "race": "humain", "horns": 0, "tusks": 0, "beard": 3, "hair": 3, "hair_color": 5, "preset": "riffald"},
+		"model": "res://assets/models/riffald/riffald.glb",
+		"height": 1.84,
+		"rig": {"guitar_scale": 1.3, "play_pick": Vector3(-0.08, 1.06, 0.2), "back_pos": Vector3(0.0, 1.15, -0.25)},
+	},
+	"persof1": {
+		"name": "Valkyriff",
+		"title": "Valkyriff, la walkyrie du riff",
+		"desc": "Humaine, longues tresses rousses, cuir sombre et ventre nu, épaulière à pointes, brassards cloutés, genouillères d'acier, cape bordeaux en lambeaux. Armée de la même Flying V.",
+		"appearance": {"sex": "f", "race": "humain", "horns": 0, "tusks": 0, "beard": 0, "hair": 3, "hair_color": 5, "preset": "persof1"},
+		"model": "res://assets/models/persof1/persof1.glb",
+		"height": 1.74,
+		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.07, 1.0, 0.17), "back_pos": Vector3(0.0, 1.1, -0.2)},
 	},
 }
+const PRESET_ORDER := ["riffald", "persof1"]
+
+
+## Modèle 3D d'un héros prédéfini ("" si personnage personnalisé ou sans modèle).
+static func preset_model(id: String) -> String:
+	return str((PRESETS.get(id, {}) as Dictionary).get("model", ""))
+
+
+## Taille d'un héros : celle de son modèle s'il est prédéfini, sinon celle de sa race.
+static func hero_height(appearance: Dictionary) -> float:
+	var p: Dictionary = PRESETS.get(str(appearance.get("preset", "")), {})
+	return float(p.get("height", get_race(str(appearance.get("race", "humain"))).get("height", 1.8)))
+
+
+## Réglages de la guitare d'un héros prédéfini (voir PRESETS).
+static func preset_rig(id: String) -> Dictionary:
+	return (PRESETS.get(id, {}) as Dictionary).get("rig", {})
 
 
 static func preset_appearance(id: String) -> Dictionary:

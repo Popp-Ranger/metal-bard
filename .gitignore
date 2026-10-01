@@ -22,3 +22,4 @@ desktop.ini
 # Animations Mixamo brutes (licence : pas de redistribution des fichiers seuls).
 # Elles sont converties dans Blender puis intégrées au modèle du héros.
 assets/animations/mixamo/*.fbx
+__pycache__/

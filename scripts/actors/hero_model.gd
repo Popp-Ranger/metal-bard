@@ -124,7 +124,7 @@ func set_appearance(a: Dictionary) -> void:
 
 ## Hauteur réelle du personnage (m).
 func height() -> float:
-	return float(RaceDB.get_race(str(appearance.get("race", "humain"))).get("height", 1.8))
+	return RaceDB.hero_height(appearance)
 
 
 func _build() -> void:
@@ -233,8 +233,10 @@ func _build() -> void:
 	_aura.add_child(_aura_light)
 	_aura.visible = _soloing
 	_update_arms()
-	if str(appearance.get("preset", "")) == "riffald" and ResourceLoader.exists(RIFFALD_MODEL):
-		_use_skin(RIFFALD_MODEL)
+	var preset_model := RaceDB.preset_model(str(appearance.get("preset", "")))
+	if not preset_model.is_empty() and ResourceLoader.exists(preset_model):
+		scale = Vector3.ONE # le modèle importé est déjà à sa taille réelle
+		_use_skin(preset_model)
 
 
 # --- Tête : visage, oreilles, cornes, défenses, barbe, coiffure ------------------

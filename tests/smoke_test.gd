@@ -792,7 +792,33 @@ func _test_characters() -> void:
 	rig.swing()
 	_check(anim.state == "die" and anim._playback.get_current_node() == "die", "Riffald : mort, plus aucune action ensuite")
 	rig.set_moving(false)
+	var riff_head := sk.get_bone_global_rest(sk.find_bone("head")).origin.y
+	# Héroïne prédéfinie (modèle fourni, squelette et animations de Riffald).
 	creation._set_hero_mode(1)
+	creation._refresh()
+	await _frames(3)
+	var heroine: HeroModel = creation._model
+	var preset_f: Dictionary = RaceDB.PRESETS["persof1"]
+	_check(str(creation.appearance["preset"]) == "persof1" and creation._name_edit.text == str(preset_f["name"])
+		and not creation._name_edit.editable and str(creation.appearance["sex"]) == "f",
+		"création : héroïne prédéfinie %s (nom verrouillé)" % preset_f["name"])
+	var anim_f := heroine._anim
+	_check(heroine._skin != null and heroine._skin.skeleton.get_bone_count() == 17 and anim_f != null
+		and anim_f.lengths.size() >= 16 and anim_f.lengths.has("smash") and anim_f.lengths.has("sleep") and heroine.scale == Vector3.ONE
+		and is_equal_approx(heroine.height(), 1.74) and is_equal_approx(anim_f.guitar_scale, float(preset_f["rig"]["guitar_scale"])),
+		"%s : son modèle, les 17 os et les %d animations de Riffald, 1,74 m" % [preset_f["name"], anim_f.lengths.size() if anim_f else 0])
+	var sk_f := heroine._skin.skeleton
+	await sk_f.skeleton_updated
+	var gt_f := anim_f._skel_to_model().affine_inverse() * heroine._guitar.transform.orthonormalized()
+	var hands_f := anim_f.hand_targets(gt_f)
+	var err_f := maxf((sk_f.get_bone_global_pose(sk_f.find_bone("hand.L")).origin - hands_f["L"]).length(),
+		(sk_f.get_bone_global_pose(sk_f.find_bone("hand.R")).origin - hands_f["R"]).length())
+	var top_f := sk_f.get_bone_global_rest(sk_f.find_bone("head")).origin.y
+	_check(err_f < 0.03 and gt_f.basis.y.x > 0.5 and top_f < riff_head,
+		"%s : mains sur la guitare (écart %.3f m), droitière, plus petite que Riffald" % [preset_f["name"], err_f])
+	heroine.swing()
+	_check(anim_f.state == "smash", "%s : coups de guitare animés" % preset_f["name"])
+	creation._set_hero_mode(RaceDB.PRESET_ORDER.size())
 	creation._refresh()
 	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")
 	var heights := {}

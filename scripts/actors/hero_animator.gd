@@ -24,8 +24,9 @@ const HANDS := {
 	"fall": [0.0, 0.0, 0.0], "land": [0.0, 0.0, 0.0], "victory": [0.0, 0.0, 0.0],
 	"die": [0.0, 0.0, 0.0], "sleep": [0.0, 0.0, 0.0],
 }
-## Riffald a des mains surdimensionnées (×1,3) : sa guitare l'est aussi, sinon ses poings couvrent
-## tout le manche. Les positions ci-dessous sont dans le repère de la guitare d'origine (avant agrandissement).
+## Taille de la guitare par héros (RaceDB.PRESETS, "rig") : Riffald a des mains surdimensionnées (×1,3),
+## sa guitare l'est aussi, sinon ses poings couvrent tout le manche. Les positions ci-dessous sont dans le
+## repère de la guitare d'origine (avant agrandissement).
 const GUITAR_SCALE := 1.3
 ## Guitare empoignée : distance main → jonction manche/caisse (repère de la guitare).
 const GRIP := 0.3
@@ -42,8 +43,8 @@ const FRET_WRIST := Vector3(0.16, 0.0, 0.07)
 const FRET_FINGERS := Vector3(-1.0, 0.0, -0.2)
 ## Les deux paumes regardent la table de la guitare (-Z de la guitare).
 const PALM_DIR := Vector3(0.0, 0.0, -1.0)
-## Position de jeu du modèle importé : point de grattage (repère du squelette, au repos) et
-## inclinaison du manche au-dessus de l'horizontale.
+## Position de jeu du modèle importé : point de grattage (repère du squelette, au repos ; valeur de Riffald,
+## remplacée par "play_pick" du héros) et inclinaison du manche au-dessus de l'horizontale.
 const PLAY_PICK := Vector3(-0.08, 1.06, 0.2)
 const PLAY_TILT_DEG := 25.0
 ## Guitare dans le dos (repère du squelette, au repos) : jonction manche/caisse au milieu du dos,
@@ -70,6 +71,10 @@ var _weights := [1.0, 1.0, 0.0]
 var _state_time := 0.0
 var _state_length := 0.0
 var _attack_count := 0
+## Réglages du héros prédéfini (RaceDB.PRESETS, "rig"), par défaut ceux de Riffald.
+var guitar_scale := GUITAR_SCALE
+var play_pick := PLAY_PICK
+var back_pos := BACK_POS
 
 
 ## Branche l'animateur sur le modèle importé si celui-ci contient ses animations.
@@ -87,6 +92,10 @@ static func attach(m: HeroModel, skin: RiggedSkin) -> HeroAnimator:
 
 func _setup(player: AnimationPlayer) -> void:
 	var sk := get_skeleton()
+	var rig: Dictionary = RaceDB.preset_rig(str(model.appearance.get("preset", "")))
+	guitar_scale = float(rig.get("guitar_scale", GUITAR_SCALE))
+	play_pick = rig.get("play_pick", PLAY_PICK)
+	back_pos = rig.get("back_pos", BACK_POS)
 	for b in sk.get_bone_count():
 		_bone[sk.get_bone_name(b)] = b
 	for n in player.get_animation_list():
@@ -115,7 +124,7 @@ func _setup(player: AnimationPlayer) -> void:
 	_guitar = model._guitar
 	if _guitar != null:
 		var guitar_t := _in_model(_guitar)
-		_guitar_scale = guitar_t.basis.get_scale() * GUITAR_SCALE
+		_guitar_scale = guitar_t.basis.get_scale() * guitar_scale
 		# Position de jeu (repère du squelette, au repos) : caisse devant le ventre côté droit,
 		# manche qui monte vers la gauche du héros (+X), table face au public (+Z).
 		var tilt := deg_to_rad(PLAY_TILT_DEG)
@@ -123,11 +132,11 @@ func _setup(player: AnimationPlayer) -> void:
 		var z := Vector3(0.0, -0.15, 1.0).normalized()
 		z = (z - y * z.dot(y)).normalized()
 		var basis := Basis(y.cross(z), y, z)
-		var play := Transform3D(basis, PLAY_PICK - basis * (PICK * GUITAR_SCALE))
+		var play := Transform3D(basis, play_pick - basis * (PICK * guitar_scale))
 		_mount = sk.get_bone_global_rest(_bone["chest"]).affine_inverse() * play
 		_fit_mount(sk)
 		_back_mount = sk.get_bone_global_rest(_bone["chest"]).affine_inverse() \
-			* Transform3D(HeroModel.back_basis(), BACK_POS)
+			* Transform3D(HeroModel.back_basis(), back_pos)
 		_guitar.get_parent().remove_child(_guitar)
 		model.add_child(_guitar)
 
@@ -138,7 +147,7 @@ func _fit_mount(sk: Skeleton3D) -> void:
 	var chest := sk.get_bone_global_rest(_bone["chest"])
 	var shoulder := sk.get_bone_global_rest(_bone["upper_arm.R"]).origin
 	var reach := (sk.get_bone_rest(_bone["forearm.R"]).origin.length() + sk.get_bone_rest(_bone["hand.R"]).origin.length()) * 0.92
-	var wrist := chest * _mount * (PICK_WRIST * GUITAR_SCALE)
+	var wrist := chest * _mount * (PICK_WRIST * guitar_scale)
 	var excess := wrist.distance_to(shoulder) - reach
 	if excess > 0.0:
 		var shift := (shoulder - wrist).normalized() * excess
@@ -320,8 +329,8 @@ func hand_targets(t: Transform3D) -> Dictionary:
 	if model._soloing:
 		fret = lerpf(HeroModel.SOLO_FRETS.x, HeroModel.SOLO_FRETS.y, 0.5 + 0.5 * sin(model._t * 5.0)) * nut
 	var strum := PICK_FINGERS.normalized() * model._strum * 0.035
-	return {"L": t * ((FRET_WRIST + Vector3(0.0, fret, 0.0)) * GUITAR_SCALE),
-		"R": t * ((PICK_WRIST + strum) * GUITAR_SCALE)}
+	return {"L": t * ((FRET_WRIST + Vector3(0.0, fret, 0.0)) * guitar_scale),
+		"R": t * ((PICK_WRIST + strum) * guitar_scale)}
 
 
 ## Guitare : transform `t` (repère du squelette) appliquée au pivot de guitare de HeroModel.
@@ -347,7 +356,7 @@ func _grip_transform(g: Dictionary, chest: Transform3D) -> Transform3D:
 		x = chest.basis.z.normalized().cross(y)
 	x = x.normalized()
 	var basis := Basis(x, y, x.cross(y))
-	return Transform3D(basis, mid - y * GRIP * GUITAR_SCALE)
+	return Transform3D(basis, mid - y * GRIP * guitar_scale)
 
 
 ## Bras : IK à deux os qui amène le poignet en `wrist`, main orientée doigts vers `fingers` et paume
