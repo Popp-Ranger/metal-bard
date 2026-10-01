@@ -3,6 +3,8 @@
 # Usage (sans interface) :
 #   blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- export
 #   blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- sheets <dossier>
+#   blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- clips
+#     (clips des squelettes ennemis, squelette sans maillage : assets/animations/squelettes.glb)
 # Même chose avec art/persof1/persof1.blend pour l'héroïne (personnage choisi d'après le .blend ouvert).
 #
 # Principe : pour chaque image, chaque os de Riffald prend la rotation monde de l'os Mixamo
@@ -16,7 +18,8 @@ import bpy, math, os, sys
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(bpy.data.filepath), "..", ".."))
+# MB_ROOT : racine du dépôt quand le .blend ouvert est une copie hors dépôt (mode « clips »).
+ROOT = os.environ.get("MB_ROOT") or os.path.abspath(os.path.join(os.path.dirname(bpy.data.filepath), "..", ".."))
 SRC = os.path.join(ROOT, "assets", "animations", "mixamo")
 # Personnage choisi d'après le fichier .blend ouvert : (armature, collection exportée, glb du jeu).
 CHARACTERS = {
@@ -64,6 +67,13 @@ ANIMS = {
     # Repos voûté, à bout de souffle (vie basse).
     "idle_tired": ("Mutant Breathing Idle", None, None, "keep"),
 }
+# Clips des squelettes ennemis, sur le même squelette mais exportés à part, sans maillage (mode « clips »,
+# lus par LocoAnimator) : ils ne vont pas dans le glb des héros.
+CLIPS = {
+    "zombie_idle": ("Zombie Idle", None, None, "keep"),
+    "zombie_run": ("Zombie Running", None, None, "loop"),
+}
+CLIPS_GLB = os.path.join(ROOT, "assets", "animations", "squelettes.glb")
 
 
 def _q(m):
@@ -153,9 +163,9 @@ def retarget(rig, src, prefix, game_name, first, last, root_mode):
     return action, f1 - f0 + 1
 
 
-def build_all(rig, names=None):
+def build_all(rig, names=None, table=None):
     actions = []
-    for game_name, (file, first, last, root_mode) in ANIMS.items():
+    for game_name, (file, first, last, root_mode) in (table or ANIMS).items():
         if names and game_name not in names:
             continue
         if not os.path.exists(os.path.join(SRC, file + ".fbx")):
@@ -173,7 +183,7 @@ def build_all(rig, names=None):
     return actions
 
 
-def export(rig, actions):
+def export(rig, actions, out=None, rig_only=False):
     # Chaque animation dans une piste NLA : l'export glTF en fait une animation séparée.
     ad = rig.animation_data
     for tr in list(ad.nla_tracks):
@@ -184,15 +194,16 @@ def export(rig, actions):
         tr.strips.new(action.name, 1, action)
         tr.mute = True
     bpy.ops.object.select_all(action="DESELECT")
-    for o in bpy.data.collections[COLLECTION].objects:
+    for o in ([rig] if rig_only else bpy.data.collections[COLLECTION].objects):
         o.select_set(True)
     bpy.context.scene.render.fps = FPS
-    bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format="GLB", use_selection=True, export_apply=False,
+    out = out or OUT_GLB
+    bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True, export_apply=False,
                               export_yup=True, export_animations=True, export_animation_mode="NLA_TRACKS",
                               export_force_sampling=True, export_frame_step=1, export_anim_slide_to_zero=True,
                               export_def_bones=False, export_optimize_animation_size=False,
                               export_image_format="JPEG", export_jpeg_quality=90)  # atlas peint en JPEG
-    print("EXPORT", OUT_GLB)
+    print("EXPORT", out)
 
 
 def sheets(rig, actions, out_dir, per_row=int(os.environ.get("PER_ROW", 10)), w=150, h=230):
@@ -241,8 +252,13 @@ if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["export"]
     rig = bpy.data.objects[RIG]
     if args[0] == "sheets":
-        acts = build_all(rig, args[2:] or None)
+        table = CLIPS if any(n in CLIPS for n in args[2:]) else ANIMS
+        acts = build_all(rig, args[2:] or None, table)
         sheets(rig, acts, args[1])
+    elif args[0] == "clips":
+        # Squelette seul + clips des squelettes ennemis -> assets/animations/squelettes.glb
+        acts = build_all(rig, None, CLIPS)
+        export(rig, acts, CLIPS_GLB, rig_only=True)
     else:
         acts = build_all(rig)
         export(rig, acts)

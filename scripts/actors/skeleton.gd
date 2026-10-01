@@ -3,7 +3,7 @@ extends Enemy
 ## Squelette guerrier (FP 1/4 en D&D 5e : CA 13, 13 PV, épée courte 1d6+2).
 ## Variante « capitaine » : plus grand, casque, plus de PV.
 ## Variante « chef » : 25 % plus grand, capuche en tête de loup, porte la clé du boss.
-## Corps articulé (HumanoidBody) : posture et démarche de Riffald ; le bras de l'épée frappe par IK.
+## Corps articulé (HumanoidBody) : repos et course de zombie (clips Mixamo) ; le bras de l'épée frappe par IK.
 
 var captain := false
 ## Chef des squelettes (garde la clé de la salle du boss).
@@ -70,6 +70,7 @@ func _build_model() -> void:
 	var rust := own_mat(Color(0.38, 0.26, 0.2), 0.6)
 	var eye := Visuals.glow_mat(Color(1.0, 0.15, 0.05), 5.0)
 	body = HumanoidBody.build(model, BODY)
+	body.style = "zombie" # repos et course de zombie (Mixamo), voir HeroAnimator.STYLES
 	var b := body
 
 	# Jambes : fémur, rotule, tibia, pied.
@@ -152,7 +153,7 @@ func _build_wolf_pelt() -> void:
 
 
 func _animate(delta: float, moving: bool) -> void:
-	super(delta, moving) # posture et démarche de Riffald
+	super(delta, moving) # repos et course de zombie
 	if _strike > 0.0:
 		_strike_arm()
 	# Poing de l'épée paume vers le corps : la lame pointe devant lui, perpendiculaire à l'avant-bras ;

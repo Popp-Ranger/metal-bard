@@ -118,7 +118,7 @@ solo, glissade, saut d'Angus Young, lit et mort.
 ## Ennemis humanoïdes (v0.1.20)
 
 Les squelettes (soldats, capitaines, chef à la peau de loup) ont un corps articulé `HumanoidBody` :
-même posture et même démarche que Riffald, foulée à leur taille. Le coup d'épée garde son rythme
+repos et course de zombie (v0.1.21, voir ci-dessous), foulée à leur taille. Le coup d'épée garde son rythme
 (élan, frappe, retour) : le bras de l'épée est amené par IK au-dessus de l'épaule puis devant, mélangé
 avec la pose animée, et le poignet rabat la lame dans l'axe du bras à l'impact.
 
@@ -130,3 +130,16 @@ gestes (attaque, objet tenu) avec `body.reach()` et `HumanoidBody.orient_hand()`
 
 Coût : environ 0,05 ms par ennemi animé ; les ennemis des salles encore fermées sont endormis et ne
 coûtent rien.
+
+## Squelettes : repos et course de zombie (v0.1.21)
+
+| Dans le jeu | Clip Mixamo | Remarque |
+|---|---|---|
+| Repos des squelettes | Zombie Idle | genoux fléchis, bras tendus devant |
+| Déplacement des squelettes | Zombie Running (en place) | trottine à 1,6 m/s, cadence ajustée à leur vitesse |
+
+Ces clips sont transférés sur le même squelette que Riffald mais exportés à part, sans maillage :
+`blender --background art/riffald/riffald.blend --python art/riffald/retarget_mixamo.py -- clips`
+→ `assets/animations/squelettes.glb` (dictionnaire `CLIPS` du script). LocoAnimator les ajoute comme
+bibliothèque « squelettes » aux corps de style « zombie » (`HumanoidBody.style`, voir
+`HeroAnimator.STYLES`). Un futur ennemi peut prendre ce style, ou un nouveau style avec ses propres clips.

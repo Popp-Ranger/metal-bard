@@ -136,6 +136,9 @@
 - [x] Les squelettes ennemis (et les futurs ennemis humanoïdes, via HumanoidBody) ont la posture et la démarche de Riffald
 - [x] Coup d'épée par IK : élan au-dessus de l'épaule, frappe avec coup de poignet
 
+## ✅ v0.1.21 — Squelettes zombies
+- [x] Les squelettes ont le repos et la course de zombie de Mixamo (Zombie Idle, Zombie Running)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

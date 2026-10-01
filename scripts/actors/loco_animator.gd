@@ -12,9 +12,13 @@ extends Node3D
 ## Le squelette de Riffald est à l'origine de sa scène : son repère est celui du corps.
 
 const SOURCE := "res://assets/models/riffald/riffald.glb"
+## Clips supplémentaires, sur le même squelette (art/riffald/retarget_mixamo.py -- clips) : bibliothèque
+## « squelettes » (style « zombie » des squelettes ennemis, voir HeroAnimator.STYLES).
+const EXTRA_CLIPS := {"squelettes": "res://assets/animations/squelettes.glb"}
 
 ## Squelette et animations de Riffald sans maillage (construit une seule fois).
 static var _rig: PackedScene
+static var _libraries := {}
 
 var body: HumanoidBody
 var tree: AnimationTree
@@ -58,6 +62,21 @@ static func _rig_scene() -> PackedScene:
 	return _rig
 
 
+## Bibliothèque de clips supplémentaires (chargée une fois, partagée par tous les animateurs).
+static func _library(lib_name: String) -> AnimationLibrary:
+	if not _libraries.has(lib_name):
+		var lib: AnimationLibrary = null
+		var path := str(EXTRA_CLIPS[lib_name])
+		if ResourceLoader.exists(path):
+			var src := (load(path) as PackedScene).instantiate()
+			var players := src.find_children("*", "AnimationPlayer", true, false)
+			if not players.is_empty():
+				lib = (players[0] as AnimationPlayer).get_animation_library("")
+			src.free()
+		_libraries[lib_name] = lib
+	return _libraries[lib_name]
+
+
 func _setup() -> void:
 	skeleton = find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
 	var player := find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
@@ -65,6 +84,11 @@ func _setup() -> void:
 		var bone_name := skeleton.get_bone_name(b)
 		_bone[bone_name] = b
 		_rest[bone_name] = skeleton.get_bone_global_rest(b).basis.get_rotation_quaternion()
+	if not body.style.is_empty():
+		for lib_name: String in EXTRA_CLIPS:
+			var lib := _library(lib_name)
+			if lib != null and not player.has_animation_library(lib_name):
+				player.add_animation_library(lib_name, lib)
 	for n in player.get_animation_list():
 		lengths[str(n)] = player.get_animation(n).length
 	_hips_rest = skeleton.get_bone_global_rest(_bone["hips"]).origin
@@ -76,7 +100,7 @@ func _setup() -> void:
 	player.get_parent().add_child(tree)
 	tree.anim_player = tree.get_path_to(player)
 	tree.root_node = tree.get_path_to(player.get_node(player.root_node))
-	tree.tree_root = HeroAnimator.loco_tree(lengths)
+	tree.tree_root = HeroAnimator.loco_tree(lengths, body.style)
 	# Avancé par le propriétaire du corps juste avant la recopie (rien pour un corps figé).
 	tree.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	tree.active = true
@@ -92,7 +116,7 @@ func _length(bone_name: String) -> float:
 ## à l'échelle de Riffald pour choisir et accélérer les cycles, sans que les pieds glissent.
 func advance(delta: float, walk: float, speed: float, tired: bool) -> void:
 	var size := maxf(_leg_k * body.root.scale.z, 0.01)
-	HeroAnimator.drive_loco(tree, "parameters/", walk, speed / size, tired, delta)
+	HeroAnimator.drive_loco(tree, "parameters/", walk, speed / size, tired, delta, body.style)
 	tree.advance(delta)
 
 

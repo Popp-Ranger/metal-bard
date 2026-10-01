@@ -181,19 +181,35 @@ static func clip(lengths: Dictionary, anim_name: String, loop: bool, timeline :=
 	return n
 
 
+## Styles de déplacement : clips (repos, repos épuisé, marche, course), vitesse naturelle de la marche
+## et de la course (m/s, à l'échelle de Riffald) et cadence minimale (1 = jamais ralentie : en dessous de
+## la marche, les pieds glissent un peu ; un cycle unique peut être ralenti pour suivre la vitesse).
+##  - "" : Riffald (héros, PNJ) ;
+##  - "zombie" : squelettes ennemis, clips de assets/animations/squelettes.glb (bibliothèque « squelettes »,
+##    voir LocoAnimator) : repos et course de zombie, qui trottine à 1,6 m/s.
+const STYLES := {
+	"": {"idle": "idle", "tired": "idle_tired", "walk": "walk", "run": "run",
+		"walk_speed": WALK_SPEED, "run_speed": RUN_SPEED, "min_pace": 1.0},
+	"zombie": {"idle": "squelettes/zombie_idle", "tired": "squelettes/zombie_idle", "walk": "squelettes/zombie_run",
+		"run": "squelettes/zombie_run", "walk_speed": 1.6, "run_speed": 1.6, "min_pace": 0.6},
+}
+
+
 ## Déplacement : repos (normal / épuisé) mélangé avec marche-course selon la vitesse (voir drive_loco).
-## Partagé avec LocoAnimator (personnages procéduraux).
-static func loco_tree(lengths: Dictionary) -> AnimationNodeBlendTree:
+## Partagé avec LocoAnimator (corps procéduraux), dans le style `style` (voir STYLES).
+static func loco_tree(lengths: Dictionary, style := "") -> AnimationNodeBlendTree:
+	var st: Dictionary = STYLES[style]
 	var loco := AnimationNodeBlendTree.new()
-	loco.add_node("idle", clip(lengths, "idle", true))
-	loco.add_node("tired", clip(lengths, "idle_tired", true))
+	loco.add_node("idle", clip(lengths, str(st["idle"]), true))
+	loco.add_node("tired", clip(lengths, str(st["tired"]), true))
 	loco.add_node("tired_mix", AnimationNodeBlend2.new())
 	var bs := AnimationNodeBlendSpace1D.new()
 	bs.min_space = 0.0
-	bs.max_space = RUN_SPEED
+	bs.max_space = maxf(float(st["run_speed"]), 0.1)
 	bs.sync = true
-	bs.add_blend_point(clip(lengths, "walk", true), WALK_SPEED, -1, "walk")
-	bs.add_blend_point(clip(lengths, "run", true), RUN_SPEED, -1, "run")
+	bs.add_blend_point(clip(lengths, str(st["walk"]), true), float(st["walk_speed"]), -1, "walk")
+	if float(st["run_speed"]) > float(st["walk_speed"]):
+		bs.add_blend_point(clip(lengths, str(st["run"]), true), float(st["run_speed"]), -1, "run")
 	loco.add_node("gait", bs)
 	loco.add_node("pace", AnimationNodeTimeScale.new())
 	loco.add_node("move", AnimationNodeBlend2.new())
@@ -208,10 +224,13 @@ static func loco_tree(lengths: Dictionary) -> AnimationNodeBlendTree:
 
 ## Paramètres du déplacement (`path` : chemin du BlendTree de loco_tree dans l'AnimationTree) :
 ## `walk` = 0 immobile → 1 en marche, `speed` = vitesse (m/s, à l'échelle de Riffald), `tired` = épuisé.
-static func drive_loco(tree: AnimationTree, path: String, walk: float, speed: float, tired: bool, delta: float) -> void:
+static func drive_loco(tree: AnimationTree, path: String, walk: float, speed: float, tired: bool, delta: float,
+		style := "") -> void:
+	var st: Dictionary = STYLES[style]
+	var run_speed := float(st["run_speed"])
 	tree.set(path + "move/blend_amount", walk)
-	tree.set(path + "gait/blend_position", clampf(speed, WALK_SPEED, RUN_SPEED))
-	tree.set(path + "pace/scale", maxf(1.0, speed / RUN_SPEED))
+	tree.set(path + "gait/blend_position", clampf(speed, float(st["walk_speed"]), run_speed))
+	tree.set(path + "pace/scale", maxf(float(st["min_pace"]), speed / run_speed))
 	var t := float(tree.get(path + "tired_mix/blend_amount"))
 	tree.set(path + "tired_mix/blend_amount", move_toward(t, 1.0 if tired else 0.0, delta * 2.0))
 

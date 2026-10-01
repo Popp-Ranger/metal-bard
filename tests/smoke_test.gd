@@ -916,8 +916,11 @@ func _test_skeleton_body() -> void:
 		skel._animate(0.033, true)
 		var ankle := skel.model.to_local(skel.body.ankle_l.global_position)
 		stride = Vector2(minf(stride.x, ankle.z), maxf(stride.y, ankle.z))
-	_check(skel.body != null and skel.body.loco != null and stride.y - stride.x > 0.3,
-		"squelette : démarche de Riffald (foulée %.2f m)" % (stride.y - stride.x))
+	var gait := skel.body.loco.tree.tree_root.get_node("gait") as AnimationNodeBlendSpace1D if skel.body.loco != null else null
+	var idle_clip := skel.body.loco.tree.tree_root.get_node("idle") as AnimationNodeAnimation if skel.body.loco != null else null
+	_check(gait != null and str((gait.get_blend_point_node(0) as AnimationNodeAnimation).animation) == "squelettes/zombie_run"
+		and str(idle_clip.animation) == "squelettes/zombie_idle" and stride.y - stride.x > 0.3,
+		"squelette : repos et course de zombie (clips Mixamo, foulée %.2f m)" % (stride.y - stride.x))
 	skel._strike = 1.0
 	skel._animate(0.033, false)
 	var raised := skel.body.wrist("r").distance_to(Skeleton.SWORD_RAISED)
