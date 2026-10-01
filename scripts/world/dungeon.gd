@@ -1,6 +1,7 @@
 extends Level
-## Donjon procédural : construit la géométrie à partir du DungeonGenerator,
-## peuple les salles de squelettes, place le boss, gère la fin de quête.
+## Donjon : construit la géométrie à partir du DungeonGenerator (aléatoire) ou d'un donjon fait main
+## dans l'éditeur (scène DungeonMap, clé "map" de la quête dans QuestDB), peuple les salles,
+## place le boss, gère la fin de quête.
 
 const CELL := 2.0
 const WALL_HEIGHT := 2.6
@@ -33,6 +34,11 @@ var _enemy_uid := 0
 var chief: Skeleton
 var _town_portal: Portal
 const DOOR_MAX_CELLS := 5 # au-delà, l'ouverture est trop large : pas de porte (côté ouvert)
+## Donjon fait main : décalage entre les cases de `gen` et celles de la GridMap de la scène, et objets
+## placés à la main [{kind, pos, basis}] (voir DungeonMap, DungeonMarker).
+var _cell_offset := Vector2i.ZERO
+var _map_markers: Array[Dictionary] = []
+var from_map := false
 
 
 func _ready() -> void:
@@ -40,9 +46,15 @@ func _ready() -> void:
 	var cfg: Dictionary = QuestDB.get_quest(quest_id).get("dungeon", {})
 	enemy_level = int(cfg.get("enemy_level", 1))
 	var seed_value := GameState.dungeon_seed if GameState.dungeon_seed != 0 else randi_range(1, 999999)
-	# La salle du boss est fermée à clé : on garde la première graine où toutes les autres
-	# salles restent accessibles sans la traverser.
-	seed_value = gen.generate_sealed(seed_value, int(cfg.get("rooms", 10)), DOOR_MAX_CELLS)
+	# Donjon fait main (quête, ou scène testée avec F6 dans l'éditeur) ou généré.
+	var map_path := str(GameState.flags.get("test_map", cfg.get("map", "")))
+	if not map_path.is_empty() and ResourceLoader.exists(map_path):
+		_load_map(map_path)
+		seed_value = 1 # décor (os, sang...) toujours tiré de la même façon
+	else:
+		# La salle du boss est fermée à clé : on garde la première graine où toutes les autres
+		# salles restent accessibles sans la traverser.
+		seed_value = gen.generate_sealed(seed_value, int(cfg.get("rooms", 10)), DOOR_MAX_CELLS)
 	GameState.dungeon_seed = seed_value
 	_rng.seed = seed_value
 
@@ -92,11 +104,39 @@ func _process(_delta: float) -> void:
 
 
 func cell_to_world(c: Vector2i) -> Vector3:
-	return Vector3((c.x + 0.5) * CELL, 0.0, (c.y + 0.5) * CELL)
+	return Vector3((c.x + _cell_offset.x + 0.5) * CELL, 0.0, (c.y + _cell_offset.y + 0.5) * CELL)
 
 
 func world_to_cell(p: Vector3) -> Vector2i:
-	return Vector2i(floori(p.x / CELL), floori(p.z / CELL))
+	return Vector2i(floori(p.x / CELL), floori(p.z / CELL)) - _cell_offset
+
+
+## Coin de la case (0, 0) de `gen` dans le monde.
+func _grid_origin() -> Vector3:
+	return Vector3(_cell_offset.x * CELL, 0.0, _cell_offset.y * CELL)
+
+
+## Donjon fait main : grille, salles et objets lus dans la scène DungeonMap, qui est ensuite retirée
+## (le donjon construit lui-même sol, murs, portes, ennemis et décor, comme pour un donjon généré).
+func _load_map(path: String) -> void:
+	var map := (load(path) as PackedScene).instantiate() as DungeonMap
+	add_child(map)
+	_cell_offset = map.read(gen)
+	for m in map.markers():
+		_map_markers.append({"kind": m.kind, "pos": Vector3(m.global_position.x, 0.0, m.global_position.z),
+			"basis": m.global_transform.basis.orthonormalized()})
+	remove_child(map)
+	map.free()
+	from_map = true
+
+
+## Salle qui contient `p` (-1 = couloir).
+func _room_at(p: Vector3) -> int:
+	var c := world_to_cell(p)
+	for i in gen.rooms.size():
+		if gen.rooms[i].has_point(c):
+			return i
+	return -1
 
 
 ## Utilisé par les ennemis pour choisir des points d'errance valides.
@@ -148,7 +188,7 @@ func _build_floor() -> void:
 	add_child(mmi)
 	# Joints sombres entre les dalles.
 	var under := Vector3(gen.width * CELL, 0.1, gen.height * CELL)
-	_under = Visuals.box(self, under, Vector3(under.x * 0.5, -0.2, under.z * 0.5), Visuals.mat(Color(0.02, 0.02, 0.02)))
+	_under = Visuals.box(self, under, _grid_origin() + Vector3(under.x * 0.5, -0.2, under.z * 0.5), Visuals.mat(Color(0.02, 0.02, 0.02)))
 
 
 func _build_walls() -> void:
@@ -184,10 +224,9 @@ func _build_walls() -> void:
 
 
 func _decorate() -> void:
-	var wood := Visuals.mat(Color(0.25, 0.15, 0.08))
-	var iron := Visuals.mat(Color(0.2, 0.2, 0.22), 0.4, 0.7)
-	var bone := Visuals.mat(Color(0.75, 0.72, 0.6))
-	var slime := Visuals.glow_mat(Color(0.35, 0.8, 0.25), 0.6)
+	if from_map:
+		_decorate_from_map()
+		return
 	_place_torches()
 	for i in gen.rooms.size():
 		if i == gen.boss_room or i == gen.start_room:
@@ -195,21 +234,37 @@ func _decorate() -> void:
 		# Piles d'os, flaques de bave verte, piliers brisés, tonneaux.
 		for k in _rng.randi_range(4, 7):
 			var p := cell_to_world(gen.random_cell_in_room(i, 2)) + Vector3(_rng.randf_range(-0.6, 0.6), 0, _rng.randf_range(-0.6, 0.6))
-			match _rng.randi_range(0, 3):
-				0:
-					for b in 5:
-						Visuals.capsule(self, 0.04, 0.4, p + Vector3(_rng.randf_range(-0.4, 0.4), 0.05, _rng.randf_range(-0.4, 0.4)),
-							bone, Vector3(90, _rng.randf_range(0, 180), 0))
-					Visuals.sphere(self, 0.13, p + Vector3(0.2, 0.12, 0.1), bone)
-				1:
-					Visuals.cylinder(self, 0.7, 0.8, 0.02, p + Vector3(0, 0.02, 0), slime)
-				2:
-					Visuals.cylinder(self, 0.35, 0.4, 1.2, p + Vector3(0, 0.6, 0), _wall_material, Vector3(0, 0, 0), 8)
-					Visuals.solid_cylinder(self, 0.4, 2.0, p + Vector3(0, 1.0, 0))
-				_:
-					Visuals.cylinder(self, 0.3, 0.3, 0.8, p + Vector3(0, 0.4, 0), wood)
-					Visuals.torus(self, 0.28, 0.32, p + Vector3(0, 0.6, 0), iron)
-					Visuals.solid_cylinder(self, 0.32, 1.0, p + Vector3(0, 0.5, 0))
+			_decor(_rng.randi_range(0, 3), p)
+
+
+## Décor : 0 = tas d'os, 1 = flaque de bave, 2 = pilier brisé, 3 = tonneau.
+func _decor(kind: int, p: Vector3) -> void:
+	match kind:
+		0:
+			DungeonDecor.bones(self, p, _rng)
+		1:
+			DungeonDecor.slime(self, p)
+		2:
+			DungeonDecor.pillar(self, p, _wall_material, true)
+		_:
+			DungeonDecor.barrel(self, p, true)
+
+
+## Donjon fait main : torches et décor posés dans l'éditeur.
+func _decorate_from_map() -> void:
+	for m in _map_markers:
+		var p: Vector3 = m["pos"]
+		match int(m["kind"]):
+			DungeonMarker.Kind.TORCHE:
+				DungeonDecor.torch(self, p, (m["basis"] as Basis).z, false)
+			DungeonMarker.Kind.OS:
+				_decor(0, p)
+			DungeonMarker.Kind.BAVE:
+				_decor(1, p)
+			DungeonMarker.Kind.PILIER:
+				_decor(2, p)
+			DungeonMarker.Kind.TONNEAU:
+				_decor(3, p)
 
 
 # --- Torches -------------------------------------------------------------------
@@ -252,43 +307,15 @@ func _place_torches() -> void:
 			if too_close:
 				continue
 			placed.append(p)
-			_torch(p, Vector3(d.x, 0, d.y), false)
+			DungeonDecor.torch(self, p, -Vector3(d.x, 0, d.y), false)
 
-
-func _torch(wall_pos: Vector3, wall_dir: Vector3, shadows: bool) -> void:
-	var iron := Visuals.mat(Color(0.18, 0.17, 0.17), 0.4, 0.8)
-	var torch := Node3D.new()
-	torch.position = wall_pos
-	torch.rotation.y = atan2(-wall_dir.x, -wall_dir.z) # +Z local = vers l'intérieur de la pièce
-	add_child(torch)
-	Visuals.box(torch, Vector3(0.22, 0.08, 0.06), Vector3(0, 1.75, 0.02), iron) # applique
-	Visuals.box(torch, Vector3(0.05, 0.3, 0.05), Vector3(0, 1.85, 0.14), iron, Vector3(30, 0, 0))
-	Visuals.cylinder(torch, 0.05, 0.035, 0.45, Vector3(0, 2.0, 0.22), Visuals.mat(Color(0.25, 0.14, 0.07)), Vector3(25, 0, 0), 8)
-	Visuals.sphere(torch, 0.1, Vector3(0, 2.27, 0.33), Visuals.glow_mat(Color(1.0, 0.5, 0.12), 6.0), Vector3(1.0, 1.6, 1.0))
-	Visuals.sphere(torch, 0.06, Vector3(0, 2.35, 0.33), Visuals.glow_mat(Color(1.0, 0.85, 0.4), 8.0), Vector3(1.0, 1.5, 1.0))
-	var flame := CPUParticles3D.new()
-	flame.position = Vector3(0, 2.35, 0.33)
-	flame.amount = 10
-	flame.lifetime = 0.5
-	flame.gravity = Vector3(0, 1.5, 0)
-	flame.initial_velocity_min = 0.1
-	flame.initial_velocity_max = 0.3
-	flame.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	flame.emission_sphere_radius = 0.05
-	flame.scale_amount_min = 0.5
-	flame.scale_amount_max = 1.0
-	var spark := SphereMesh.new()
-	spark.radius = 0.035
-	spark.height = 0.07
-	spark.material = Visuals.glow_mat(Color(1.0, 0.6, 0.2), 5.0)
-	flame.mesh = spark
-	torch.add_child(flame)
-	var light := Visuals.flicker_light(torch, Vector3(0, 2.4, 0.8), Color(1.0, 0.6, 0.3), 3.2, 11.0, shadows)
-	light.flicker_amount = 0.2
 
 # --- Population ----------------------------------------------------------------
 
 func _spawn_enemies() -> void:
+	if from_map:
+		_spawn_from_map()
+		return
 	# Salle voisine du boss : le chef des squelettes y monte la garde, avec la clé du boss.
 	var captain_room := -1
 	var best := INF
@@ -314,34 +341,69 @@ func _spawn_enemies() -> void:
 				_spawn_rat(cell_to_world(gen.random_cell_in_room(i, 1)), i)
 		if i == captain_room:
 			chief = _spawn_skeleton(cell_to_world(gen.center(i)), true, i, true)
-	# Chef déjà vaincu lors d'une visite précédente : sa clé attend peut-être encore au sol.
+	_restore_boss_key()
+
+
+## Chef déjà vaincu lors d'une visite précédente : sa clé attend peut-être encore au sol.
+func _restore_boss_key() -> void:
 	var key_pos: Array = _state.get("boss_key_pos", [])
 	if chief == null and not bool(_state.get("boss_key", false)) and key_pos.size() == 2:
 		_spawn_boss_key(Vector3(float(key_pos[0]), 0.0, float(key_pos[1])))
+
+
+## Donjon fait main : ennemis et coffres posés dans l'éditeur. Un ennemi posé dans un couloir est
+## éveillé dès le départ. En coop, des renforts s'ajoutent dans chaque salle (comme pour un donjon généré).
+func _spawn_from_map() -> void:
+	var chest_id := 0
+	var by_room := {} # salle -> positions des ennemis posés (renforts de la coop)
+	for m in _map_markers:
+		var p: Vector3 = m["pos"]
+		var kind := int(m["kind"])
+		var room := _room_at(p)
+		var yaw := atan2((m["basis"] as Basis).z.x, (m["basis"] as Basis).z.z)
+		var e: Enemy = null
+		match kind:
+			DungeonMarker.Kind.SQUELETTE, DungeonMarker.Kind.CAPITAINE, DungeonMarker.Kind.CHEF:
+				e = _spawn_skeleton(p, kind != DungeonMarker.Kind.SQUELETTE, room if room >= 0 else -2, kind == DungeonMarker.Kind.CHEF)
+				if kind == DungeonMarker.Kind.CHEF:
+					chief = e as Skeleton
+			DungeonMarker.Kind.RAT:
+				e = _spawn_rat(p, room if room >= 0 else -2)
+			DungeonMarker.Kind.COFFRE:
+				_spawn_chest(p, chest_id, yaw)
+				chest_id += 1
+		if e != null:
+			e.position = p
+			e.rotation.y = yaw
+		if kind in [DungeonMarker.Kind.SQUELETTE, DungeonMarker.Kind.RAT] and room >= 0:
+			if not by_room.has(room):
+				by_room[room] = []
+			(by_room[room] as Array).append([kind, p])
+	for room: int in by_room:
+		var placed: Array = by_room[room]
+		for k in _coop_count(placed.size()) - placed.size():
+			var src: Array = placed[k % placed.size()]
+			var p: Vector3 = src[1] + Vector3(_rng.randf_range(-1.0, 1.0), 0.0, _rng.randf_range(-1.0, 1.0))
+			if int(src[0]) == DungeonMarker.Kind.RAT:
+				_spawn_rat(p, room)
+			else:
+				_spawn_skeleton(p, false, room)
+	_restore_boss_key()
 
 
 ## Salle cul-de-sac : une douzaine de squelettes (dont 2 capitaines) gardent un coffre.
 func _spawn_ambush(room: int) -> void:
 	for k in _coop_count(12):
 		_spawn_skeleton(cell_to_world(gen.random_cell_in_room(room, 1)), k < 2, room)
-	var chest_id := gen.ambush_rooms.find(room)
+	_spawn_chest(cell_to_world(gen.center(room)), gen.ambush_rooms.find(room))
+
+
+## Coffre (or, potion, parfois un objet) ; `chest_id` = identifiant sauvegardé (ouvert ou non).
+func _spawn_chest(c: Vector3, chest_id: int, yaw: float = 0.0) -> void:
 	var already_open := _state_has("chests", chest_id)
-	var c := cell_to_world(gen.center(room))
-	var chest := Node3D.new()
-	chest.position = c
-	add_child(chest)
-	var wood := Visuals.mat(Color(0.35, 0.2, 0.1), 0.7)
-	var gold := Visuals.mat(Color(0.85, 0.65, 0.2), 0.3, 0.9)
-	Visuals.box(chest, Vector3(1.1, 0.6, 0.7), Vector3(0, 0.3, 0), wood)
-	var lid := Visuals.box(chest, Vector3(1.15, 0.2, 0.75), Vector3(0, 0.7, 0), wood)
-	for x: float in [-0.4, 0.4]:
-		Visuals.box(chest, Vector3(0.08, 0.82, 0.78), Vector3(x, 0.41, 0), gold)
-	var shine := OmniLight3D.new()
-	shine.position = Vector3(0, 1.0, 0)
-	shine.light_color = Color(1.0, 0.8, 0.4)
-	shine.light_energy = 1.2
-	shine.omni_range = 3.0
-	chest.add_child(shine)
+	var parts := DungeonDecor.chest(self, c, yaw)
+	var lid: MeshInstance3D = parts[1]
+	var shine: OmniLight3D = parts[2]
 	if already_open:
 		lid.rotation_degrees.x = -100.0
 		lid.position += Vector3(0, 0.1, -0.35)
@@ -384,7 +446,8 @@ func _spawn_rat(pos: Vector3, room: int = -1) -> Rat:
 
 
 ## `room` >= 0 : ennemi d'origine du donjon (persistant, endormi tant que sa salle est
-## fermée) ; -1 : renfort invoqué en cours de combat.
+## fermée) ; -2 : ennemi d'origine posé dans un couloir (persistant, éveillé) ; -1 : renfort
+## invoqué en cours de combat.
 func _spawn_skeleton(pos: Vector3, captain: bool, room: int = -1, is_chief: bool = false) -> Skeleton:
 	var s := Skeleton.new()
 	s.captain = captain
@@ -399,7 +462,7 @@ func _spawn_skeleton(pos: Vector3, captain: bool, room: int = -1, is_chief: bool
 ## Ajoute un ennemi au donjon, sauf s'il a déjà été tué lors d'une visite précédente
 ## (les tirages aléatoires ont quand même eu lieu : le reste du donjon est identique).
 func _place_enemy(e: Enemy, room: int) -> Enemy:
-	if room < 0:
+	if room == -1:
 		add_child(e)
 		return e
 	var uid := _enemy_uid
@@ -409,6 +472,8 @@ func _place_enemy(e: Enemy, room: int) -> Enemy:
 		return null
 	e.set_meta("uid", uid)
 	add_child(e)
+	if room < 0:
+		return e
 	if not _room_enemies.has(room):
 		_room_enemies[room] = []
 	(_room_enemies[room] as Array).append(e)
@@ -844,7 +909,7 @@ func _build_room_covers() -> void:
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.albedo_color = Color(0.0, 0.0, 0.0, 1.0)
 		var size := Vector3(r.size.x * CELL, 0.04, r.size.y * CELL)
-		var pos := Vector3((r.position.x + r.size.x * 0.5) * CELL, 0.03, (r.position.y + r.size.y * 0.5) * CELL)
+		var pos := _grid_origin() + Vector3((r.position.x + r.size.x * 0.5) * CELL, 0.03, (r.position.y + r.size.y * 0.5) * CELL)
 		var cover := Visuals.box(self, size, pos, mat)
 		cover.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_covers[i] = cover

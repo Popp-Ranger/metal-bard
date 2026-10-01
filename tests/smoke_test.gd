@@ -13,6 +13,7 @@ func _ready() -> void:
 	_test_audio()
 	await _test_characters()
 	await _test_skeleton_body()
+	await _test_level_editor()
 	await _test_quest_flow()
 	await _test_new_features()
 	await _test_town_portal()
@@ -900,6 +901,45 @@ func _test_characters() -> void:
 		and GameState.g("le barde", "la barde") == "la barde", "nom et genre repris dans les dialogues")
 	creation.queue_free()
 	await _frames(3)
+
+
+## Éditeur de niveau : le premier donjon est une scène faite main (DungeonMap), les suivants restent générés.
+func _test_level_editor() -> void:
+	print("[Éditeur de niveau]")
+	var map := (load("res://scenes/levels/catacombes.tscn") as PackedScene).instantiate() as DungeonMap
+	var problems := map.check()
+	var kinds := {}
+	for m in map.markers():
+		kinds[m.kind] = int(kinds.get(m.kind, 0)) + 1
+	_check(problems.is_empty() and map.rooms().size() >= 8 and int(kinds.get(DungeonMarker.Kind.CHEF, 0)) == 1
+		and int(kinds.get(DungeonMarker.Kind.TORCHE, 0)) > 5, "Catacombes : scène faite main valide (%d salles, %d objets) %s"
+		% [map.rooms().size(), map.markers().size(), problems])
+	map.free()
+	GameState.new_game()
+	GameState.accept_quest("plumeau")
+	var d: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(d)
+	await _frames(3)
+	var chests := 0
+	for c in d.get_children():
+		if c is Interactable and (c as Interactable).prompt == "Ouvrir le coffre":
+			chests += 1
+	_check(bool(d.get("from_map")) and d.get("chief") != null and (d.get("doors") as Array).size() >= 8 and chests >= 1
+		and d.call("is_walkable", (d as Level).hero.global_position),
+		"donjon de la quête lu dans la scène : salles, portes, chef, coffres (%d), héros dans la salle de départ" % chests)
+	d.queue_free()
+	await _frames(3)
+	GameState.new_game()
+	GameState.accept_quest("plumeau")
+	GameState.flags["test_map"] = "" # sans scène : donjon généré (donjons suivants)
+	var g: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(g)
+	await _frames(3)
+	_check(not bool(g.get("from_map")) and g.get("chief") != null and (g.get("gen") as DungeonGenerator).rooms.size() >= 10,
+		"sans scène, le donjon reste généré aléatoirement")
+	g.queue_free()
+	await _frames(3)
+	GameState.new_game()
 
 
 ## Ennemis humanoïdes : corps articulé (HumanoidBody), posture et démarche de Riffald.

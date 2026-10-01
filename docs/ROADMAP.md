@@ -139,6 +139,10 @@
 ## ✅ v0.1.21 — Squelettes zombies
 - [x] Les squelettes ont le repos et la course de zombie de Mixamo (Zombie Idle, Zombie Running)
 
+## ✅ v0.1.22 — Éditeur de donjon
+- [x] Premier donjon fait main dans l'éditeur de Godot : sol peint case par case (GridMap), murs automatiques, salles, objets à glisser-déposer (docs/EDITEUR_NIVEAUX.md)
+- [x] Vérification du donjon et test direct (F6) ; les donjons suivants restent générés
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

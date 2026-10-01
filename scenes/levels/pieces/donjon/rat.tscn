@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/dungeon_marker.gd" id="1_kfk1k"]
+
+[node name="Rat" type="Node3D" unique_id=856489264]
+script = ExtResource("1_kfk1k")
+kind = 3

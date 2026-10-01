@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/dungeon_marker.gd" id="1_al2ir"]
+
+[node name="Flaque de bave" type="Node3D" unique_id=2139453759]
+script = ExtResource("1_al2ir")
+kind = 7

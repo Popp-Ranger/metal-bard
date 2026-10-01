@@ -16,6 +16,8 @@ const QUESTS := {
 		"requires": "",
 		"dungeon": {
 			"name": "Catacombes Suintantes",
+			# Donjon fait main dans l'éditeur (voir docs/EDITEUR_NIVEAUX.md) ; sans "map", il est généré.
+			"map": "res://scenes/levels/catacombes.tscn",
 			"rooms": 10,
 			"enemy_level": 1,
 			"boss": "gloubah",
