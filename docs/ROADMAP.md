@@ -122,8 +122,8 @@
 - [x] Mains sur la guitare : la gauche au bout du manche (près du sillet), doigts repliés sur la touche ; la droite qui gratte sur la caisse ; guitare de Riffald agrandie ×1,3 comme ses mains
 - [x] Pas de sorts ni de coups de guitare dans la taverne (sauf au sous-sol d'entraînement) : la guitare passe dans le dos, manche vers le bas incliné à 45° vers la gauche
 
-## ✅ v0.1.18 — Héroïne prédéfinie
-- [x] Deuxième héros prédéfini (nom provisoire Valkyriff) d'après le modèle fourni (persoF1) : allégé à 40 000 triangles, mis à 1,74 m
+## ✅ v0.1.18 — Valkyriff, héroïne prédéfinie
+- [x] Deuxième héros prédéfini, Valkyriff, d'après le modèle fourni (persoF1) : allégé à 40 000 triangles, mis à 1,74 m
 - [x] Même squelette (17 os), mêmes 16 animations Mixamo et même Flying V que Riffald ; cape et tresse pondérées à part
 - [x] Sélecteur « Héros » : Riffald, l'héroïne ou personnage personnalisé ; taille réelle affichée (docs/PERSOF1.md)
 

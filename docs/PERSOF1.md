@@ -1,8 +1,8 @@
-# Héroïne prédéfinie (persoF1)
+# Valkyriff, héroïne prédéfinie (modèle persoF1)
 
 Deuxième héros prédéfini, proposé à la création de personnage après Riffald
-(sélecteur « Héros »). Nom provisoire : **Valkyriff** — à changer dans `scripts/rpg/race_db.gd`
-(`PRESETS["persof1"]`, clés `name` et `title`).
+(sélecteur « Héros »). Nom et titre dans `scripts/rpg/race_db.gd` (`PRESETS["persof1"]`,
+clés `name` et `title`) ; l'identifiant interne reste `persof1`.
 
 ## Source
 
