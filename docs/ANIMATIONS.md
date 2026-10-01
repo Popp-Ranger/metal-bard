@@ -63,7 +63,7 @@ Les noms exacts peuvent varier : prendre l'animation la plus proche de la descri
    suppression du déplacement de la racine, export dans `riffald.glb`.
 2. Godot : AnimationTree (machine à états, BlendSpace repos/marche/course selon la vitesse,
    frappe superposée sur le haut du corps), IK des mains sur la guitare, SpringBones cape/cheveux.
-3. Le héros personnalisé garde l'animation procédurale en attendant un vrai modèle.
+3. Héros personnalisés et PNJ : mêmes clips que Riffald, recopiés sur leur corps procédural (voir plus bas).
 
 ## État actuel (v0.1.14)
 
@@ -93,4 +93,24 @@ Non utilisés : Guitar Playing, Jump, Standing 1H Magic Attack 02 (vrille), T-Po
 
 Après l'animation, `HeroAnimator` (SkeletonModifier3D) porte la guitare à la sangle sur l'os
 « chest » et ramène les mains dessus par IK à deux os ; pendant les frappes, la guitare passe dans
-les mains, dans le prolongement des bras. Les héros personnalisés gardent l'animation procédurale.
+les mains, dans le prolongement des bras.
+
+## Héros personnalisés et PNJ (v0.1.19)
+
+Tous les personnages humanoïdes ont la posture et le déplacement de Riffald : `LocoAnimator` joue les
+mêmes clips (Happy Idle, Mutant Breathing Idle, Walking, Running, même mélange que `HeroAnimator`) sur
+une copie invisible du squelette de Riffald, sans maillage, puis les recopie sur le corps procédural
+de `HeroModel` :
+
+- bassin, buste (axe bassin → cou), tête et pieds : rotation de l'os depuis sa pose de repos ;
+- jambes et bras : IK à deux segments vers les chevilles et poignets de Riffald, à la longueur des
+  membres procéduraux ; la foulée est à la taille du personnage (un ogre fait de plus grands pas) ;
+- guitare en main : les bras restent sur la guitare (IK de HeroModel), le reste du corps suit les clips.
+
+Concerne les héros personnalisés (création de personnage, coop), les clients de la taverne et les PNJ.
+Gérald, Zarathos et l'Inconnue, autrefois des silhouettes figées, sont désormais des corps articulés
+en costume (`Npc.COSTUMES` et `_dress`) : chapeau de paille et salopette, robe, chapeau pointu et
+bâton tenu en main, long manteau et capuche.
+
+Le corps procédural reprend la main pour les poses sans clip : assis (clients, fauteuil roulant),
+solo, glissade, saut d'Angus Young, lit et mort. Les squelettes ennemis gardent leurs animations.

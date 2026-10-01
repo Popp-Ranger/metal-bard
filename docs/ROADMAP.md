@@ -127,6 +127,11 @@
 - [x] Même squelette (17 os), mêmes 16 animations Mixamo et même Flying V que Riffald ; cape et tresse pondérées à part
 - [x] Sélecteur « Héros » : Riffald, l'héroïne ou personnage personnalisé ; taille réelle affichée (docs/PERSOF1.md)
 
+## ✅ v0.1.19 — Tout le monde bouge comme Riffald
+- [x] Héros personnalisés, clients et PNJ : posture et déplacement de Riffald (mêmes clips Mixamo, recopiés sur le corps procédural)
+- [x] Gérald, Zarathos et l'Inconnue deviennent des corps articulés en costume (Zarathos tient son bâton)
+- [x] Intro : Espace ou Échap passe la cinématique
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

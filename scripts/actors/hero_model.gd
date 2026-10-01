@@ -3,9 +3,11 @@ extends Node3D
 ## Apparence du héros, construite selon le personnage créé (RaceDB) :
 ## sexe, race (taille et carrure), cornes, défenses, barbe, coiffure longue, couleur de cheveux.
 ## Tenue commune : manteau de cuir noir, médaillon à cornes (hommage à Ronnie James Dio).
+## Les PNJ ont leur propre tenue (appearance["outfit"]) et pas de guitare.
 ## Il joue d'une réplique de Gibson Flying V, portée bas à la sangle comme un guitariste
-## de metal, et se déplace avec la posture voûtée et la démarche claudicante des
-## Réprouvés (morts-vivants) de World of Warcraft. Le modèle regarde vers +Z.
+## de metal. Debout, il a la posture et la démarche de Riffald (mêmes clips Mixamo, voir
+## LocoAnimator) ; assis, en solo, en glissade, au lit ou mort, le squelette procédural prend
+## le relais (ancienne posture voûtée des Réprouvés de World of Warcraft). Le modèle regarde vers +Z.
 ##
 ## Les bras sont pilotés par une petite IK à deux os : la main gauche reste sur le manche,
 ## la main droite gratte les cordes (ou empoigne le manche pour frapper).
@@ -15,6 +17,7 @@ const FOREARM := 0.26
 const THIGH := 0.45
 const SHIN := 0.43
 const HIP_Y := 0.93 # hauteur du bassin pour un personnage de 1,8 m
+const HIP_HALF_WIDTH := 0.1 # écart des hanches de part et d'autre du bassin
 const HEAD_SCALE := 0.78 # tête ≈ 1/7,5 de la taille (proportions réalistes)
 const TORSO_LEAN := 0.12 # dos légèrement voûté (attitude metal)
 ## Doigts : longueur des phalanges (proximale, moyenne, distale) ; le pouce en a deux.
@@ -77,6 +80,13 @@ var _flash_mats: Array[StandardMaterial3D] = []
 var _skin: RiggedSkin
 ## Animations du modèle importé (AnimationTree + IK de la guitare), ou null : voir HeroAnimator.
 var _anim: HeroAnimator
+## Posture et déplacement de Riffald pour le modèle procédural (créé à la première image animée).
+var _loco: LocoAnimator
+var _loco_on := false
+var _dead := false
+var _lying := false
+## Point (repère du torse) que la main du côté +X empoigne : bâton d'un PNJ ; ZERO = main libre.
+var prop_grip := Vector3.ZERO
 ## Vie basse : posture de repos voûtée, à bout de souffle (modèle animé).
 var tired := false
 ## Rapport de longueur du manche de la guitare utilisée / Flying V procédurale.
@@ -129,6 +139,11 @@ func height() -> float:
 
 func _build() -> void:
 	_skin = null
+	_anim = null
+	_loco = null
+	_loco_on = false
+	_dead = false
+	_lying = false
 	_neck_scale = 1.0
 	guitar_slung = false
 	var race_id := str(appearance.get("race", "humain"))
@@ -140,8 +155,13 @@ func _build() -> void:
 	var w := float(race.get("width", 1.0)) * (0.9 if female else 1.0) * float(appearance.get("width_mult", 1.0))
 	scale = Vector3(w * sqrt(h), h, w * sqrt(h))
 
-	var leather := _own_mat(Color(0.2, 0.15, 0.13), 0.6)
-	var coat := _own_mat(Color(0.13, 0.1, 0.11), 0.8)
+	# Tenue : cuir noir et long manteau, ou celle d'un PNJ (appearance["outfit"] : couleurs "top" (buste),
+	# "legs" (jambes), "coat" (manches, bottes) et "plain" = vêtements simples, sans manteau ni épaulières).
+	var outfit: Dictionary = appearance.get("outfit", {})
+	var plain: bool = outfit.get("plain", false)
+	var leather := _own_mat(outfit.get("top", Color(0.2, 0.15, 0.13)), 0.6)
+	var coat := _own_mat(outfit.get("coat", Color(0.13, 0.1, 0.11)), 0.8)
+	var legs := _own_mat(outfit["legs"], 0.7) if outfit.has("legs") else leather
 	var skin := _own_mat(race.get("skin", Color(0.8, 0.63, 0.52)), 0.55 if skeleton else 0.65)
 	var hair_colors: Array = RaceDB.HAIR_COLORS
 	var hair := _own_mat(hair_colors[clampi(int(appearance.get("hair_color", 0)), 0, hair_colors.size() - 1)], 0.75)
@@ -150,10 +170,10 @@ func _build() -> void:
 	# Proportions réalistes (modèle de base de 1,8 m) : jambes ≈ 52 % de la taille,
 	# tête ≈ 1/7,5 de la taille, épaules ≈ 2 têtes de large.
 	# --- Jambes : hanche → genou → cheville → pied.
-	_hip_l = _pivot(self, Vector3(-0.1, HIP_Y, 0))
-	_hip_r = _pivot(self, Vector3(0.1, HIP_Y, 0))
-	_knee_l = _build_leg(_hip_l, leather, coat)
-	_knee_r = _build_leg(_hip_r, leather, coat)
+	_hip_l = _pivot(self, Vector3(-HIP_HALF_WIDTH, HIP_Y, 0))
+	_hip_r = _pivot(self, Vector3(HIP_HALF_WIDTH, HIP_Y, 0))
+	_knee_l = _build_leg(_hip_l, legs, coat)
+	_knee_r = _build_leg(_hip_r, legs, coat)
 	_ankle_l = _knee_l.get_child(_knee_l.get_child_count() - 1) as Node3D
 	_ankle_r = _knee_r.get_child(_knee_r.get_child_count() - 1) as Node3D
 
@@ -174,20 +194,23 @@ func _build() -> void:
 			Visuals.box(_torso, Vector3(0.16 - i * 0.015, 0.025, 0.02), Vector3(0, 0.46 - i * 0.065, 0.12), skin)
 	Visuals.cylinder(_torso, 0.05, 0.055, 0.12, Vector3(0, 0.58, 0.01), skin, Vector3.ZERO, 10) # cou
 	# Long manteau de cuir : deux pans qui tombent jusqu'aux genoux, col relevé.
-	for side: float in [-1.0, 1.0]:
-		Visuals.box(_torso, Vector3(0.17, 0.78, 0.03), Vector3(0.1 * side, 0.02, -0.12), coat, Vector3(-6, 0, 3 * side))
-		Visuals.box(_torso, Vector3(0.05, 0.62, 0.2), Vector3(0.17 * side, 0.2, -0.02), coat, Vector3(0, 0, 4 * side))
-		Visuals.box(_torso, Vector3(0.1, 0.1, 0.03), Vector3(0.09 * side, 0.6, -0.06), coat, Vector3(-20, 0, 18 * side)) # col
+	if not plain:
+		for side: float in [-1.0, 1.0]:
+			Visuals.box(_torso, Vector3(0.17, 0.78, 0.03), Vector3(0.1 * side, 0.02, -0.12), coat, Vector3(-6, 0, 3 * side))
+			Visuals.box(_torso, Vector3(0.05, 0.62, 0.2), Vector3(0.17 * side, 0.2, -0.02), coat, Vector3(0, 0, 4 * side))
+			Visuals.box(_torso, Vector3(0.1, 0.1, 0.03), Vector3(0.09 * side, 0.6, -0.06), coat, Vector3(-20, 0, 18 * side)) # col
 	Visuals.cylinder(_torso, 0.16, 0.16, 0.06, Vector3(0, 0.03, 0), coat, Vector3.ZERO, 14).scale = Vector3(1, 1, 0.75) # ceinture
 	for i in 5:
 		var a := -0.9 + i * 0.45
 		Visuals.sphere(_torso, 0.016, Vector3(sin(a) * 0.155, 0.03, cos(a) * 0.12), metal)
-	Visuals.sphere(_torso, 0.03, Vector3(0, 0.44, 0.13), Visuals.glow_mat(Color(1.0, 0.2, 0.1), 2.5)) # médaillon
+	if not plain:
+		Visuals.sphere(_torso, 0.03, Vector3(0, 0.44, 0.13), Visuals.glow_mat(Color(1.0, 0.2, 0.1), 2.5)) # médaillon
 	# Épaules et épaulières à pointes.
 	var shoulder := 0.18 if female else 0.2
 	for side: float in [-1.0, 1.0]:
 		Visuals.sphere(_torso, 0.075, Vector3(shoulder * side, 0.5, 0.0), coat, Vector3(1.2, 0.8, 1.1))
-		Visuals.cylinder(_torso, 0.0, 0.025, 0.1, Vector3((shoulder + 0.04) * side, 0.57, 0.0), metal, Vector3(0, 0, -30 * side))
+		if not plain:
+			Visuals.cylinder(_torso, 0.0, 0.025, 0.1, Vector3((shoulder + 0.04) * side, 0.57, 0.0), metal, Vector3(0, 0, -30 * side))
 	# Sangle de guitare en travers du torse.
 	if appearance.get("guitar", true):
 		Visuals.box(_torso, Vector3(0.04, 0.6, 0.015), Vector3(0.01, 0.3, 0.125), Visuals.mat(Color(0.12, 0.1, 0.1)), Vector3(0, 0, -33))
@@ -338,9 +361,12 @@ func _build_beard(kind: int, hair: Material) -> void:
 			pass
 
 
-## Coiffures (toujours longues) : tresses, queue de cheval, longs lâchés, glam-metal.
+## Coiffures (toujours longues) : tresses, queue de cheval, longs lâchés, glam-metal ; -1 = aucune
+## (tête couverte d'une capuche).
 func _build_hair(style: int, hair: Material) -> void:
 	_hair_back = _pivot(_head, Vector3(0, 0.2, -0.1))
+	if style < 0:
+		return
 	match style:
 		0: # tresses : calotte + deux tresses sur l'avant des épaules + dos
 			Visuals.sphere(_head, 0.165, Vector3(0, 0.26, -0.01), hair, Vector3(1.05, 0.9, 1.05))
@@ -584,6 +610,59 @@ func _process(delta: float) -> void:
 	_phase += delta * lerpf(5.2, 9.5, run) * _walk
 	var p := _phase
 	var breath := sin(_t * 1.8)
+	if _animated():
+		# Debout : posture et déplacement de Riffald (clips Mixamo, voir LocoAnimator).
+		_loco.advance(delta, _walk, move_speed * (1.0 if _moving else 0.0), tired)
+		_loco.apply_body()
+	else:
+		_procedural_body(delta, run, p, breath, hunched)
+	_hair_back.rotation.x = -0.1 - _walk * lerpf(0.1, 0.3, run) - (absf(sin(_t * 9.0)) * 0.3 if _soloing else 0.0)
+
+	# Grattage permanent pendant le solo ; doigts de la main gauche qui changent de case.
+	if _soloing:
+		_strum = absf(sin(_t * 18.0))
+	else:
+		_strum = move_toward(_strum, 0.0, delta * 4.0)
+	_fret_timer -= delta
+	if _fret_timer <= 0.0:
+		_fret_timer = 0.12 if (_soloing or _strum > 0.1) else 0.6
+		_fret_finger = randi_range(1, 4)
+	_apply_special_pose(delta)
+	_aura.visible = _soloing
+	if _soloing:
+		_aura.rotation.y += delta * 2.0
+		_aura_light.light_energy = 2.2 + sin(_t * 10.0) * 0.5
+	_update_arms()
+	if _skin != null and _anim == null:
+		_skin.drive()
+
+
+## Posture et déplacement animés (LocoAnimator) : debout et hors des poses spéciales (assis, solo,
+## glissade, saut, lit, mort), pour le modèle procédural seulement (les modèles importés ont HeroAnimator).
+func _animated() -> bool:
+	var want := _anim == null and not seated and not _soloing and _pose.is_empty() and not _dead and not _lying
+	if want and _loco == null:
+		_loco = LocoAnimator.attach(self)
+	if _loco == null:
+		return false
+	if want != _loco_on:
+		_loco_on = want
+		if not want:
+			_reset_pose()
+	return want
+
+
+## Retour au squelette procédural : pivots du corps remis à leur repos (les bras sont recalculés par IK).
+func _reset_pose() -> void:
+	for n: Node3D in [_hip_l, _hip_r, _knee_l, _knee_r, _ankle_l, _ankle_r, _torso, _head]:
+		n.basis = Basis.IDENTITY
+	_hip_l.position = Vector3(-HIP_HALF_WIDTH, HIP_Y, 0)
+	_hip_r.position = Vector3(HIP_HALF_WIDTH, HIP_Y, 0)
+	_torso.position = Vector3(0, HIP_Y, 0)
+
+
+## Squelette procédural : assis, ou marche voûtée (solo, glissade, saut, lit, mort).
+func _procedural_body(delta: float, run: float, p: float, breath: float, hunched: bool) -> void:
 	if seated:
 		# Assis : cuisses à l'horizontale, tibias vers le sol, bassin à hauteur de l'assise.
 		var hip_y := _seat_height / maxf(scale.y, 0.01) + 0.04
@@ -636,48 +715,37 @@ func _process(delta: float) -> void:
 	else:
 		var rest := -lean * 0.7
 		_head.rotation.x = lerpf(_head.rotation.x, rest + sin(p * 2.0) * 0.02 * _walk, delta * 8.0)
-	_hair_back.rotation.x = -0.1 - _walk * lerpf(0.1, 0.3, run) - (absf(sin(_t * 9.0)) * 0.3 if _soloing else 0.0)
-
-	# Grattage permanent pendant le solo ; doigts de la main gauche qui changent de case.
-	if _soloing:
-		_strum = absf(sin(_t * 18.0))
-	else:
-		_strum = move_toward(_strum, 0.0, delta * 4.0)
-	_fret_timer -= delta
-	if _fret_timer <= 0.0:
-		_fret_timer = 0.12 if (_soloing or _strum > 0.1) else 0.6
-		_fret_finger = randi_range(1, 4)
-	_apply_special_pose(delta)
-	_aura.visible = _soloing
-	if _soloing:
-		_aura.rotation.y += delta * 2.0
-		_aura_light.light_energy = 2.2 + sin(_t * 10.0) * 0.5
-	_update_arms()
-	if _skin != null and _anim == null:
-		_skin.drive()
 
 
 # --- IK des bras et des mains ------------------------------------------------------------
 
 func _update_arms() -> void:
 	if _guitar == null or guitar_slung:
-		# Sans guitare (PNJ) ou guitare dans le dos : bras qui balancent à l'opposé des jambes,
-		# mains sur la table assis.
-		var swing := sin(_phase) * lerpf(0.1, 0.2, clampf((move_speed - 1.5) / 4.0, 0.0, 1.0)) * _walk
-		var l := Vector3(-0.27, 0.02, 0.03 - swing)
-		var r := Vector3(0.27, 0.02, 0.03 + swing)
-		if seated:
-			l = Vector3(-0.17, 0.28, 0.38)
-			r = Vector3(0.17, 0.28 + sin(_t * 1.3) * 0.03, 0.38)
-		_solve_arm(_upper_l, _fore_l, l, Vector3(-0.4, -0.2, -1.0))
-		_solve_arm(_upper_r, _fore_r, r, Vector3(0.4, -0.2, -1.0))
-		var palm_l := Vector3(0, -1, 0) if seated else Vector3(1, 0, 0.2)
-		var palm_r := Vector3(0, -1, 0) if seated else Vector3(-1, 0, 0.2)
-		_orient_hand(_upper_l, _fore_l, _hand_l, palm_l, 0.0)
-		_orient_hand(_upper_r, _fore_r, _hand_r, palm_r, 0.0)
+		# Sans guitare (PNJ) ou guitare dans le dos : bras de l'animation de Riffald debout, sinon
+		# bras qui balancent à l'opposé des jambes, mains sur la table assis.
+		if _loco_on:
+			_loco.apply_arms()
+		else:
+			var swing := sin(_phase) * lerpf(0.1, 0.2, clampf((move_speed - 1.5) / 4.0, 0.0, 1.0)) * _walk
+			var l := Vector3(-0.27, 0.02, 0.03 - swing)
+			var r := Vector3(0.27, 0.02, 0.03 + swing)
+			if seated:
+				l = Vector3(-0.17, 0.28, 0.38)
+				r = Vector3(0.17, 0.28 + sin(_t * 1.3) * 0.03, 0.38)
+			_solve_arm(_upper_l, _fore_l, l, Vector3(-0.4, -0.2, -1.0))
+			_solve_arm(_upper_r, _fore_r, r, Vector3(0.4, -0.2, -1.0))
+			var palm_l := Vector3(0, -1, 0) if seated else Vector3(1, 0, 0.2)
+			var palm_r := Vector3(0, -1, 0) if seated else Vector3(-1, 0, 0.2)
+			_orient_hand(_upper_l, _fore_l, _hand_l, palm_l, 0.0)
+			_orient_hand(_upper_r, _fore_r, _hand_r, palm_r, 0.0)
 		var relaxed := [0.3, 0.25, 0.3, 0.35, 0.4] if not seated else [0.15, 0.1, 0.12, 0.15, 0.18]
 		_curl_fingers(_fingers_l, relaxed)
 		_curl_fingers(_fingers_r, relaxed)
+		if prop_grip != Vector3.ZERO and not seated:
+			# Bâton (PNJ) : avant-bras vers l'avant, paume tournée vers le corps, poing serré.
+			_solve_arm(_upper_r, _fore_r, prop_grip, Vector3(0.6, -1.0, -0.6))
+			_orient_hand(_upper_r, _fore_r, _hand_r, Vector3(-1, 0, 0), 0.0)
+			_curl_fingers(_fingers_r, [1.2, 1.5, 1.5, 1.5, 1.5])
 		return
 	var gt := _guitar.transform
 	var nut := PROC_NUT * _neck_scale
@@ -841,6 +909,7 @@ func flash(color: Color = Color(1.0, 0.1, 0.05)) -> void:
 func die() -> void:
 	_soloing = false
 	_moving = false
+	_dead = true
 	if _anim != null:
 		_anim.play("die")
 		return
@@ -900,6 +969,7 @@ func victory() -> void:
 ## dans son repère, voir SLEEP_YAW) ; sinon l'appelant couche le modèle entier.
 func lie(active: bool) -> bool:
 	if _anim == null:
+		_lying = active # squelette procédural, immobile : l'appelant couche le modèle
 		return false
 	_anim.play("sleep" if active else "loco")
 	return true

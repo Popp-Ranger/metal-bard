@@ -1,12 +1,28 @@
 class_name Npc
 extends Node3D
 ## Personnage non joueur. [E] (ou clic) pour lui parler (voir DialogueDB).
-## Apparence : modèle dédié (Gérald, Zarathos, l'Inconnue) ou, si `look` est rempli,
-## un modèle généré avec l'outil de création de personnage (clients, tavernière...).
+## Apparence : un modèle généré avec l'outil de création de personnage (HeroModel, `look`) ; les PNJ
+## à costume (Gérald, Zarathos, l'Inconnue) y ajoutent leurs accessoires (voir COSTUMES et _dress).
+## Tous ont la posture et la démarche de Riffald (voir LocoAnimator).
 ## Peut marcher sur le maillage de navigation, s'asseoir, et afficher un point
 ## d'exclamation / d'interrogation vert s'il donne une quête.
 
 signal arrived
+
+## Apparence des PNJ sans `look` (même format que RaceDB.DEFAULT_APPEARANCE, plus "outfit" : voir
+## HeroModel) ; "hat" = hauteur du chapeau au-dessus de la tête (étiquettes).
+const COSTUMES := {
+	"gerald": {"sex": "m", "race": "humain", "beard": 0, "hair": 2, "hair_color": 2,
+		"outfit": {"plain": true, "top": Color(0.45, 0.35, 0.2), "legs": Color(0.3, 0.35, 0.55), "coat": Color(0.3, 0.25, 0.18)}},
+	"zarathos": {"sex": "m", "race": "humain", "beard": 1, "hair": 2, "hair_color": 3, "hat": 0.45,
+		"outfit": {"plain": true, "top": Color(0.2, 0.15, 0.4), "legs": Color(0.2, 0.15, 0.4), "coat": Color(0.2, 0.15, 0.4)}},
+	"inconnue": {"sex": "f", "race": "humain", "hair": -1,
+		"outfit": {"plain": true, "top": Color(0.08, 0.06, 0.08), "legs": Color(0.08, 0.06, 0.08), "coat": Color(0.08, 0.06, 0.08)}},
+}
+const DEFAULT_COSTUME := {"sex": "m", "race": "humain", "beard": 0, "hair": 1, "hair_color": 1,
+	"outfit": {"plain": true, "top": Color(0.4, 0.4, 0.4), "legs": Color(0.2, 0.2, 0.2)}}
+## Bâton de Zarathos : point empoigné (repère du torse), le bâton passe dans le poing.
+const STAFF_GRIP := Vector3(0.27, 0.18, 0.25)
 
 var npc_id := ""
 ## Nom affiché (sinon celui de DialogueDB) et identifiant du dialogue (sinon npc_id).
@@ -28,7 +44,6 @@ var _going_home := false
 var model: HeroModel
 var walker: NavWalker
 var _body: Node3D
-var _head: Node3D
 var _t := randf() * 10.0
 var _hero: Node3D
 var _labels: Node3D
@@ -53,14 +68,15 @@ func _ready() -> void:
 	_body = Node3D.new()
 	add_child(_body)
 	if look.is_empty():
-		_build()
-	else:
-		var full_look := look.duplicate()
-		full_look["guitar"] = false
-		full_look["hunched"] = false
-		model = HeroModel.new()
-		model.appearance = full_look
-		_body.add_child(model)
+		look = COSTUMES.get(npc_id, DEFAULT_COSTUME)
+	var full_look := RaceDB.DEFAULT_APPEARANCE.duplicate()
+	full_look.merge(look, true)
+	full_look["guitar"] = false
+	full_look["hunched"] = false
+	model = HeroModel.new()
+	model.appearance = full_look
+	_body.add_child(model)
+	_dress()
 	walker = NavWalker.new()
 	add_child(walker)
 	walker.arrived.connect(func() -> void: arrived.emit())
@@ -90,11 +106,9 @@ func _ready() -> void:
 		model.set_seated(true)
 
 
-## Hauteur du sommet de la tête (pour placer les étiquettes).
+## Hauteur du sommet de la tête, chapeau compris (pour placer les étiquettes).
 func _top_height() -> float:
-	if model != null:
-		return model.height() * (0.72 if seated else 1.0) + 0.15
-	return 2.0 if seated else 2.2
+	return model.height() * (0.72 if seated else 1.0) + 0.15 + float(look.get("hat", 0.0))
 
 
 func get_display_name() -> String:
@@ -172,12 +186,9 @@ func _process(delta: float) -> void:
 	var moving := walker != null and walker.walking and walker.direction.length() > 0.1
 	if moving:
 		rotation.y = lerp_angle(rotation.y, atan2(walker.direction.x, walker.direction.z), 1.0 - exp(-10.0 * delta))
-	if model != null and walker != null:
+	if walker != null:
 		model.move_speed = walker.speed
-	if model != null:
-		model.set_moving(moving)
-	else:
-		_body.position.y = absf(sin(_t * 8.0)) * 0.05 if moving else sin(_t * 1.8) * 0.015
+	model.set_moving(moving)
 	if _hero == null or not is_instance_valid(_hero):
 		_hero = get_tree().get_first_node_in_group("hero") as Node3D
 		return
@@ -188,91 +199,46 @@ func _process(delta: float) -> void:
 	if to.length() < 5.0 and not moving:
 		var local := global_transform.basis.inverse() * to
 		yaw = clampf(atan2(local.x, local.z), -1.1, 1.1)
-	if model != null:
-		model.head_turn = lerp_angle(model.head_turn, yaw, delta * 5.0)
-	elif _head != null:
-		_head.rotation.y = lerp_angle(_head.rotation.y, yaw, delta * 5.0)
+	model.head_turn = lerp_angle(model.head_turn, yaw, delta * 5.0)
 
 
-# --- Apparences ------------------------------------------------------------
+# --- Costumes ----------------------------------------------------------------
 
-func _build() -> void:
-	var skin := Visuals.mat(Color(0.85, 0.66, 0.54), 0.6)
+## Accessoires des PNJ costumés, posés sur les pivots du modèle : ils suivent ses mouvements.
+func _dress() -> void:
+	var m := model
 	match npc_id:
 		"gerald":
-			_humanoid(Color(0.45, 0.35, 0.2), Color(0.3, 0.25, 0.18), skin, 1.0)
-			Visuals.cylinder(_head, 0.32, 0.32, 0.03, Vector3(0, 0.2, 0), Visuals.mat(Color(0.8, 0.7, 0.35)))
-			Visuals.cylinder(_head, 0.1, 0.17, 0.16, Vector3(0, 0.28, 0), Visuals.mat(Color(0.8, 0.7, 0.35)))
-			Visuals.box(_body, Vector3(0.44, 0.5, 0.05), Vector3(0, 1.05, 0.16), Visuals.mat(Color(0.3, 0.35, 0.55))) # salopette
-		"brunhilde":
-			_humanoid(Color(0.5, 0.15, 0.12), Color(0.25, 0.18, 0.12), skin, 1.1)
-			Visuals.box(_body, Vector3(0.5, 0.7, 0.05), Vector3(0, 0.9, 0.2), Visuals.mat(Color(0.85, 0.8, 0.7))) # tablier
-			var hair := Visuals.mat(Color(0.85, 0.6, 0.25))
-			Visuals.sphere(_head, 0.2, Vector3(0, 0.07, -0.02), hair, Vector3(1.0, 0.8, 1.0))
-			for s: float in [-1.0, 1.0]: # tresses
-				Visuals.capsule(_head, 0.05, 0.5, Vector3(0.18 * s, -0.25, 0.02), hair)
+			# Fermier : chapeau de paille, salopette en toile bleue.
+			var straw := Visuals.mat(Color(0.8, 0.7, 0.35))
+			Visuals.cylinder(m._head, 0.4, 0.4, 0.035, Vector3(0, 0.34, 0.02), straw, Vector3.ZERO, 18)
+			Visuals.cylinder(m._head, 0.14, 0.21, 0.2, Vector3(0, 0.44, 0.0), straw, Vector3.ZERO, 14)
+			var denim := Visuals.mat(Color(0.3, 0.35, 0.55))
+			Visuals.box(m._torso, Vector3(0.24, 0.28, 0.03), Vector3(0, 0.3, 0.12), denim, Vector3(5, 0, 0)) # bavette
+			for s: float in [-1.0, 1.0]:
+				Visuals.box(m._torso, Vector3(0.035, 0.32, 0.03), Vector3(0.085 * s, 0.42, 0.04), denim, Vector3(-30, 0, 0)) # bretelles
 		"zarathos":
+			# Mage : robe jusqu'aux pieds, chapeau pointu à large bord, bâton surmonté d'un orbe.
 			var robe := Visuals.mat(Color(0.2, 0.15, 0.4), 0.9)
-			Visuals.cylinder(_body, 0.18, 0.42, 1.5, Vector3(0, 0.75, 0), robe)
-			_head = _pivot(_body, Vector3(0, 1.62, 0))
-			Visuals.sphere(_head, 0.16, Vector3.ZERO, skin)
-			Visuals.cylinder(_head, 0.0, 0.3, 0.6, Vector3(0, 0.35, -0.03), robe, Vector3(-10, 0, 0)) # chapeau pointu
-			Visuals.cylinder(_head, 0.32, 0.32, 0.03, Vector3(0, 0.1, 0), robe)
-			Visuals.cylinder(_head, 0.02, 0.14, 0.55, Vector3(0, -0.28, 0.12), Visuals.mat(Color(0.9, 0.9, 0.9)), Vector3(180, 0, 0)) # barbe
-			Visuals.cylinder(_body, 0.03, 0.03, 1.9, Vector3(0.4, 0.95, 0.1), Visuals.mat(Color(0.3, 0.2, 0.1))) # bâton
-			Visuals.sphere(_body, 0.1, Vector3(0.4, 1.95, 0.1), Visuals.glow_mat(Color(0.6, 0.4, 1.0), 4.0))
-			var l := Visuals.flicker_light(_body, Vector3(0.4, 2.0, 0.1), Color(0.6, 0.4, 1.0), 0.8, 3.5)
+			Visuals.cylinder(m._torso, 0.19, 0.45, 1.03, Vector3(0, -0.415, 0), robe, Vector3.ZERO, 16)
+			Visuals.cylinder(m._head, 0.42, 0.42, 0.035, Vector3(0, 0.36, 0.02), robe, Vector3.ZERO, 18)
+			Visuals.cylinder(m._head, 0.0, 0.24, 0.75, Vector3(0, 0.72, -0.05), robe, Vector3(-10, 0, 0), 14)
+			var staff := Node3D.new()
+			staff.position = STAFF_GRIP + Vector3(0.0, 0.0, 0.05)
+			m._torso.add_child(staff)
+			Visuals.cylinder(staff, 0.03, 0.03, 1.9, Vector3(0, -0.15, 0), Visuals.mat(Color(0.3, 0.2, 0.1)))
+			Visuals.sphere(staff, 0.1, Vector3(0, 0.82, 0), Visuals.glow_mat(Color(0.6, 0.4, 1.0), 4.0))
+			var l := Visuals.flicker_light(staff, Vector3(0, 0.88, 0), Color(0.6, 0.4, 1.0), 0.8, 3.5)
 			l.flicker_amount = 0.4
+			m.prop_grip = STAFF_GRIP
 		"inconnue":
+			# Long manteau noir, capuche d'où ne luisent que deux yeux rouges.
 			var cloak := Visuals.mat(Color(0.08, 0.06, 0.08), 0.9)
-			Visuals.cylinder(_body, 0.2, 0.4, 1.55, Vector3(0, 0.78, 0), cloak)
-			_head = _pivot(_body, Vector3(0, 1.65, 0))
-			Visuals.sphere(_head, 0.2, Vector3(0, 0.02, -0.02), cloak, Vector3(1.0, 1.15, 1.1))
-			Visuals.sphere(_head, 0.02, Vector3(-0.05, 0.0, 0.17), Visuals.glow_mat(Color(1.0, 0.2, 0.2), 4.0))
-			Visuals.sphere(_head, 0.02, Vector3(0.05, 0.0, 0.17), Visuals.glow_mat(Color(1.0, 0.2, 0.2), 4.0))
-		"borin":
-			_humanoid(Color(0.35, 0.2, 0.1), Color(0.2, 0.15, 0.1), skin, 0.75)
-			Visuals.cylinder(_head, 0.05, 0.2, 0.45, Vector3(0, -0.25, 0.1), Visuals.mat(Color(0.75, 0.35, 0.1)), Vector3(180, 0, 0)) # barbe
-			Visuals.cylinder(_body, 0.07, 0.07, 0.16, Vector3(0.28, 0.9, 0.2), Visuals.mat(Color(0.6, 0.45, 0.2))) # chope
-		"sylvaine":
-			_humanoid(Color(0.15, 0.35, 0.3), Color(0.1, 0.2, 0.18), skin, 1.05)
-			var hair := Visuals.mat(Color(0.9, 0.9, 0.85))
-			Visuals.box(_head, Vector3(0.36, 0.55, 0.12), Vector3(0, -0.15, -0.12), hair)
-			for s: float in [-1.0, 1.0]: # oreilles pointues
-				Visuals.cylinder(_head, 0.0, 0.04, 0.16, Vector3(0.17 * s, 0.03, 0), skin, Vector3(0, 0, -70 * s))
-			Visuals.sphere(_body, 0.2, Vector3(0.3, 0.95, 0.15), Visuals.mat(Color(0.8, 0.8, 0.85), 0.3, 0.7), Vector3(0.8, 1.1, 0.3)) # luth d'argent
-		_:
-			_humanoid(Color(0.4, 0.4, 0.4), Color(0.2, 0.2, 0.2), skin, 1.0)
-
-
-func _humanoid(top: Color, bottom: Color, skin: Material, s: float) -> void:
-	_body.scale = Vector3.ONE * s
-	var top_mat := Visuals.mat(top)
-	var bottom_mat := Visuals.mat(bottom)
-	if seated:
-		Visuals.capsule(_body, 0.1, 0.45, Vector3(-0.12, 0.5, 0.2), bottom_mat, Vector3(90, 0, 0))
-		Visuals.capsule(_body, 0.1, 0.45, Vector3(0.12, 0.5, 0.2), bottom_mat, Vector3(90, 0, 0))
-		Visuals.capsule(_body, 0.09, 0.45, Vector3(-0.12, 0.25, 0.42), bottom_mat)
-		Visuals.capsule(_body, 0.09, 0.45, Vector3(0.12, 0.25, 0.42), bottom_mat)
-		_body.position.y = -0.0
-	else:
-		Visuals.capsule(_body, 0.1, 0.9, Vector3(-0.12, 0.45, 0), bottom_mat)
-		Visuals.capsule(_body, 0.1, 0.9, Vector3(0.12, 0.45, 0), bottom_mat)
-	var base_y := 0.55 if seated else 0.9
-	Visuals.capsule(_body, 0.26, 0.75, Vector3(0, base_y + 0.35, 0), top_mat)
-	Visuals.capsule(_body, 0.08, 0.6, Vector3(-0.3, base_y + 0.35, 0.05), top_mat, Vector3(-20, 0, 8))
-	Visuals.capsule(_body, 0.08, 0.6, Vector3(0.3, base_y + 0.35, 0.05), top_mat, Vector3(-20, 0, -8))
-	_head = _pivot(_body, Vector3(0, base_y + 0.9, 0))
-	Visuals.sphere(_head, 0.17, Vector3.ZERO, skin)
-	Visuals.sphere(_head, 0.025, Vector3(-0.06, 0.02, 0.15), Visuals.mat(Color(0.05, 0.05, 0.05)))
-	Visuals.sphere(_head, 0.025, Vector3(0.06, 0.02, 0.15), Visuals.mat(Color(0.05, 0.05, 0.05)))
-
-
-func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
-	var p := Node3D.new()
-	p.position = pos
-	parent.add_child(p)
-	return p
+			Visuals.cylinder(m._torso, 0.19, 0.42, 1.03, Vector3(0, -0.415, 0), cloak, Vector3.ZERO, 16)
+			Visuals.sphere(m._head, 0.21, Vector3(0, 0.22, -0.01), cloak, Vector3(1.0, 1.15, 1.1))
+			var eyes := Visuals.glow_mat(Color(1.0, 0.2, 0.2), 4.0)
+			for s: float in [-1.0, 1.0]:
+				Visuals.sphere(m._head, 0.022, Vector3(0.05 * s, 0.22, 0.225), eyes)
 
 
 # --- Errance (Zarathos) ------------------------------------------------------------

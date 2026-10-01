@@ -112,14 +112,7 @@ func _setup(player: AnimationPlayer) -> void:
 	tree.active = true
 	_playback = tree.get("parameters/sm/playback") as AnimationNodeStateMachinePlayback
 	_playback.start("loco")
-	# Paumes : dans Blender (build_riffald.py, build_hand), la main est construite doigts le long de
-	# l'os, pouce vers w0 et paume n = (doigts × w0) × côté ; la conversion glTF (x, z, -y) est une
-	# rotation, le produit vectoriel est donc le même dans le repère du squelette.
-	for side: String in ["L", "R"]:
-		var s := 1.0 if side == "L" else -1.0
-		var rest := sk.get_bone_global_rest(_bone["hand." + side]).basis.orthonormalized()
-		var w0 := Vector3(-0.55 * s, 0.0, 0.85).normalized()
-		_palm[side] = rest.inverse() * (rest.y.cross(w0).normalized() * s)
+	_palm = rest_palms(sk)
 	# Guitare : sortie du torse procédural, portée à la sangle sur l'os « chest ».
 	_guitar = model._guitar
 	if _guitar != null:
@@ -141,6 +134,20 @@ func _setup(player: AnimationPlayer) -> void:
 		model.add_child(_guitar)
 
 
+## Normale de la paume de chaque main ("L"/"R") dans le repère de l'os « hand ». Dans Blender
+## (build_riffald.py, build_hand), la main est construite doigts le long de l'os, pouce vers w0 et
+## paume n = (doigts × w0) × côté ; la conversion glTF (x, z, -y) est une rotation, le produit
+## vectoriel est donc le même dans le repère du squelette.
+static func rest_palms(sk: Skeleton3D) -> Dictionary:
+	var palms := {}
+	for side: String in ["L", "R"]:
+		var s := 1.0 if side == "L" else -1.0
+		var rest := sk.get_bone_global_rest(sk.find_bone("hand." + side)).basis.orthonormalized()
+		var w0 := Vector3(-0.55 * s, 0.0, 0.85).normalized()
+		palms[side] = rest.inverse() * (rest.y.cross(w0).normalized() * s)
+	return palms
+
+
 ## Les bras du modèle importé sont plus courts que ceux du squelette procédural : on remonte la
 ## guitare vers l'épaule droite juste assez pour que la main droite atteigne les cordes.
 func _fit_mount(sk: Skeleton3D) -> void:
@@ -155,6 +162,12 @@ func _fit_mount(sk: Skeleton3D) -> void:
 
 
 func _clip(anim_name: String, loop: bool, timeline := 0.0, offset := 0.0) -> AnimationNodeAnimation:
+	return clip(lengths, anim_name, loop, timeline, offset)
+
+
+## Nœud d'animation : `lengths` = durée des clips (s) ; `timeline` > 0 = durée à l'écran,
+## `offset` > 0 = segment du clip joué à sa vitesse d'origine.
+static func clip(lengths: Dictionary, anim_name: String, loop: bool, timeline := 0.0, offset := 0.0) -> AnimationNodeAnimation:
 	var n := AnimationNodeAnimation.new()
 	n.animation = anim_name
 	if loop and timeline <= 0.0:
@@ -168,18 +181,19 @@ func _clip(anim_name: String, loop: bool, timeline := 0.0, offset := 0.0) -> Ani
 	return n
 
 
-func _build_tree(skel_path: String) -> AnimationNodeBlendTree:
-	# Déplacement : repos (normal / épuisé) mélangé avec marche-course selon la vitesse.
+## Déplacement : repos (normal / épuisé) mélangé avec marche-course selon la vitesse (voir drive_loco).
+## Partagé avec LocoAnimator (personnages procéduraux).
+static func loco_tree(lengths: Dictionary) -> AnimationNodeBlendTree:
 	var loco := AnimationNodeBlendTree.new()
-	loco.add_node("idle", _clip("idle", true))
-	loco.add_node("tired", _clip("idle_tired", true))
+	loco.add_node("idle", clip(lengths, "idle", true))
+	loco.add_node("tired", clip(lengths, "idle_tired", true))
 	loco.add_node("tired_mix", AnimationNodeBlend2.new())
 	var bs := AnimationNodeBlendSpace1D.new()
 	bs.min_space = 0.0
 	bs.max_space = RUN_SPEED
 	bs.sync = true
-	bs.add_blend_point(_clip("walk", true), WALK_SPEED, -1, "walk")
-	bs.add_blend_point(_clip("run", true), RUN_SPEED, -1, "run")
+	bs.add_blend_point(clip(lengths, "walk", true), WALK_SPEED, -1, "walk")
+	bs.add_blend_point(clip(lengths, "run", true), RUN_SPEED, -1, "run")
 	loco.add_node("gait", bs)
 	loco.add_node("pace", AnimationNodeTimeScale.new())
 	loco.add_node("move", AnimationNodeBlend2.new())
@@ -189,9 +203,22 @@ func _build_tree(skel_path: String) -> AnimationNodeBlendTree:
 	loco.connect_node("move", 0, "tired_mix")
 	loco.connect_node("move", 1, "pace")
 	loco.connect_node("output", 0, "move")
+	return loco
 
+
+## Paramètres du déplacement (`path` : chemin du BlendTree de loco_tree dans l'AnimationTree) :
+## `walk` = 0 immobile → 1 en marche, `speed` = vitesse (m/s, à l'échelle de Riffald), `tired` = épuisé.
+static func drive_loco(tree: AnimationTree, path: String, walk: float, speed: float, tired: bool, delta: float) -> void:
+	tree.set(path + "move/blend_amount", walk)
+	tree.set(path + "gait/blend_position", clampf(speed, WALK_SPEED, RUN_SPEED))
+	tree.set(path + "pace/scale", maxf(1.0, speed / RUN_SPEED))
+	var t := float(tree.get(path + "tired_mix/blend_amount"))
+	tree.set(path + "tired_mix/blend_amount", move_toward(t, 1.0 if tired else 0.0, delta * 2.0))
+
+
+func _build_tree(skel_path: String) -> AnimationNodeBlendTree:
 	var sm := AnimationNodeStateMachine.new()
-	sm.add_node("loco", loco)
+	sm.add_node("loco", loco_tree(lengths))
 	sm.add_node("solo", _clip("headbang", true))
 	sm.add_node("fall", _clip("fall", true))
 	sm.add_node("sleep", _clip("sleep", true))
@@ -273,12 +300,7 @@ func _process(delta: float) -> void:
 	if tree == null:
 		return
 	var m := model
-	var speed := m.move_speed * (1.0 if m._moving else 0.0)
-	tree.set("parameters/sm/loco/move/blend_amount", m._walk)
-	tree.set("parameters/sm/loco/gait/blend_position", clampf(speed, WALK_SPEED, RUN_SPEED))
-	tree.set("parameters/sm/loco/pace/scale", maxf(1.0, speed / RUN_SPEED))
-	var tired := float(tree.get("parameters/sm/loco/tired_mix/blend_amount"))
-	tree.set("parameters/sm/loco/tired_mix/blend_amount", move_toward(tired, 1.0 if m.tired else 0.0, delta * 2.0))
+	drive_loco(tree, "parameters/sm/loco/", m._walk, m.move_speed * (1.0 if m._moving else 0.0), m.tired, delta)
 	# Fin des actions ; se déplacer interrompt un sort ou une frappe déjà lancés.
 	_state_time += delta
 	if ONE_SHOTS.has(state):

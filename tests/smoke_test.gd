@@ -516,11 +516,13 @@ func _test_new_features() -> void:
 			walker_p = p
 	var reached_bar := false
 	var back_seated := false
+	var walked_animated := false
 	if walker_p != null:
 		walker_p.walk_speed = 12.0
 		walker_p.walker.speed = 12.0
 		for f in 600:
 			await get_tree().physics_frame
+			walked_animated = walked_animated or (walker_p.walker.walking and walker_p.model._loco_on)
 			if walker_p.mode == Patron.Mode.AT_BAR:
 				reached_bar = true
 				walker_p._timer = 0.0
@@ -536,6 +538,21 @@ func _test_new_features() -> void:
 		if c is Npc and (c as Npc).npc_id == "zarathos":
 			zarathos = c
 	_check(zarathos != null and zarathos.wander_radius > 0.0, "Zarathos fait les cent pas près de son portail")
+	_check(walked_animated and walker_p.seated and not walker_p.model._loco_on,
+		"le client marche comme Riffald (clips Mixamo), puis se rassoit (pose procédurale)")
+	# Tous les PNJ sont articulés (HeroModel) : posture et démarche de Riffald debout.
+	var npc_models := true
+	var animated_npcs := 0
+	for c in tavern.get_children():
+		var n := c as Npc
+		if n != null:
+			npc_models = npc_models and n.model != null
+			if n.model != null and n.model._loco_on:
+				animated_npcs += 1
+	var zm := zarathos.model
+	var staff_err := zm._hand_r.global_position.distance_to(zm._torso.to_global(zm.prop_grip))
+	_check(npc_models and animated_npcs >= 4 and staff_err < 0.03,
+		"PNJ articulés : %d debout avec la posture de Riffald, bâton de Zarathos en main (écart %.3f m)" % [animated_npcs, staff_err])
 	# Chambre : payer ne soigne plus, il faut se coucher sur le lit (1 PV → 100 % en 10 s).
 	var t_tavern := tavern as Node
 	GameState.flags.erase("room_paid")
@@ -559,7 +576,9 @@ func _test_new_features() -> void:
 	_check(demon_found, "portail démoniaque dans le sous-sol")
 	# Sous-sol (zone décalée en x = 70) : décibels illimités.
 	hero.global_position = Vector3(70.0 - 9.0, 0, -3.0)
-	await _frames(3)
+	for i in 3: # la guitare revient en main au pas de physique, puis les bras suivent à l'image
+		await get_tree().physics_frame
+	await _frames(2)
 	GameState.mana = 5.0
 	var spent := GameState.spend_mana(40.0)
 	_check(spent and GameState.infinite_mana and GameState.mana >= GameState.max_mana() - 0.01, "sous-sol : décibels toujours au maximum")
@@ -570,7 +589,8 @@ func _test_new_features() -> void:
 	var body_mid := hm._guitar.global_transform * Vector3(0, -0.1, 0)
 	_check(hero.spells_allowed and not hm.guitar_slung and hm._hand_r.global_position.distance_to(neck_end) < 0.1
 		and hm._hand_l.global_position.distance_to(body_mid) < 0.12,
-		"sous-sol : guitare en main, main gauche au bout du manche, main droite au centre de la caisse")
+		"sous-sol : guitare en main, main gauche au bout du manche, main droite au centre de la caisse (écarts %.2f / %.2f m)" % [
+			hm._hand_r.global_position.distance_to(neck_end), hm._hand_l.global_position.distance_to(body_mid)])
 	# Réinitialisation des talents (l'Inconnue encapuchonnée).
 	GameState.talent_points = 3
 	GameState.learn_talent("ballade_reparatrice")
@@ -831,6 +851,29 @@ func _test_characters() -> void:
 	creation._set_hero_mode(RaceDB.PRESET_ORDER.size())
 	creation._refresh()
 	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")
+	# Héros personnalisé (corps procédural) : posture et démarche de Riffald, mêmes clips Mixamo.
+	await _frames(3)
+	var custom: HeroModel = creation._model
+	var loco := custom._loco
+	_check(custom._anim == null and loco != null and custom._loco_on and loco.lengths.has("idle") and loco.lengths.has("run")
+		and custom._torso.basis.y.dot(Vector3.UP) > 0.97, "héros personnalisé : posture de repos de Riffald (clips Mixamo), dos droit")
+	custom.move_speed = Balance.HERO_SPEED
+	custom.set_moving(true)
+	var stride := Vector2(INF, -INF)
+	var sole := INF
+	for k in 16:
+		await get_tree().create_timer(0.05).timeout
+		var ankle := custom.to_local(custom._ankle_l.global_position)
+		stride = Vector2(minf(stride.x, ankle.z), maxf(stride.y, ankle.z))
+		sole = minf(sole, ankle.y)
+	_check(custom._loco_on and stride.y - stride.x > 0.5 and sole < 0.15 and custom._torso.basis.y.z > 0.05,
+		"héros personnalisé : course de Riffald (foulée %.2f m, pied au sol, buste penché en avant)" % (stride.y - stride.x))
+	custom.set_moving(false)
+	custom.set_seated(true)
+	await _frames(2)
+	_check(not custom._loco_on and absf(custom._hip_l.rotation.x + 1.45) < 0.01
+		and is_equal_approx(custom._hip_l.position.x, -HeroModel.HIP_HALF_WIDTH), "assis : le squelette procédural reprend la main")
+	custom.set_seated(false)
 	var heights := {}
 	var built := true
 	for race_id: String in RaceDB.RACE_ORDER:
