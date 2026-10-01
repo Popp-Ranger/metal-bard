@@ -9,6 +9,8 @@ extends CharacterBody3D
 ##   PEUR     — fuit le héros (Growl de l'Abîme) ;
 ##   MORT.
 ## Vitesse = 0,25 × vitesse du héros (Balance.ENEMY_SPEED_RATIO).
+## Ennemi humanoïde : construire son corps avec HumanoidBody.build(model, ...) dans _build_model() et le
+## ranger dans `body` ; il prend alors la posture et la démarche de Riffald (voir _animate et Skeleton).
 
 enum State { WANDER, CHASE, ATTACK, STAGGER, TRANCE, FEAR, DEAD }
 
@@ -44,6 +46,10 @@ var _net_pos := Vector3.ZERO
 var _net_yaw := 0.0
 var _retarget := 0.0
 var model: Node3D
+## Corps articulé des ennemis humanoïdes (null pour les autres) : voir HumanoidBody.
+var body: HumanoidBody
+## Vitesse de déplacement de l'image en cours (m/s), pour la cadence de la marche.
+var _speed_now := 0.0
 
 var _home := Vector3.ZERO
 var _wander_target := Vector3.ZERO
@@ -101,9 +107,11 @@ func _build_model() -> void:
 	Visuals.capsule(model, radius, height, Vector3(0, height * 0.5, 0), own_mat(Color(0.5, 0.5, 0.5)))
 
 
-## À surcharger : animation procédurale (marche, élan...).
-func _animate(_delta: float, _moving: bool) -> void:
-	pass
+## Animation (marche, élan...) : un ennemi humanoïde (`body`) a la posture et la démarche de Riffald ;
+## les autres surchargent cette fonction (les humanoïdes l'appellent avec super() puis ajoutent leurs gestes).
+func _animate(delta: float, moving: bool) -> void:
+	if body != null:
+		body.step(delta, moving, _speed_now)
 
 
 ## À surcharger : animation d'attaque (appelée au début de l'élan).
@@ -212,8 +220,9 @@ func _physics_process(delta: float) -> void:
 	if look.length() > 0.05:
 		model.rotation.y = lerp_angle(model.rotation.y, atan2(look.x, look.z), 1.0 - exp(-10.0 * delta))
 	_anim_t += delta
+	_speed_now = desired.length()
 	if state != State.TRANCE:
-		_animate(delta, desired.length() > 0.05)
+		_animate(delta, _speed_now > 0.05)
 
 
 ## Rayon de détection réel (trait « Un des leurs » des héros squelettes).
@@ -532,7 +541,8 @@ func _net_follow(delta: float) -> void:
 	global_position = global_position.lerp(Vector3(_net_pos.x, 0.0, _net_pos.z), 1.0 - exp(-12.0 * delta))
 	model.rotation.y = lerp_angle(model.rotation.y, _net_yaw, 1.0 - exp(-12.0 * delta))
 	_anim_t += delta
+	_speed_now = prev.distance_to(global_position) / maxf(delta, 0.001)
 	if state == State.TRANCE:
 		model.rotation.x = absf(sin(_anim_t * 11.0)) * 0.45
 	else:
-		_animate(delta, prev.distance_to(global_position) > 0.2 * delta)
+		_animate(delta, _speed_now > 0.2)

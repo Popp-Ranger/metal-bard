@@ -132,6 +132,10 @@
 - [x] Gérald, Zarathos et l'Inconnue deviennent des corps articulés en costume (Zarathos tient son bâton)
 - [x] Intro : Espace ou Échap passe la cinématique
 
+## ✅ v0.1.20 — Squelettes articulés
+- [x] Les squelettes ennemis (et les futurs ennemis humanoïdes, via HumanoidBody) ont la posture et la démarche de Riffald
+- [x] Coup d'épée par IK : élan au-dessus de l'épaule, frappe avec coup de poignet
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

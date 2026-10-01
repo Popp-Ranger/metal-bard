@@ -100,7 +100,7 @@ les mains, dans le prolongement des bras.
 Tous les personnages humanoïdes ont la posture et le déplacement de Riffald : `LocoAnimator` joue les
 mêmes clips (Happy Idle, Mutant Breathing Idle, Walking, Running, même mélange que `HeroAnimator`) sur
 une copie invisible du squelette de Riffald, sans maillage, puis les recopie sur le corps procédural
-de `HeroModel` :
+du personnage (`HumanoidBody`) :
 
 - bassin, buste (axe bassin → cou), tête et pieds : rotation de l'os depuis sa pose de repos ;
 - jambes et bras : IK à deux segments vers les chevilles et poignets de Riffald, à la longueur des
@@ -113,4 +113,20 @@ en costume (`Npc.COSTUMES` et `_dress`) : chapeau de paille et salopette, robe, 
 bâton tenu en main, long manteau et capuche.
 
 Le corps procédural reprend la main pour les poses sans clip : assis (clients, fauteuil roulant),
-solo, glissade, saut d'Angus Young, lit et mort. Les squelettes ennemis gardent leurs animations.
+solo, glissade, saut d'Angus Young, lit et mort.
+
+## Ennemis humanoïdes (v0.1.20)
+
+Les squelettes (soldats, capitaines, chef à la peau de loup) ont un corps articulé `HumanoidBody` :
+même posture et même démarche que Riffald, foulée à leur taille. Le coup d'épée garde son rythme
+(élan, frappe, retour) : le bras de l'épée est amené par IK au-dessus de l'épaule puis devant, mélangé
+avec la pose animée, et le poignet rabat la lame dans l'axe du bras à l'impact.
+
+**Futurs ennemis humanoïdes** : dans `_build_model()`, construire le corps avec
+`body = HumanoidBody.build(model, {proportions})` et accrocher les maillages à ses pivots
+(`torso`, `head`, `hip_l`, `knee_l`, `ankle_l`, `upper_l`, `fore_l`, `hand_l`, et leurs pendants `_r`).
+`Enemy._animate` l'anime alors tout seul ; une surcharge appelle `super(delta, moving)` puis ajoute ses
+gestes (attaque, objet tenu) avec `body.reach()` et `HumanoidBody.orient_hand()`, comme `Skeleton`.
+
+Coût : environ 0,05 ms par ennemi animé ; les ennemis des salles encore fermées sont endormis et ne
+coûtent rien.

@@ -80,8 +80,8 @@ var _flash_mats: Array[StandardMaterial3D] = []
 var _skin: RiggedSkin
 ## Animations du modèle importé (AnimationTree + IK de la guitare), ou null : voir HeroAnimator.
 var _anim: HeroAnimator
-## Posture et déplacement de Riffald pour le modèle procédural (créé à la première image animée).
-var _loco: LocoAnimator
+## Pivots du corps procédural, animés avec la posture et la démarche de Riffald (voir HumanoidBody).
+var _body: HumanoidBody
 var _loco_on := false
 var _dead := false
 var _lying := false
@@ -140,7 +140,7 @@ func height() -> float:
 func _build() -> void:
 	_skin = null
 	_anim = null
-	_loco = null
+	_body = null
 	_loco_on = false
 	_dead = false
 	_lying = false
@@ -242,6 +242,7 @@ func _build() -> void:
 		# Médiator entre le pouce et l'index de la main droite (pivot « _l », côté -X).
 		_pick = Visuals.cylinder(_hand_l, 0.018, 0.018, 0.004, Vector3(0.0, -0.075, 0.03),
 			Visuals.mat(Color(1.0, 0.75, 0.2), 0.3), Vector3(90, 0, 0), 3)
+	_make_body()
 
 	# --- Aura dorée du solo (invincibilité).
 	_aura = Node3D.new()
@@ -260,6 +261,33 @@ func _build() -> void:
 	if not preset_model.is_empty() and ResourceLoader.exists(preset_model):
 		scale = Vector3.ONE # le modèle importé est déjà à sa taille réelle
 		_use_skin(preset_model)
+
+
+## Pivots du corps rassemblés pour LocoAnimator (même hiérarchie que HumanoidBody.build).
+func _make_body() -> void:
+	var b := HumanoidBody.new()
+	b.root = self
+	b.torso = _torso
+	b.head = _head
+	b.hip_l = _hip_l
+	b.hip_r = _hip_r
+	b.knee_l = _knee_l
+	b.knee_r = _knee_r
+	b.ankle_l = _ankle_l
+	b.ankle_r = _ankle_r
+	b.upper_l = _upper_l
+	b.upper_r = _upper_r
+	b.fore_l = _fore_l
+	b.fore_r = _fore_r
+	b.hand_l = _hand_l
+	b.hand_r = _hand_r
+	b.hip_y = HIP_Y
+	b.hip_half = HIP_HALF_WIDTH
+	b.thigh = THIGH
+	b.shin = SHIN
+	b.upper_arm = UPPER_ARM
+	b.forearm = FOREARM
+	_body = b
 
 
 # --- Tête : visage, oreilles, cornes, défenses, barbe, coiffure ------------------
@@ -612,8 +640,9 @@ func _process(delta: float) -> void:
 	var breath := sin(_t * 1.8)
 	if _animated():
 		# Debout : posture et déplacement de Riffald (clips Mixamo, voir LocoAnimator).
-		_loco.advance(delta, _walk, move_speed * (1.0 if _moving else 0.0), tired)
-		_loco.apply_body()
+		_body.head_turn = head_turn
+		_body.loco.advance(delta, _walk, move_speed * (1.0 if _moving else 0.0), tired)
+		_body.loco.apply_body()
 	else:
 		_procedural_body(delta, run, p, breath, hunched)
 	_hair_back.rotation.x = -0.1 - _walk * lerpf(0.1, 0.3, run) - (absf(sin(_t * 9.0)) * 0.3 if _soloing else 0.0)
@@ -641,9 +670,7 @@ func _process(delta: float) -> void:
 ## glissade, saut, lit, mort), pour le modèle procédural seulement (les modèles importés ont HeroAnimator).
 func _animated() -> bool:
 	var want := _anim == null and not seated and not _soloing and _pose.is_empty() and not _dead and not _lying
-	if want and _loco == null:
-		_loco = LocoAnimator.attach(self)
-	if _loco == null:
+	if _body == null or (want and not _body.ensure_loco()) or _body.loco == null:
 		return false
 	if want != _loco_on:
 		_loco_on = want
@@ -655,7 +682,7 @@ func _animated() -> bool:
 ## Retour au squelette procédural : pivots du corps remis à leur repos (les bras sont recalculés par IK).
 func _reset_pose() -> void:
 	for n: Node3D in [_hip_l, _hip_r, _knee_l, _knee_r, _ankle_l, _ankle_r, _torso, _head]:
-		n.basis = Basis.IDENTITY
+		n.quaternion = Quaternion.IDENTITY # la tête garde son échelle
 	_hip_l.position = Vector3(-HIP_HALF_WIDTH, HIP_Y, 0)
 	_hip_r.position = Vector3(HIP_HALF_WIDTH, HIP_Y, 0)
 	_torso.position = Vector3(0, HIP_Y, 0)
@@ -724,7 +751,7 @@ func _update_arms() -> void:
 		# Sans guitare (PNJ) ou guitare dans le dos : bras de l'animation de Riffald debout, sinon
 		# bras qui balancent à l'opposé des jambes, mains sur la table assis.
 		if _loco_on:
-			_loco.apply_arms()
+			_body.loco.apply_arms()
 		else:
 			var swing := sin(_phase) * lerpf(0.1, 0.2, clampf((move_speed - 1.5) / 4.0, 0.0, 1.0)) * _walk
 			var l := Vector3(-0.27, 0.02, 0.03 - swing)
@@ -778,14 +805,7 @@ func _update_arms() -> void:
 ## Oriente la main dans le prolongement de l'avant-bras, paume tournée vers `palm_dir`
 ## (espace du torse) ; `wrist_pitch` plie le poignet.
 func _orient_hand(upper: Node3D, fore: Node3D, hand: Node3D, palm_dir: Vector3, wrist_pitch: float) -> void:
-	var fb := upper.basis * fore.basis
-	var y := fb.y.normalized()
-	var z := palm_dir - y * palm_dir.dot(y)
-	if z.length() < 0.01:
-		return
-	z = z.normalized()
-	var desired := Basis(y.cross(z), y, z)
-	hand.basis = fb.inverse() * desired * Basis(Vector3.RIGHT, wrist_pitch)
+	HumanoidBody.orient_hand(upper, fore, hand, palm_dir, wrist_pitch)
 
 
 ## IK analytique à deux segments dans l'espace du torse.

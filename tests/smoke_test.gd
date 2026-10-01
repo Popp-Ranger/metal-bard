@@ -12,6 +12,7 @@ func _ready() -> void:
 	_test_generator()
 	_test_audio()
 	await _test_characters()
+	await _test_skeleton_body()
 	await _test_quest_flow()
 	await _test_new_features()
 	await _test_town_portal()
@@ -854,7 +855,7 @@ func _test_characters() -> void:
 	# Héros personnalisé (corps procédural) : posture et démarche de Riffald, mêmes clips Mixamo.
 	await _frames(3)
 	var custom: HeroModel = creation._model
-	var loco := custom._loco
+	var loco := custom._body.loco
 	_check(custom._anim == null and loco != null and custom._loco_on and loco.lengths.has("idle") and loco.lengths.has("run")
 		and custom._torso.basis.y.dot(Vector3.UP) > 0.97, "héros personnalisé : posture de repos de Riffald (clips Mixamo), dos droit")
 	custom.move_speed = Balance.HERO_SPEED
@@ -899,6 +900,31 @@ func _test_characters() -> void:
 		and GameState.g("le barde", "la barde") == "la barde", "nom et genre repris dans les dialogues")
 	creation.queue_free()
 	await _frames(3)
+
+
+## Ennemis humanoïdes : corps articulé (HumanoidBody), posture et démarche de Riffald.
+func _test_skeleton_body() -> void:
+	print("[Squelettes : corps articulé]")
+	var skel := Skeleton.new()
+	skel.captain = true
+	add_child(skel)
+	skel.set_physics_process(false)
+	await _frames(1)
+	var stride := Vector2(INF, -INF)
+	for k in 40:
+		skel._speed_now = skel.move_speed
+		skel._animate(0.033, true)
+		var ankle := skel.model.to_local(skel.body.ankle_l.global_position)
+		stride = Vector2(minf(stride.x, ankle.z), maxf(stride.y, ankle.z))
+	_check(skel.body != null and skel.body.loco != null and stride.y - stride.x > 0.3,
+		"squelette : démarche de Riffald (foulée %.2f m)" % (stride.y - stride.x))
+	skel._strike = 1.0
+	skel._animate(0.033, false)
+	var raised := skel.body.wrist("r").distance_to(Skeleton.SWORD_RAISED)
+	_check(raised < 0.03 and skel.body.wrist("r").y > skel.body.upper_r.position.y,
+		"squelette : épée levée au-dessus de l'épaule pour frapper (écart %.3f m)" % raised)
+	skel.queue_free()
+	await _frames(1)
 
 
 ## Portail bleu (T) et donjon persistant : on repart exactement où on était, rien n'a bougé.
