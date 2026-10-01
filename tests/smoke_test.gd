@@ -154,8 +154,8 @@ func _test_quest_flow() -> void:
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	_check(enemies.size() >= 8, "donjon peuplé (%d ennemis)" % enemies.size())
 	var dungeon_music := Sfx._ambience.stream as AudioStreamMP3
-	_check(dungeon_music != null and dungeon_music.loop and dungeon_music.resource_path.ends_with("dungeon_theme.mp3"),
-		"musique du donjon chargée et en boucle")
+	_check(dungeon_music != null and not dungeon_music.loop and dungeon_music.resource_path.begins_with("res://audio/music/donjons/")
+		and Sfx.playlist().size() == 5, "musique du donjon : un des 5 morceaux du dossier, tiré au hasard")
 	dungeon_music = null
 	var hero := get_tree().get_first_node_in_group("hero") as Hero
 	_check(hero != null, "héros présent dans le donjon")
@@ -731,6 +731,15 @@ func _test_audio() -> void:
 		Sfx.set_volume(bus_name, float(saved[bus_name]))
 	Sfx.save_settings()
 	_check(Sfx._streams.has("voice_0") and Sfx._streams.has("voice_3"), "voix des dialogues générées")
+	# Donjons : les musiques du dossier jouées au hasard, sans répéter deux fois de suite la même.
+	Sfx.play_playlist("res://audio/music/donjons", -60.0)
+	var first := Sfx._playlist_last
+	Sfx._next_track()
+	var mp3 := Sfx._ambience.stream as AudioStreamMP3
+	_check(Sfx.playlist().size() == 5 and Sfx._playlist_last != first and mp3 != null and not mp3.loop,
+		"donjons : %d musiques en lecture aléatoire, enchaînées sans répétition" % Sfx.playlist().size())
+	Sfx.stop_ambience()
+	_check(Sfx.playlist().is_empty(), "la liste de lecture s'arrête avec la musique")
 
 
 func _test_characters() -> void:
@@ -1003,6 +1012,18 @@ func _test_skeleton_body() -> void:
 	var sword := sk.find_children("*", "BoneAttachment3D", true, false)
 	_check(moved > 0.2 and sword.size() >= 3, "squelette : coup d'épée animé (main %.2f m), épée, bouclier et casque accrochés aux os" % moved)
 	skel.queue_free()
+	await _frames(1)
+	# Ennemi posé tourné (marqueur, apparition au hasard) : le corps reste droit, c'est le modèle
+	# qui prend l'orientation, sinon le regard (angle du monde) le ferait marcher de travers.
+	var rat := Rat.new()
+	rat.rotation.y = 1.3
+	add_child(rat)
+	rat.set_physics_process(false)
+	await _frames(1)
+	var fwd := rat.model.global_basis.z.normalized()
+	_check(is_zero_approx(rat.rotation.y) and fwd.distance_to(Basis(Vector3.UP, 1.3).z) < 0.01,
+		"ennemi posé tourné : le modèle regarde où il va (corps droit, orientation sur le modèle)")
+	rat.queue_free()
 	await _frames(1)
 
 

@@ -89,7 +89,12 @@ func _ready() -> void:
 	col.shape = cap
 	col.position.y = height * 0.5
 	add_child(col)
+	# L'orientation de départ passe au modèle : le corps reste droit, car le regard du modèle
+	# (model.rotation.y) est calculé comme un angle du monde. Sinon il marcherait de travers.
+	var spawn_yaw := rotation.y
+	rotation.y = 0.0
 	model = Node3D.new()
+	model.rotation.y = spawn_yaw
 	add_child(model)
 	_build_model()
 	_build_hp_bar()

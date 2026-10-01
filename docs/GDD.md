@@ -208,7 +208,7 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 **Prévu** : salles « préfabriquées » (autel, bibliothèque, arène à pièges), coffres et pièges, salles secrètes, étages multiples, biomes par donjon, difficulté dynamique.
 
 ## 12. Audio
-- **Musiques** (`audio/music/`, jouées en boucle via `Sfx.play_music()`) : `tavern_theme.mp3` dans la taverne (3 min 21), `dungeon_theme.mp3` dans le donjon.
+- **Musiques** (`audio/music/`) : `tavern_theme.mp3` en boucle dans la taverne (3 min 21, `Sfx.play_music()`) ; dans les donjons, les morceaux de `audio/music/donjons/` joués au hasard l’un après l’autre (`Sfx.play_playlist()`, sans répéter deux fois de suite le même) : déposer un MP3/OGG dans ce dossier suffit à l’ajouter. `dungeon_theme.mp3` n’est plus utilisé.
 - **Dialogues** : chaque lettre affichée fait « babiller » le personnage (syllabes synthétisées à partir de formants de voyelles), avec un timbre propre à chacun (Riffald grave, Plumeau aigu).
 - **Bruitages synthétisés par code** (`scripts/autoload/sfx.gd`) : décharge électrique, onde de choc, power chords distordus, tonnerre, coassements, os qui claquent. Le bourdon d'ambiance ne sert plus qu'à l'écran titre.
 - **Trois canaux (bus) réglables séparément** dans **Options > Audio** (écran titre et menu pause) : *Musique*, *Sorts et effets*, *Dialogues*. Réglages appliqués en direct et sauvegardés dans `user://settings.cfg`.

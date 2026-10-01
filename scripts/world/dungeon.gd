@@ -91,7 +91,7 @@ func _ready() -> void:
 	Events.story_action.connect(_on_story_action)
 	Events.enemy_killed.connect(_on_enemy_killed)
 	Events.town_portal_requested.connect(open_town_portal)
-	Sfx.play_music("res://audio/music/dungeon_theme.mp3", -8.0) # musique du donjon
+	Sfx.play_playlist("res://audio/music/donjons", -8.0) # musiques des donjons, au hasard
 	if GameState.quest_state(quest_id) == QuestDB.State.ACTIVE:
 		Events.notify("Trouvez Plumeau au fond des catacombes...", Events.COLOR_DEFAULT)
 

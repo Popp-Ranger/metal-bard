@@ -151,6 +151,11 @@
 - [x] Zarathos (mage), Grokk le tavernier orc (remplace Brunhilde) et tous les squelettes ennemis : modèles 3D fournis, squelette de Riffald et clips Mixamo (docs/PNJ_3D.md)
 - [x] Squelettes : course de zombie, coup d'épée animé, sursaut, mort ; épée, bouclier, casque et peau de loup accrochés aux os
 
+## ✅ v0.1.25 — Ennemis de face, musiques des donjons
+- [x] Rats et squelettes marchent et frappent face au joueur (l'orientation d'apparition passe au modèle, le corps reste droit)
+- [x] Donjons : les 5 musiques de `audio/music/donjons/` en lecture aléatoire, enchaînées sans répétition
+- [x] Grokk le tavernier : poids repeints à la main dans Blender, glb réexporté
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -29,8 +29,8 @@ blender --background art/pnj/<perso>.blend --python art/riffald/retarget_mixamo.
    Seul le glb en profite, le .blend n'est pas modifié.
 
 **Retouches à la main.** Après `rig`, on peut corriger les os et la peinture des poids directement dans le
-`.blend`, puis relancer seulement l'**export**. Le squelette a été retouché ainsi : `rig squelette` refuse
-désormais de tout recalculer (sauf `rig squelette force`, qui effacerait les retouches).
+`.blend`, puis relancer seulement l'**export**. Le squelette et le tavernier ont été retouchés ainsi : `rig squelette` (ou `rig tavernier`) refuse
+désormais de tout recalculer (sauf avec `force`, qui effacerait les retouches).
 
 ## Dans le jeu
 

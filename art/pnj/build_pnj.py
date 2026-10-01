@@ -31,7 +31,7 @@ CHARS = {
         "shoulder.R": (-0.23, 0.05, 1.55), "elbow.R": (-0.34, 0.02, 1.25), "wrist.R": (-0.43, -0.10, 1.06),
         "hip.L": (0.12, 0.05, 1.0), "knee.L": (0.18, 0.04, 0.56), "ankle.L": (0.26, 0.06, 0.13),
         "hip.R": (-0.12, 0.05, 1.0), "knee.R": (-0.20, 0.04, 0.56), "ankle.R": (-0.29, 0.06, 0.13)}},
-    "tavernier": {"dir": "Tavernier", "name": "Tavernier", "height": 2.05, "joints": {
+    "tavernier": {"dir": "Tavernier", "name": "Tavernier", "height": 2.05, "retouche": True, "joints": {
         "hips": (0.0, 0.05, 0.95), "spine": (0.0, 0.06, 1.15), "chest": (0.0, 0.08, 1.40),
         "neck": (0.0, 0.07, 1.72), "head": (0.0, 0.04, 1.78), "head_top": (0.0, 0.04, 2.05),
         "shoulder.L": (0.30, 0.14, 1.57), "elbow.L": (0.44, 0.15, 1.15), "wrist.L": (0.47, -0.02, 0.92),

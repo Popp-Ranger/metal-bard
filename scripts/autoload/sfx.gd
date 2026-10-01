@@ -46,6 +46,9 @@ var _clip: AudioStreamPlayer
 var _thunders: Array[int] = []
 var _strikes: Array[Vector2] = [] # (instant, force) des coups de tonnerre de la musique d'orage
 var _last_music_pos := -1.0
+## Liste de lecture aléatoire en cours (donjons) et dernier morceau joué.
+var _playlist: Array[String] = []
+var _playlist_last := ""
 
 
 func _ready() -> void:
@@ -58,6 +61,7 @@ func _ready() -> void:
 		_players.append(p)
 	_ambience = AudioStreamPlayer.new()
 	_ambience.bus = BUS_MUSIC
+	_ambience.finished.connect(_next_track)
 	add_child(_ambience)
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = BUS_DIALOGUE
@@ -146,6 +150,7 @@ func play_voice(pitch: float, volume_db: float = -10.0) -> void:
 
 
 func play_ambience(id: String, volume_db: float = -12.0) -> void:
+	_playlist.clear()
 	var stream: AudioStreamWAV = _streams.get(id)
 	if stream == null:
 		return
@@ -157,6 +162,7 @@ func play_ambience(id: String, volume_db: float = -12.0) -> void:
 ## Musique de fond lue depuis un fichier (MP3 / OGG), jouée en boucle
 ## sur le canal Musique : elle s'arrête aux changements de scène.
 func play_music(path: String, volume_db: float = -8.0) -> void:
+	_playlist.clear()
 	var stream := load(path) as AudioStream
 	if stream == null:
 		push_warning("Musique introuvable : %s" % path)
@@ -172,7 +178,48 @@ func play_music(path: String, volume_db: float = -8.0) -> void:
 	_ambience.play()
 
 
+## Musiques d'un dossier (MP3 / OGG) jouées au hasard l'une après l'autre, sans répéter deux fois
+## de suite la même : il suffit de déposer un fichier dans le dossier pour l'ajouter.
+func play_playlist(dir: String, volume_db: float = -8.0) -> void:
+	var tracks: Array[String] = []
+	for f in ResourceLoader.list_directory(dir):
+		if f.get_extension().to_lower() in ["mp3", "ogg"]:
+			tracks.append(dir.path_join(f))
+	if tracks.is_empty():
+		push_warning("Aucune musique dans %s" % dir)
+		return
+	_playlist = tracks
+	_playlist_last = ""
+	_ambience.volume_db = volume_db
+	_next_track()
+
+
+## Liste de lecture en cours (vide : musique unique en boucle).
+func playlist() -> Array[String]:
+	return _playlist
+
+
+func _next_track() -> void:
+	if _playlist.is_empty():
+		return
+	var choices := _playlist.filter(func(p: String) -> bool: return p != _playlist_last)
+	var path := str((choices if not choices.is_empty() else _playlist).pick_random())
+	_playlist_last = path
+	var stream := load(path) as AudioStream
+	if stream == null:
+		return
+	var mp3 := stream as AudioStreamMP3
+	if mp3 != null:
+		mp3.loop = false
+	var ogg := stream as AudioStreamOggVorbis
+	if ogg != null:
+		ogg.loop = false
+	_ambience.stream = stream
+	_ambience.play()
+
+
 func stop_ambience() -> void:
+	_playlist.clear()
 	_ambience.stop()
 
 
