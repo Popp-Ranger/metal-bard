@@ -143,6 +143,10 @@
 - [x] Premier donjon fait main dans l'éditeur de Godot : sol peint case par case (GridMap), murs automatiques, salles, objets à glisser-déposer (docs/EDITEUR_NIVEAUX.md)
 - [x] Vérification du donjon et test direct (F6) ; les donjons suivants restent générés
 
+## ✅ v0.1.23 — Éditeur de taverne
+- [x] Le Crâne Hurlant fait main dans l'éditeur : sols et murs en cases de 1 m (murs, fenêtres éclairées par la lune, murets, cloisons), mobilier et points du jeu à glisser-déposer
+- [x] Tables (places des clients), comptoir, escaliers reliés à leur arrivée, lit loué, salle d'entraînement, PNJ ; vérification et test direct (F6)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

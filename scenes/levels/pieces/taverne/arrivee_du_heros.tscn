@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_d1mbu"]
+
+[node name="Arrivée du héros" type="Node3D" unique_id=472335848]
+script = ExtResource("1_d1mbu")
+kind = 22

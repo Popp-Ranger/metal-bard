@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_nwr25"]
+
+[node name="Table ronde" type="Node3D" unique_id=1484199353]
+script = ExtResource("1_nwr25")

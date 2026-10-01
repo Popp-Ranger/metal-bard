@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_3f3ll"]
+
+[node name="Tapis" type="Node3D" unique_id=1548079879]
+script = ExtResource("1_3f3ll")
+kind = 11
+size = Vector2(3, 2)

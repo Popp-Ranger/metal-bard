@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_66l5t"]
+
+[node name="Portes d\'entrée" type="Node3D" unique_id=1305726405]
+script = ExtResource("1_66l5t")
+kind = 25

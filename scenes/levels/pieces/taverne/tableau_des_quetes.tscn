@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_sktvb"]
+
+[node name="Tableau des quêtes" type="Node3D" unique_id=956057742]
+script = ExtResource("1_sktvb")
+kind = 9

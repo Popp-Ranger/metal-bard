@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_u4xon"]
+
+[node name="Fantôme" type="Node3D" unique_id=548001882]
+script = ExtResource("1_u4xon")
+kind = 18

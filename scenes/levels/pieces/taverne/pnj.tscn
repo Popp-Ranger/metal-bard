@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_vm8xw"]
+
+[node name="PNJ" type="Node3D" unique_id=664415786]
+script = ExtResource("1_vm8xw")
+kind = 33

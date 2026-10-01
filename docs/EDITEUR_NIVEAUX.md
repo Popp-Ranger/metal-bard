@@ -7,6 +7,11 @@ case, puis on glisse-dépose les objets. En jeu, le code lit la scène et y bran
 Ouvrir le projet dans Godot (`project.godot`), puis la scène voulue depuis le panneau **Système de
 fichiers** (en bas à gauche).
 
+| Niveau | Scène |
+|---|---|
+| La taverne (le Crâne Hurlant) | `scenes/levels/taverne.tscn` |
+| Le premier donjon (Catacombes Suintantes) | `scenes/levels/catacombes.tscn` |
+
 ## Premier donjon : `scenes/levels/catacombes.tscn`
 
 Le donjon de la quête « Le Petit Plumeau » (Catacombes Suintantes, Gloubah). Les donjons suivants
@@ -86,4 +91,63 @@ modifié le donjon, terminez-le (ou fuyez) avant de reprendre une ancienne sauve
 
 ```
 Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tools/levels/build_dungeon_assets.gd -- catacombes
+```
+
+## La taverne : `scenes/levels/taverne.tscn`
+
+Le Crâne Hurlant sur trois zones de la même scène, éloignées les unes des autres et reliées par les
+escaliers : le **rez-de-chaussée** (autour de l'origine), l'**étage** (70 m au nord) et le **sous-sol**
+(70 m à l'est). Dans l'arbre de la scène, les objets sont rangés dans les dossiers **Rez-de-chaussee**,
+**Etage** et **Sous-sol** (facultatifs).
+
+### Sols et murs (cases de 1 m)
+
+- **Sol** (GridMap) : tuiles **Plancher** et **Dalles**.
+- **Murs** (GridMap) : **Mur** (4 m), **Fenêtre**, **Muret** (bas, infranchissable), **Cloison**
+  (s'efface quand le héros passe derrière). Un mur se pose sur le **bord** de sa case : avant de
+  peindre, tourner la tuile avec **S** (un quart de tour) pour choisir le bord.
+  Astuce : les murs d'enceinte sont posés dans les cases juste à l'extérieur du plancher, ce qui évite
+  que deux murs se disputent la même case dans les angles.
+- Chaque **fenêtre** fait entrer le clair de lune du côté où il y a du plancher. Deux fenêtres côte à
+  côte forment une seule baie (une seule lumière).
+
+### Les objets
+
+Glisser-déposer depuis `scenes/levels/pieces/taverne/`. Les réglages propres à chaque objet sont dans
+l'Inspecteur (seuls ceux qui servent s'affichent). Tourner un objet : son devant est la flèche (+Z).
+
+| Pièce | Réglages | En jeu |
+|---|---|---|
+| `table` | *Option* : place laissée au fauteuil de Katrkar | table ronde et ses 4 chaises : les clients s'y assoient |
+| `comptoir` | *Size* x : longueur | les clients viennent commander devant (disques bleus = places) |
+| `chaise`, `etagere_bouteilles`, `cheminee`, `tonneau`, `caisse`, `pilier_lanterne`, `lanterne`, `banniere`, `tapis`, `malle`, `table_de_chevet`, `grimoires`, `orbe`, `dormeur`, `fantome`, `ratelier`, `torche` | taille (*Size*), couleur (*Color*, *Variant*) selon l'objet ; échelle du nœud pour un plus gros tonneau | décor (la plupart bloquent le passage) |
+| `lit` | *Variant* : couverture (0 à 3) ; *Option* : **lit loué par le héros** (un seul) | le héros s'y repose une fois la chambre louée |
+| `ecriteau` | *Text*, *Color* | texte flottant |
+| `tableau_des_quetes` | | on y lit les quêtes |
+| `arrivee_du_heros` | | où apparaît le héros (un seul) |
+| `cercle_de_runes` | | portail de Zarathos vers le donjon ; on y revient du donjon (un seul) |
+| `portail_bleu` | | portail bleu de retour au donjon (un seul) |
+| `portes_entree` | | portes verrouillées (laisser une ouverture de 4 cases dans le muret) |
+| `escalier_qui_monte`, `escalier_qui_descend` | *Text* : invite ; *Destination* : une `arrivee_escalier` ; *Variant* : nombre de marches | on change de zone avec un fondu |
+| `arrivee_escalier` | *Text* : nom du lieu affiché à l'arrivée | |
+| `zone_entrainement` | *Size* | dedans, sorts et décibels illimités |
+| `mannequin`, `mannequin_allie`, `portail_demoniaque` | | salle d'entraînement |
+| `pnj` | *Npc* : Brunhilde, Zarathos, l'Inconnue, Gérald (chacun une fois) | |
+
+Pour relier un escalier : sélectionner l'escalier, puis dans l'Inspecteur cliquer sur *Destination*
+→ **Assigner** et choisir l'arrivée dans la liste.
+
+### Vérifier et tester
+
+- Racine **Taverne** → bouton **Vérifier la taverne** : problèmes dans la **Sortie** (un seul lit loué,
+  escalier qui ne mène nulle part, PNJ manquant...).
+- **F6** : nouvelle partie directement dans la taverne (intro passée).
+
+### Repartir de la taverne d'origine
+
+`tools/levels/build_tavern_assets.gd` recrée les tuiles et les pièces ; avec `-- taverne`, il **écrase**
+`taverne.tscn` par le Crâne Hurlant d'origine :
+
+```
+Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tools/levels/build_tavern_assets.gd -- taverne
 ```

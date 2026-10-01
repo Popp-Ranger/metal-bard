@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_e8owd"]
+
+[node name="Table de chevet" type="Node3D" unique_id=2126442784]
+script = ExtResource("1_e8owd")
+kind = 13

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_mpio0"]
+
+[node name="Étagère à bouteilles" type="Node3D" unique_id=1337351422]
+script = ExtResource("1_mpio0")
+kind = 3
+size = Vector2(4, 0.4)

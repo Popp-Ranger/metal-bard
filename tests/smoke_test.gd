@@ -939,6 +939,31 @@ func _test_level_editor() -> void:
 		"sans scène, le donjon reste généré aléatoirement")
 	g.queue_free()
 	await _frames(3)
+	# Taverne faite main (TavernMap) : la vie de la taverne branchée sur la scène.
+	var tmap := (load("res://scenes/levels/taverne.tscn") as PackedScene).instantiate() as TavernMap
+	var t_problems := tmap.check()
+	_check(t_problems.is_empty() and tmap.markers().size() > 60, "Taverne : scène faite main valide (%d objets) %s" % [tmap.markers().size(), t_problems])
+	tmap.free()
+	GameState.new_game()
+	GameState.flags["intro_done"] = true
+	var tv: Node = load("res://scenes/tavern.tscn").instantiate()
+	add_child(tv)
+	await _frames(3)
+	var stairs := 0
+	var moons := 0
+	for c in tv.get_children():
+		if c is Interactable and ((c as Interactable).prompt.begins_with("Monter") or (c as Interactable).prompt.begins_with("Descendre")
+				or (c as Interactable).prompt.begins_with("Remonter")):
+			stairs += 1
+		if c is SpotLight3D:
+			moons += 1
+	_check((tv.get("_seats") as Array).size() == 23 and not (tv.get("_katrkar_seat") as Dictionary).is_empty()
+		and (tv.get("_bar_spots") as Array).size() == 6 and stairs == 4 and moons == 8 and tv.get("bed_interact") != null
+		and bool(tv.call("is_in_cellar", Vector3(61, 0, -3))) and not bool(tv.call("is_in_cellar", Vector3(0, 0, 0))),
+		"taverne lue dans la scène : 23 places, comptoir, 4 escaliers, %d fenêtres éclairées, lit, salle d'entraînement (%d %d %d)" % [moons,
+			(tv.get("_seats") as Array).size(), (tv.get("_bar_spots") as Array).size(), stairs])
+	tv.queue_free()
+	await _frames(3)
 	GameState.new_game()
 
 

@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_onxwd"]
+
+[node name="Mannequin allié" type="Node3D" unique_id=515175155]
+script = ExtResource("1_onxwd")
+kind = 31

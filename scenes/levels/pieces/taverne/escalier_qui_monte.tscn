@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_gp7ma"]
+
+[node name="Escalier qui monte" type="Node3D" unique_id=913191928]
+script = ExtResource("1_gp7ma")
+kind = 26
+variant = 10
+text = "Monter"

@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_vayfm"]
+
+[node name="Mannequin" type="Node3D" unique_id=192785109]
+script = ExtResource("1_vayfm")
+kind = 30

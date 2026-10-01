@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_m1itp"]
+
+[node name="Zone d\'entraînement" type="Node3D" unique_id=582758597]
+script = ExtResource("1_m1itp")
+kind = 29
+size = Vector2(10, 8)

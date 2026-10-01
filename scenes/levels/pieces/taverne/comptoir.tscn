@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_mkgc1"]
+
+[node name="Comptoir" type="Node3D" unique_id=891102110]
+script = ExtResource("1_mkgc1")
+kind = 2
+size = Vector2(11, 0.8)

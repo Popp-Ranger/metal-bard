@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="1_3vx51"]
+
+[node name="Caisse" type="Node3D" unique_id=649282490]
+script = ExtResource("1_3vx51")
+kind = 6
