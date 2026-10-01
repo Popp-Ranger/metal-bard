@@ -38,7 +38,9 @@ CHARS = {
         "shoulder.R": (-0.30, 0.14, 1.57), "elbow.R": (-0.45, 0.15, 1.15), "wrist.R": (-0.48, -0.02, 0.92),
         "hip.L": (0.13, 0.05, 0.92), "knee.L": (0.16, 0.05, 0.52), "ankle.L": (0.24, 0.07, 0.16),
         "hip.R": (-0.13, 0.05, 0.92), "knee.R": (-0.16, 0.05, 0.52), "ankle.R": (-0.25, 0.07, 0.16)}},
-    "squelette": {"dir": "Squelette", "name": "Squelette", "height": 1.75, "joints": {
+    # Squelette : os et peinture des poids retouchés à la main par Ulysse dans squelette.blend (2 oct. 2026) ;
+    # « rig » les effacerait, il refuse donc sauf avec « force » (ces articulations sont celles d'origine).
+    "squelette": {"dir": "Squelette", "name": "Squelette", "height": 1.75, "retouche": True, "joints": {
         "hips": (0.0, 0.04, 0.90), "spine": (0.0, 0.06, 1.05), "chest": (0.0, 0.07, 1.22),
         "neck": (0.0, 0.08, 1.43), "head": (0.0, 0.07, 1.50), "head_top": (0.0, 0.06, 1.75),
         "shoulder.L": (0.25, 0.12, 1.37), "elbow.L": (0.34, 0.14, 1.06), "wrist.L": (0.40, 0.03, 0.81),
@@ -242,6 +244,10 @@ def _candidates(co, j):
 
 def rig():
     c = cfg()
+    if c.get("retouche") and "force" not in ARGS:
+        print("REFUS : le squelette et les poids de %s ont été retouchés à la main dans Blender ; "
+              "relancer avec « rig %s force » pour les recalculer (retouches perdues)." % (c["name"], ARGS[1]))
+        return
     body = bpy.data.objects[c["name"]]
     rig_name = c["name"] + "_rig"
     for o in list(bpy.data.objects):

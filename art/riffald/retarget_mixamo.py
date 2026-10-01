@@ -189,7 +189,76 @@ def build_all(rig, names=None, table=None):
     return actions
 
 
+def fill_unweighted(rig):
+    """Vertices sans poids (somme nulle, souvent laissés par une retouche à la peinture de poids) : ils
+    resteraient figés à leur place pendant l'animation et étireraient de grands pans de maillage. Ils
+    prennent la moyenne des poids de leurs voisins déjà pondérés, de proche en proche (la peinture voisine
+    est prolongée) ; une pièce isolée sans aucun poids suit l'os le plus proche. Puis chaque vertex est
+    normalisé (somme des poids = 1, comme le fait Blender à l'affichage). Le .blend n'est pas enregistré :
+    seul le glb exporté en profite."""
+    bones = {b.name: (b.head_local, b.tail_local) for b in rig.data.bones}
+
+    def seg_dist(p, a, b):
+        ab = b - a
+        t = max(0.0, min(1.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+        return (a + ab * t - p).length
+
+    for o in bpy.data.objects:
+        if o.type != "MESH" or o.parent != rig:
+            continue
+        me = o.data
+        names = {g.index: g.name for g in o.vertex_groups}
+        nb = [[] for _ in me.vertices]
+        for e in me.edges:
+            a, b = e.vertices
+            nb[a].append(b)
+            nb[b].append(a)
+        W = [{names[g.group]: g.weight for g in v.groups if g.weight > 0.0 and g.group in names} for v in me.vertices]
+        pending = {i for i, w in enumerate(W) if sum(w.values()) < 0.01}
+        empty = len(pending)
+        while pending:
+            done = []
+            for i in pending:
+                acc, k = {}, 0
+                for j in nb[i]:
+                    if j not in pending:
+                        k += 1
+                        for g, w in W[j].items():
+                            acc[g] = acc.get(g, 0.0) + w
+                if k:
+                    done.append((i, {g: w / k for g, w in acc.items()}))
+            if not done:
+                break
+            for i, w in done:
+                W[i] = w
+                pending.discard(i)
+        for i in pending:  # pièce isolée : l'os le plus proche
+            p = me.vertices[i].co
+            W[i] = {min(bones, key=lambda bn: seg_dist(p, *bones[bn])): 1.0}
+        changed = 0
+        for i, v in enumerate(me.vertices):
+            tot = sum(W[i].values())
+            if tot <= 0.0:
+                continue
+            target = {g: w / tot for g, w in W[i].items() if w / tot > 0.001}
+            current = {names[g.group]: g.weight for g in v.groups if g.group in names}
+            if all(abs(current.get(g, 0.0) - w) < 1e-4 for g, w in target.items()) and \
+                    all(g in target or w < 1e-4 for g, w in current.items()):
+                continue
+            changed += 1
+            for g in list(current):
+                o.vertex_groups[g].remove([i])
+            for g, w in target.items():
+                if o.vertex_groups.get(g) is None:
+                    o.vertex_groups.new(name=g)
+                o.vertex_groups[g].add([i], w, "REPLACE")
+        print("POIDS %s : %d vertices sans poids complétés (%d par une pièce isolée), %d normalisés"
+              % (o.name, empty, len(pending), changed))
+
+
 def export(rig, actions, out=None, rig_only=False):
+    if not rig_only:
+        fill_unweighted(rig)
     # Chaque animation dans une piste NLA : l'export glTF en fait une animation séparée.
     ad = rig.animation_data
     for tr in list(ad.nla_tracks):
@@ -258,7 +327,7 @@ if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["export"]
     rig = bpy.data.objects[RIG]
     if args[0] == "sheets":
-        table = CLIPS if any(n in CLIPS for n in args[2:]) else ANIMS
+        table = dict(ANIMS, **CLIPS) if args[2:] else ANIMS
         acts = build_all(rig, args[2:] or None, table)
         sheets(rig, acts, args[1])
     elif args[0] == "clips":

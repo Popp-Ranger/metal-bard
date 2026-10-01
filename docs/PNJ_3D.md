@@ -23,7 +23,14 @@ blender --background art/pnj/<perso>.blend --python art/riffald/retarget_mixamo.
 2. **views** : vues de face et de profil quadrillées, pour relever les articulations (dictionnaire `CHARS`).
 3. **rig** : squelette de Riffald (17 os), pondération par distance aux os ; chapeau et barbe suivent la
    tête ; la robe du mage ne suit les jambes que sous le genou.
-4. **export** : clips Mixamo du personnage → `assets/models/pnj/<perso>.glb`.
+4. **export** : clips Mixamo du personnage → `assets/models/pnj/<perso>.glb`. Avant l'export, les vertices restés
+   sans aucun poids (oubliés à la peinture) reprennent ceux de leurs voisins, et les poids sont normalisés
+   (`fill_unweighted`) : sinon ils resteraient figés et étireraient de grands pans pendant l'animation.
+   Seul le glb en profite, le .blend n'est pas modifié.
+
+**Retouches à la main.** Après `rig`, on peut corriger les os et la peinture des poids directement dans le
+`.blend`, puis relancer seulement l'**export**. Le squelette a été retouché ainsi : `rig squelette` refuse
+désormais de tout recalculer (sauf `rig squelette force`, qui effacerait les retouches).
 
 ## Dans le jeu
 
