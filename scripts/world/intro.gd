@@ -21,6 +21,8 @@ var _moon_light: DirectionalLight3D
 var _bats: Array[Node3D] = []
 var _bat_data: Array[Vector4] = [] # (rayon, vitesse, phase, hauteur)
 var _cine_cam: Camera3D
+var _cine_tween: Tween
+var _cine_layer: CanvasLayer
 var _cinematic := true
 var _entered := false
 var _t := 0.0
@@ -637,27 +639,49 @@ func _play_cinematic() -> void:
 	hud.visible = false
 	var caption := _caption("La nuit de la Lune de Sang...")
 	Sfx.play("thunder", -6.0)
-	await get_tree().create_timer(3.5).timeout
-	caption.text = "Les morts ont quitté leurs tombes."
-	# ... puis la caméra descend sur le cimetière, les tombes vides et les cadavres.
-	var tw := create_tween()
+	# ... puis la caméra descend sur le cimetière, les tombes vides et les cadavres, et revient sur
+	# notre héros. Une seule séquence, que la touche Espace ou Échap interrompt (voir _input).
 	var graves := cem + road_right(2.0) * 5.0 - road_dir(2.0) * 4.0
 	var end_pos := cem - road_right(2.0) * 5.0 - road_dir(2.0) * 15.0 + Vector3(0, 7.0, 0)
-	tw.tween_method(_cine_look.bind(start_pos, end_pos, moon, graves), 0.0, 1.0, 4.5).set_trans(Tween.TRANS_SINE)
-	await tw.finished
-	await get_tree().create_timer(1.5).timeout
-	caption.text = ""
-	# Retour sur notre héros.
-	var tw2 := create_tween()
 	var close := hero.global_position + IsoCamera.OFFSET * 0.35
-	tw2.tween_property(_cine_cam, "position", close, 2.0).set_trans(Tween.TRANS_SINE)
-	tw2.parallel().tween_method(_cine_aim, _cine_cam.global_transform.basis.get_rotation_quaternion(),
-		Transform3D().looking_at(hero.global_position + Vector3(0, 1.4, 0) - close).basis.get_rotation_quaternion(), 2.0)
-	await tw2.finished
-	caption.get_parent().get_parent().queue_free()
+	var over_graves := Basis.looking_at(graves - end_pos, Vector3.UP).get_rotation_quaternion()
+	var on_hero := Basis.looking_at(hero.global_position + Vector3(0, 1.4, 0) - close, Vector3.UP).get_rotation_quaternion()
+	_cine_tween = create_tween()
+	_cine_tween.tween_interval(3.5)
+	_cine_tween.tween_callback(func() -> void: caption.text = "Les morts ont quitté leurs tombes.")
+	_cine_tween.tween_method(_cine_look.bind(start_pos, end_pos, moon, graves), 0.0, 1.0, 4.5).set_trans(Tween.TRANS_SINE)
+	_cine_tween.tween_interval(1.5)
+	_cine_tween.tween_callback(func() -> void: caption.text = "")
+	_cine_tween.tween_property(_cine_cam, "position", close, 2.0).set_trans(Tween.TRANS_SINE)
+	_cine_tween.parallel().tween_method(_cine_aim, over_graves, on_hero, 2.0)
+	_cine_tween.tween_callback(_end_cinematic)
+
+
+## Espace ou Échap pendant la cinématique : on la passe (sans ouvrir le menu pause).
+func _input(event: InputEvent) -> void:
+	if _cine_cam == null:
+		return
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and key.keycode in [KEY_SPACE, KEY_ESCAPE]:
+		get_viewport().set_input_as_handled()
+		skip_cinematic()
+
+
+func skip_cinematic() -> void:
+	if _cine_tween != null:
+		_cine_tween.kill()
+	_end_cinematic()
+
+
+## Fin de la cinématique (jouée jusqu'au bout ou passée) : retour à la caméra du jeu et réplique du héros.
+func _end_cinematic() -> void:
+	if _cine_cam == null:
+		return
+	_cine_layer.queue_free()
 	camera.current = true
 	camera.snap_to_target()
 	_cine_cam.queue_free()
+	_cine_cam = null
 	hud.visible = true
 	Events.dialogue_requested.emit("intro_hero")
 	await Events.dialogue_closed
@@ -680,6 +704,7 @@ func _caption(text: String) -> Label:
 	var layer := CanvasLayer.new()
 	layer.layer = 20
 	add_child(layer)
+	_cine_layer = layer
 	var bars := ColorRect.new() # bandes noires de cinéma
 	bars.color = Color(0, 0, 0, 0.0)
 	bars.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -704,6 +729,14 @@ func _caption(text: String) -> Label:
 	l.offset_top = -80
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bars.add_child(l)
+	var hint := UiStyle.label("Espace / Échap : passer", 20, Color(0.7, 0.66, 0.6))
+	hint.anchor_left = 1.0
+	hint.anchor_right = 1.0
+	hint.offset_left = -420
+	hint.offset_right = -28
+	hint.offset_top = 32
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	bars.add_child(hint)
 	return l
 
 

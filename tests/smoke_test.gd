@@ -647,8 +647,18 @@ func _test_new_features() -> void:
 	_check(Sfx.storm_playing() and Sfx._strikes.size() >= 5, "intro : musique d'orage lightning_menu.mp3 (%d coups de tonnerre repérés)" % Sfx._strikes.size())
 	_check(road_time > 17.0 and road_time < 23.0, "route pavée d'environ 20 s de marche (%.0f s)" % road_time)
 	_check(max_turn > 0.9, "route sinueuse : virages jusqu'à %.0f°" % rad_to_deg(max_turn))
-	intro.set("_cinematic", false)
-	i_level.hero.captive = false
+	# Échap (ou Espace) passe la cinématique, sans ouvrir le menu pause.
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	get_viewport().push_input(esc)
+	await _frames(3)
+	var i_hud := i_level.hud
+	_check(intro.get("_cine_cam") == null and i_level.camera.current and i_hud.dialogue.visible and not i_hud._pause_menu.visible
+		and i_level.hero.captive, "intro : Échap passe la cinématique, réplique du héros (pas de menu pause)")
+	i_hud.dialogue.close()
+	await _frames(2)
+	_check(not bool(intro.get("_cinematic")) and not i_level.hero.captive, "intro : après sa réplique, le héros est libre")
 	intro.call("_lightning")
 	await get_tree().create_timer(1.5).timeout
 	_check(true, "un éclair frappe le décor sans erreur")
