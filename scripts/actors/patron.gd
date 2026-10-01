@@ -2,7 +2,7 @@ class_name Patron
 extends Npc
 ## Client de la taverne avec une petite « simulation de vie » :
 ## assis à sa table au moins 40 s, il recule sa chaise, se lève et va au comptoir parler
-## avec la tavernière (20 s au plus), prend une chope, puis revient, s'assoit et rapproche sa chaise.
+## avec le tavernier (20 s au plus), prend une chope, puis revient, s'assoit et rapproche sa chaise.
 ## La taverne n'autorise jamais plus de 2 clients debout en même temps (claim_standing).
 ## Les clients sont un peu grossiers : ils lâchent des jurons de temps en temps.
 
@@ -13,7 +13,7 @@ const SEATED_MAX := 110.0
 const BAR_MIN := 6.0
 const BAR_MAX := 20.0
 const CHAIR_PULL := 0.5 # recul de la chaise (m) pour se lever
-const BAR_LINES := ["Une bière, Brunhilde !", "La même chose, et plus vite que ça !", "Tu as entendu pour les squelettes ?",
+const BAR_LINES := ["Une bière, Grokk !", "La même chose, et plus vite que ça !", "Tu as entendu pour les squelettes ?",
 	"Mets ça sur mon ardoise.", "Encore une tournée, bordel !", "Il paraît que la Liche revient... enfer et damnation.",
 	"Ta soupe est... surprenante.", "Hydromel, et vite !", "Le barde joue ce soir ? Ça, c'est Metal !"]
 ## Jurons lancés au hasard depuis la table.
@@ -150,7 +150,7 @@ func _sit_down() -> void:
 	sit(true, seat_height)
 
 
-## La tavernière sert une chope : le client la tient dans la main droite.
+## Le tavernier sert une chope : le client la tient dans la main droite.
 func _take_mug() -> void:
 	_drop_mug()
 	if model == null or model._hand_r == null:

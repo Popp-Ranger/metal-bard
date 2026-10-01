@@ -21,6 +21,9 @@ const COSTUMES := {
 }
 const DEFAULT_COSTUME := {"sex": "m", "race": "humain", "beard": 0, "hair": 1, "hair_color": 1,
 	"outfit": {"plain": true, "top": Color(0.4, 0.4, 0.4), "legs": Color(0.2, 0.2, 0.2)}}
+## PNJ au modèle 3D importé (art/pnj, CharacterSkin) : Zarathos (mage) et le tavernier orc ; les autres
+## sont générés (HeroModel). Sans le modèle, on revient au costume.
+const SKINS := {"zarathos": "mage", "brunhilde": "tavernier"}
 ## Bâton de Zarathos : point empoigné (repère du torse), le bâton passe dans le poing.
 const STAFF_GRIP := Vector3(0.27, 0.18, 0.25)
 
@@ -42,6 +45,7 @@ var _wander_timer := randf_range(4.0, 9.0)
 var _going_home := false
 
 var model: HeroModel
+var skin: CharacterSkin
 var walker: NavWalker
 var _body: Node3D
 var _t := randf() * 10.0
@@ -67,16 +71,21 @@ func _ready() -> void:
 	add_to_group("npcs")
 	_body = Node3D.new()
 	add_child(_body)
-	if look.is_empty():
-		look = COSTUMES.get(npc_id, DEFAULT_COSTUME)
-	var full_look := RaceDB.DEFAULT_APPEARANCE.duplicate()
-	full_look.merge(look, true)
-	full_look["guitar"] = false
-	full_look["hunched"] = false
-	model = HeroModel.new()
-	model.appearance = full_look
-	_body.add_child(model)
-	_dress()
+	if SKINS.has(npc_id):
+		skin = CharacterSkin.create(str(SKINS[npc_id]))
+	if skin != null:
+		_body.add_child(skin)
+	else:
+		if look.is_empty():
+			look = COSTUMES.get(npc_id, DEFAULT_COSTUME)
+		var full_look := RaceDB.DEFAULT_APPEARANCE.duplicate()
+		full_look.merge(look, true)
+		full_look["guitar"] = false
+		full_look["hunched"] = false
+		model = HeroModel.new()
+		model.appearance = full_look
+		_body.add_child(model)
+		_dress()
 	walker = NavWalker.new()
 	add_child(walker)
 	walker.arrived.connect(func() -> void: arrived.emit())
@@ -108,6 +117,8 @@ func _ready() -> void:
 
 ## Hauteur du sommet de la tête, chapeau compris (pour placer les étiquettes).
 func _top_height() -> float:
+	if skin != null:
+		return skin.height + 0.15
 	return model.height() * (0.72 if seated else 1.0) + 0.15 + float(look.get("hat", 0.0))
 
 
@@ -186,9 +197,12 @@ func _process(delta: float) -> void:
 	var moving := walker != null and walker.walking and walker.direction.length() > 0.1
 	if moving:
 		rotation.y = lerp_angle(rotation.y, atan2(walker.direction.x, walker.direction.z), 1.0 - exp(-10.0 * delta))
-	if walker != null:
-		model.move_speed = walker.speed
-	model.set_moving(moving)
+	if skin != null:
+		skin.step(delta, moving, walker.speed if walker != null else 0.0)
+	else:
+		if walker != null:
+			model.move_speed = walker.speed
+		model.set_moving(moving)
 	if _hero == null or not is_instance_valid(_hero):
 		_hero = get_tree().get_first_node_in_group("hero") as Node3D
 		return
@@ -199,7 +213,8 @@ func _process(delta: float) -> void:
 	if to.length() < 5.0 and not moving:
 		var local := global_transform.basis.inverse() * to
 		yaw = clampf(atan2(local.x, local.z), -1.1, 1.1)
-	model.head_turn = lerp_angle(model.head_turn, yaw, delta * 5.0)
+	if model != null:
+		model.head_turn = lerp_angle(model.head_turn, yaw, delta * 5.0)
 
 
 # --- Costumes ----------------------------------------------------------------

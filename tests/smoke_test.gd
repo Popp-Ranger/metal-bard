@@ -542,19 +542,24 @@ func _test_new_features() -> void:
 	_check(zarathos != null and zarathos.wander_radius > 0.0, "Zarathos fait les cent pas près de son portail")
 	_check(walked_animated and walker_p.seated and not walker_p.model._loco_on,
 		"le client marche comme Riffald (clips Mixamo), puis se rassoit (pose procédurale)")
-	# Tous les PNJ sont articulés (HeroModel) : posture et démarche de Riffald debout.
+	# PNJ : modèles 3D importés (Zarathos le mage, Grokk le tavernier orc), les autres articulés (HeroModel)
+	# avec la posture et la démarche de Riffald.
 	var npc_models := true
 	var animated_npcs := 0
+	var skins := {}
 	for c in tavern.get_children():
 		var n := c as Npc
 		if n != null:
-			npc_models = npc_models and n.model != null
+			npc_models = npc_models and (n.model != null or n.skin != null)
 			if n.model != null and n.model._loco_on:
 				animated_npcs += 1
-	var zm := zarathos.model
-	var staff_err := zm._hand_r.global_position.distance_to(zm._torso.to_global(zm.prop_grip))
-	_check(npc_models and animated_npcs >= 4 and staff_err < 0.03,
-		"PNJ articulés : %d debout avec la posture de Riffald, bâton de Zarathos en main (écart %.3f m)" % [animated_npcs, staff_err])
+			if n.skin != null:
+				skins[n.npc_id] = n.skin
+	var mage: CharacterSkin = skins.get("zarathos")
+	var keeper: CharacterSkin = skins.get("brunhilde")
+	_check(npc_models and animated_npcs >= 2 and mage != null and keeper != null and mage.lengths.has("walk")
+		and keeper.skeleton.get_bone_count() == 17 and DialogueDB.npc_name("brunhilde").begins_with("Grokk"),
+		"PNJ : Zarathos et Grokk le tavernier orc avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout comme Riffald" % animated_npcs)
 	# Chambre : payer ne soigne plus, il faut se coucher sur le lit (1 PV → 100 % en 10 s).
 	var t_tavern := tavern as Node
 	GameState.flags.erase("room_paid")
@@ -969,28 +974,34 @@ func _test_level_editor() -> void:
 
 ## Ennemis humanoïdes : corps articulé (HumanoidBody), posture et démarche de Riffald.
 func _test_skeleton_body() -> void:
-	print("[Squelettes : corps articulé]")
+	print("[Squelettes : modèle 3D importé]")
 	var skel := Skeleton.new()
 	skel.captain = true
 	add_child(skel)
 	skel.set_physics_process(false)
 	await _frames(1)
+	var skin := skel.skin
+	var sk := skin.skeleton
+	var foot := sk.find_bone("foot.L")
 	var stride := Vector2(INF, -INF)
 	for k in 40:
 		skel._speed_now = skel.move_speed
 		skel._animate(0.033, true)
-		var ankle := skel.model.to_local(skel.body.ankle_l.global_position)
-		stride = Vector2(minf(stride.x, ankle.z), maxf(stride.y, ankle.z))
-	var gait := skel.body.loco.tree.tree_root.get_node("gait") as AnimationNodeBlendSpace1D if skel.body.loco != null else null
-	var idle_clip := skel.body.loco.tree.tree_root.get_node("idle") as AnimationNodeAnimation if skel.body.loco != null else null
-	_check(gait != null and str((gait.get_blend_point_node(0) as AnimationNodeAnimation).animation) == "squelettes/zombie_run"
-		and str(idle_clip.animation) == "squelettes/zombie_idle" and stride.y - stride.x > 0.3,
-		"squelette : repos et course de zombie (clips Mixamo, foulée %.2f m)" % (stride.y - stride.x))
-	skel._strike = 1.0
-	skel._animate(0.033, false)
-	var raised := skel.body.wrist("r").distance_to(Skeleton.SWORD_RAISED)
-	_check(raised < 0.03 and skel.body.wrist("r").y > skel.body.upper_r.position.y,
-		"squelette : épée levée au-dessus de l'épaule pour frapper (écart %.3f m)" % raised)
+		var p := sk.get_bone_global_pose(foot).origin
+		stride = Vector2(minf(stride.x, p.z), maxf(stride.y, p.z))
+	var gait := skin.tree.tree_root.get_node("loco").get_node("gait") as AnimationNodeBlendSpace1D
+	_check(sk.get_bone_count() == 17 and str((gait.get_blend_point_node(0) as AnimationNodeAnimation).animation) == "zombie_run"
+		and stride.y - stride.x > 0.3 and skin.lengths.has("slash") and skin.lengths.has("die"),
+		"squelette : modèle 3D (17 os), repos et course de zombie (foulée %.2f m)" % (stride.y - stride.x))
+	var hand := sk.find_bone("hand.R")
+	var before := sk.get_bone_global_pose(hand).origin
+	skel._attack_anim(0.5)
+	var moved := 0.0
+	for k in 12:
+		skel._animate(0.033, false)
+		moved = maxf(moved, sk.get_bone_global_pose(hand).origin.distance_to(before))
+	var sword := sk.find_children("*", "BoneAttachment3D", true, false)
+	_check(moved > 0.2 and sword.size() >= 3, "squelette : coup d'épée animé (main %.2f m), épée, bouclier et casque accrochés aux os" % moved)
 	skel.queue_free()
 	await _frames(1)
 

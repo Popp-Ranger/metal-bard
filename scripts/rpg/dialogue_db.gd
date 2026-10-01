@@ -8,7 +8,7 @@ extends RefCounted
 
 const NPCS := {
 	"gerald": {"name": "Gérald Pissenlit", "title": "Fermier éploré", "color": Color(0.85, 0.75, 0.45)},
-	"brunhilde": {"name": "Brunhilde Chope-de-Fer", "title": "Tavernière ogresse", "color": Color(0.95, 0.55, 0.35)},
+	"brunhilde": {"name": "Grokk Chope-de-Fer", "title": "Tavernier orc", "color": Color(0.95, 0.55, 0.35)},
 	"zarathos": {"name": "Zarathos le Grisonnant", "title": "Mage des portails", "color": Color(0.7, 0.6, 1.0)},
 	"inconnue": {"name": "L'Inconnue encapuchonnée", "title": "???", "color": Color(0.75, 0.3, 0.35)},
 	"borin": {"name": "Borin Barbe-de-Bière", "title": "Client (très) détendu", "color": Color(0.9, 0.7, 0.4)},
@@ -138,7 +138,7 @@ static func _zarathos() -> Dictionary:
 	if state == QuestDB.State.OBJECTIVE_DONE or state == QuestDB.State.TURNED_IN:
 		return {
 			"lines": [
-				[z, "J'ai senti ton solo jusqu'ici. Les murs de la taverne ont tremblé, et Brunhilde a perdu trois chopes."],
+				[z, "J'ai senti ton solo jusqu'ici. Les murs de la taverne ont tremblé, et Grokk a perdu trois chopes."],
 				[z, "Il y a d'autres donjons, d'autres portails... Mais l'univers n'est pas encore prêt. Reviens plus tard. (Prochaines quêtes à venir !)"],
 			],
 			"choices": [["« À bientôt. »", "close"]],
@@ -312,13 +312,13 @@ static func _katrkar_epee() -> Dictionary:
 
 const CLIENT_LINES := [
 	"Santé, barde ! Joue-nous quelque chose qui fait trembler les chopes !",
-	"La bière de Brunhilde, c'est la meilleure. Ne lui dis pas que j'ai dit ça, elle augmenterait les prix.",
+	"La bière de Grokk, c'est la meilleure. Ne lui dis pas que j'ai dit ça, il augmenterait les prix.",
 	"On dit que les squelettes volent les cloches des temples. Qui vole une cloche, sérieusement ?",
 	"J'ai vu un portail violet s'ouvrir tout seul près du vieux mage. J'ai renversé ma soupe.",
 	"Ne t'assieds pas à la table près de la cheminée : Borin y a laissé ses bottes.",
 	"Tu as essayé les mannequins au sous-sol ? Moi, j'ai perdu contre l'un d'eux.",
 	"Il paraît que les chambres de l'étage sont hantées. Enfin, surtout la n°4.",
-	"Un ogre, une tavernière et un troll entrent dans une taverne... ah, tu la connais ?",
+	"Un orc, un ogre et un troll entrent dans une taverne... ah, tu la connais ?",
 	"YEAH ! Enfer et damnation, cette bière arrache !",
 	"Bordel, barde, joue-nous un truc qui cogne ! Ça, c'est Metal !",
 	"Damnation... j'ai encore perdu ma chope. Ah non, elle est dans ma main. YEAH !",

@@ -276,7 +276,7 @@ func _ground(g: Node3D) -> void:
 	_m(g, TavernMarker.Kind.BANNIERE, Vector3(-14.75, 2.8, -9.0), 90.0)
 	_m(g, TavernMarker.Kind.CERCLE_RUNES, Vector3(10.5, 0, -1.0))
 	_m(g, TavernMarker.Kind.PORTAIL_BLEU, Vector3(6.9, 0, -1.6))
-	_m(g, TavernMarker.Kind.PNJ, Vector3(1.0, 0, -9.1), 0.0, {"name": "Brunhilde", "npc": 0})
+	_m(g, TavernMarker.Kind.PNJ, Vector3(1.0, 0, -9.1), 0.0, {"name": "Tavernier", "npc": 0})
 	_m(g, TavernMarker.Kind.PNJ, Vector3(12.8, 0, 1.8), -120.0, {"name": "Zarathos", "npc": 1})
 	_m(g, TavernMarker.Kind.PNJ, Vector3(-13.5, 0, -9.3), 45.0, {"name": "Inconnue", "npc": 2})
 	_m(g, TavernMarker.Kind.PNJ, Vector3(-6.5, 0, 7.5), 80.0, {"name": "Gerald", "npc": 3})

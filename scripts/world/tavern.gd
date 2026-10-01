@@ -215,7 +215,7 @@ func _build_front_doors(m: TavernMarker) -> void:
 
 func _on_locked_door() -> void:
 	Sfx.play("thud", -6.0)
-	Events.notify("Les portes du Crâne Hurlant sont verrouillées. Brunhilde : « Personne ne sort tant que la Lune de Sang est levée ! »", Events.COLOR_BAD)
+	Events.notify("Les portes du Crâne Hurlant sont verrouillées. Grokk : « Personne ne sort tant que la Lune de Sang est levée ! »", Events.COLOR_BAD)
 
 
 ## Fin de l'intro : les portes claquent derrière le héros.
@@ -294,8 +294,7 @@ func _spawn_npcs() -> void:
 		var n := Npc.create(id, m.global_position, rad_to_deg(m.global_rotation.y))
 		match id:
 			"brunhilde":
-				# Tavernière ogresse, 1,5 fois plus large que les autres ogres.
-				n.look = {"sex": "f", "race": "ogre", "horns": 0, "tusks": 1, "beard": 0, "hair": 0, "hair_color": 2, "width_mult": 1.5}
+				# Grokk, le tavernier orc (modèle 3D importé, voir Npc.SKINS), derrière son comptoir.
 				n.interact_radius = 3.2
 			"zarathos":
 				n.wander_radius = 2.5 # quelques pas près de son cercle de runes
@@ -423,13 +422,13 @@ func _reunion() -> void:
 # Chambre louée : se coucher pour récupérer
 # =====================================================================================
 
-## Lit loué : il faut l'avoir loué à Brunhilde, puis le héros s'y allonge et récupère
+## Lit loué : il faut l'avoir loué à Grokk, puis le héros s'y allonge et récupère
 ## progressivement (voir Hero.lie_down).
 func _use_bed(bed: Vector3, yaw: float) -> void:
 	if hero == null or hero.resting:
 		return
 	if not bool(GameState.flags.get("room_paid", false)):
-		Events.notify("Ce lit n'est pas à toi : loue d'abord la chambre à Brunhilde (%d médiators)." % ItemDB.rest_price(), Events.COLOR_BAD)
+		Events.notify("Ce lit n'est pas à toi : loue d'abord la chambre à Grokk (%d médiators)." % ItemDB.rest_price(), Events.COLOR_BAD)
 		Sfx.play("dud", -8.0)
 		return
 	hero.lie_down(bed, yaw)

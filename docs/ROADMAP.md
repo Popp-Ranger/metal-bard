@@ -147,6 +147,10 @@
 - [x] Le Crâne Hurlant fait main dans l'éditeur : sols et murs en cases de 1 m (murs, fenêtres éclairées par la lune, murets, cloisons), mobilier et points du jeu à glisser-déposer
 - [x] Tables (places des clients), comptoir, escaliers reliés à leur arrivée, lit loué, salle d'entraînement, PNJ ; vérification et test direct (F6)
 
+## ✅ v0.1.24 — PNJ et squelettes en 3D
+- [x] Zarathos (mage), Grokk le tavernier orc (remplace Brunhilde) et tous les squelettes ennemis : modèles 3D fournis, squelette de Riffald et clips Mixamo (docs/PNJ_3D.md)
+- [x] Squelettes : course de zombie, coup d'épée animé, sursaut, mort ; épée, bouclier, casque et peau de loup accrochés aux os
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -192,6 +192,11 @@ const STYLES := {
 		"walk_speed": WALK_SPEED, "run_speed": RUN_SPEED, "min_pace": 1.0},
 	"zombie": {"idle": "squelettes/zombie_idle", "tired": "squelettes/zombie_idle", "walk": "squelettes/zombie_run",
 		"run": "squelettes/zombie_run", "walk_speed": 1.6, "run_speed": 1.6, "min_pace": 0.6},
+	# Modèles importés des PNJ et ennemis (CharacterSkin) : leurs clips sont dans leur propre glb.
+	"pnj": {"idle": "idle", "tired": "idle", "walk": "walk", "run": "run",
+		"walk_speed": WALK_SPEED, "run_speed": RUN_SPEED, "min_pace": 1.0},
+	"zombie_modele": {"idle": "zombie_idle", "tired": "zombie_idle", "walk": "zombie_run", "run": "zombie_run",
+		"walk_speed": 1.6, "run_speed": 1.6, "min_pace": 0.6},
 }
 
 

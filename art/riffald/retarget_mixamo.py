@@ -21,12 +21,18 @@ from mathutils import Matrix, Quaternion, Vector
 # MB_ROOT : racine du dépôt quand le .blend ouvert est une copie hors dépôt (mode « clips »).
 ROOT = os.environ.get("MB_ROOT") or os.path.abspath(os.path.join(os.path.dirname(bpy.data.filepath), "..", ".."))
 SRC = os.path.join(ROOT, "assets", "animations", "mixamo")
-# Personnage choisi d'après le fichier .blend ouvert : (armature, collection exportée, glb du jeu).
+# Personnage choisi d'après le fichier .blend ouvert : (armature, collection exportée, glb du jeu, clips à
+# exporter : None = tous ceux de ANIMS). PNJ et ennemis (art/pnj) : seulement leurs clips.
+PNJ_GLB = os.path.join(ROOT, "assets", "models", "pnj")
 CHARACTERS = {
-    "riffald": ("Riffald_rig", "Riffald", os.path.join(ROOT, "assets", "models", "riffald", "riffald.glb")),
-    "persof1": ("PersoF1_rig", "PersoF1", os.path.join(ROOT, "assets", "models", "persof1", "persof1.glb")),
+    "riffald": ("Riffald_rig", "Riffald", os.path.join(ROOT, "assets", "models", "riffald", "riffald.glb"), None),
+    "persof1": ("PersoF1_rig", "PersoF1", os.path.join(ROOT, "assets", "models", "persof1", "persof1.glb"), None),
+    "mage": ("Mage_rig", "Mage", os.path.join(PNJ_GLB, "mage.glb"), ["idle", "walk", "run"]),
+    "tavernier": ("Tavernier_rig", "Tavernier", os.path.join(PNJ_GLB, "tavernier.glb"), ["idle", "walk", "run"]),
+    "squelette": ("Squelette_rig", "Squelette", os.path.join(PNJ_GLB, "squelette.glb"),
+                  ["zombie_idle", "zombie_run", "slash", "hit", "die"]),
 }
-RIG, COLLECTION, OUT_GLB = CHARACTERS[os.path.splitext(os.path.basename(bpy.data.filepath))[0].lower()]
+RIG, COLLECTION, OUT_GLB, ONLY = CHARACTERS[os.path.splitext(os.path.basename(bpy.data.filepath))[0].lower()]
 FPS = 30
 
 # Os de Riffald -> os Mixamo (sans le préfixe « mixamorigN: »).
@@ -260,5 +266,8 @@ if __name__ == "__main__":
         acts = build_all(rig, None, CLIPS)
         export(rig, acts, CLIPS_GLB, rig_only=True)
     else:
-        acts = build_all(rig)
+        if ONLY is None:
+            acts = build_all(rig)
+        else:
+            acts = build_all(rig, ONLY, dict(ANIMS, **CLIPS))
         export(rig, acts)

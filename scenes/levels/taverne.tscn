@@ -202,7 +202,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.9, 0, -1.6)
 script = ExtResource("4_bwn7x")
 kind = 24
 
-[node name="Brunhilde" type="Node3D" parent="Rez-de-chaussee" unique_id=1816164395]
+[node name="Tavernier" type="Node3D" parent="Rez-de-chaussee" unique_id=1816164395]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, -9.1)
 script = ExtResource("4_bwn7x")
 kind = 33
