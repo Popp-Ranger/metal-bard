@@ -7,6 +7,10 @@ extends Node
 const RATE := 22050
 const NOTE_FREQS := [329.63, 392.0, 440.0, 493.88] # Mi, Sol, La, Si — gamme pentatonique de Mi
 const SETTINGS_PATH := "user://settings.cfg"
+## Intensité de référence des bruitages synthétisés (LUFS à 0 dB) : chacun y est ramené à sa
+## création, nettement sous les enregistrements fournis (riff -5,5, onde de choc -9, tonnerre -8,4)
+## pour que montée de niveau et sorts ne couvrent plus le reste.
+const SYNTH_LUFS := -21.0
 
 const BUS_MUSIC := "Musique"
 const BUS_SFX := "Effets"
@@ -175,13 +179,13 @@ func stop_ambience() -> void:
 # --- Construction -----------------------------------------------------------
 
 func _build_all() -> void:
-	_streams["zap"] = _to_wav(_zap())
-	_streams["boom"] = _to_wav(_boom())
-	_streams["thud"] = _to_wav(_thud())
-	_streams["swoosh"] = _to_wav(_swoosh())
-	_streams["clack"] = _to_wav(_clack())
-	_streams["bones"] = _to_wav(_bones())
-	_streams["thunder"] = _to_wav(_thunder()) # secours si les fichiers manquent
+	_streams["zap"] = _fx(_zap())
+	_streams["boom"] = _fx(_boom())
+	_streams["thud"] = _fx(_thud())
+	_streams["swoosh"] = _fx(_swoosh())
+	_streams["clack"] = _fx(_clack())
+	_streams["bones"] = _fx(_bones())
+	_streams["thunder"] = _fx(_thunder()) # secours si les fichiers manquent
 	for i in THUNDER_FILES.size():
 		var t := load(str(THUNDER_FILES[i])) as AudioStream
 		if t != null:
@@ -194,24 +198,93 @@ func _build_all() -> void:
 		var s := load(str(pair[1])) as AudioStream
 		if s != null:
 			_streams[str(pair[0])] = s
-	_streams["croak"] = _to_wav(_croak())
-	_streams["splash"] = _to_wav(_splash())
-	_streams["hurt"] = _to_wav(_hurt())
-	_streams["coin"] = _to_wav(_coin())
-	_streams["potion"] = _to_wav(_potion())
-	_streams["portal"] = _to_wav(_portal())
-	_streams["dud"] = _to_wav(_dud())
-	_streams["levelup"] = _to_wav(_arpeggio([329.63, 415.3, 493.88, 659.25], 0.11))
-	_streams["solo_start"] = _to_wav(_arpeggio([164.81, 246.94, 329.63], 0.08))
+	_streams["croak"] = _fx(_croak())
+	_streams["splash"] = _fx(_splash())
+	_streams["hurt"] = _fx(_hurt())
+	_streams["coin"] = _fx(_coin())
+	_streams["potion"] = _fx(_potion())
+	_streams["portal"] = _fx(_portal())
+	_streams["dud"] = _fx(_dud())
+	_streams["levelup"] = _fx(_arpeggio([329.63, 415.3, 493.88, 659.25], 0.11))
+	_streams["solo_start"] = _fx(_arpeggio([164.81, 246.94, 329.63], 0.08))
 	for i in NOTE_FREQS.size():
 		var f: float = NOTE_FREQS[i]
-		_streams["note_%d" % i] = _to_wav(_power_chord(f, 0.5))
+		_streams["note_%d" % i] = _fx(_power_chord(f, 0.5))
 	_streams["amb_dungeon"] = _to_wav(_amb_dungeon(), true)
 	# Syllabes de « voix » (voyelles a, é, o, i) pour les dialogues.
 	var vowels := [[730.0, 1090.0], [530.0, 1840.0], [570.0, 840.0], [300.0, 2200.0]]
 	for i in vowels.size():
 		var v: Array = vowels[i]
 		_streams["voice_%d" % i] = _to_wav(_voice_blip(float(v[0]), float(v[1])))
+
+
+## Bruitage synthétisé ramené à l'intensité de référence (voir SYNTH_LUFS).
+func _fx(buf: PackedFloat32Array) -> AudioStreamWAV:
+	var level := loudness(buf, RATE)
+	var gain := db_to_linear(SYNTH_LUFS - level)
+	var peak := 0.0
+	for v in buf:
+		peak = maxf(peak, absf(v))
+	if peak > 0.0:
+		gain = minf(gain, 0.98 / peak) # jamais de saturation si un son discret est remonté
+	for i in buf.size():
+		buf[i] *= gain
+	return _to_wav(buf)
+
+
+## Intensité perçue d'un son (LUFS, maximum « momentané » sur 400 ms) : pondération K de la
+## norme ITU-R BS.1770 (plateau +4 dB dans les aigus, coupure des infragraves), la même mesure
+## que celle qui harmonise les volumes à la radio et sur les plateformes de streaming.
+static func loudness(buf: PackedFloat32Array, rate: int) -> float:
+	var k := _biquad(buf, _k_shelf(rate))
+	k = _biquad(k, _k_highpass(rate))
+	# Son plus court que la fenêtre : moyenne sur toute sa durée.
+	var win := mini(k.size(), int(rate * 0.4))
+	var acc := 0.0
+	var best := 0.0
+	for i in k.size():
+		acc += k[i] * k[i]
+		if i >= win:
+			acc -= k[i - win] * k[i - win]
+		if i >= win - 1:
+			best = maxf(best, acc / win)
+	return -0.691 + 10.0 * log(maxf(best, 1e-12)) / log(10.0)
+
+
+static func _k_shelf(rate: int) -> PackedFloat64Array:
+	var k := tan(PI * 1681.974 / rate)
+	var vh := pow(10.0, 3.99984 / 20.0)
+	var vb := pow(vh, 0.4996668)
+	var q := 0.7071752
+	var a0 := 1.0 + k / q + k * k
+	return PackedFloat64Array([(vh + vb * k / q + k * k) / a0, 2.0 * (k * k - vh) / a0, (vh - vb * k / q + k * k) / a0,
+		2.0 * (k * k - 1.0) / a0, (1.0 - k / q + k * k) / a0])
+
+
+static func _k_highpass(rate: int) -> PackedFloat64Array:
+	var k := tan(PI * 38.13547 / rate)
+	var q := 0.5003270
+	var a0 := 1.0 + k / q + k * k
+	return PackedFloat64Array([1.0, -2.0, 1.0, 2.0 * (k * k - 1.0) / a0, (1.0 - k / q + k * k) / a0])
+
+
+## Filtre biquad : c = [b0, b1, b2, a1, a2].
+static func _biquad(x: PackedFloat32Array, c: PackedFloat64Array) -> PackedFloat32Array:
+	var y := PackedFloat32Array()
+	y.resize(x.size())
+	var x1 := 0.0
+	var x2 := 0.0
+	var y1 := 0.0
+	var y2 := 0.0
+	for i in x.size():
+		var xi := x[i]
+		var yi := c[0] * xi + c[1] * x1 + c[2] * x2 - c[3] * y1 - c[4] * y2
+		x2 = x1
+		x1 = xi
+		y2 = y1
+		y1 = yi
+		y[i] = yi
+	return y
 
 
 func _to_wav(buf: PackedFloat32Array, loop: bool = false) -> AudioStreamWAV:

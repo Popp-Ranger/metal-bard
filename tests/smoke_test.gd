@@ -254,6 +254,21 @@ func _test_quest_flow() -> void:
 	_check((Sfx._streams["solo_thunder"] as AudioStream).resource_path.ends_with("short_thunder.mp3")
 		and (Sfx._streams["wave"] as AudioStream).resource_path.ends_with("ondes_de_chocs.wav"),
 		"sons : éclairs du solo = short_thunder, onde de choc = ondes de chocs.wav")
+	# Bruitages synthétisés (montée de niveau, sorts...) : tous au même niveau perçu, sous les
+	# enregistrements fournis (riff électrique ≈ -5,5 LUFS) au lieu de les couvrir.
+	var levels := {}
+	for id: String in ["levelup", "boom", "portal", "zap", "croak", "thud", "swoosh", "solo_start", "note_0", "coin"]:
+		var w := Sfx._streams[id] as AudioStreamWAV
+		var pcm := PackedFloat32Array()
+		pcm.resize(w.data.size() / 2)
+		for k in pcm.size():
+			pcm[k] = w.data.decode_s16(k * 2) / 32767.0
+		levels[id] = Sfx.loudness(pcm, Sfx.RATE)
+	var level_ok := Sfx.SYNTH_LUFS <= -18.0
+	for id: String in levels:
+		level_ok = level_ok and absf(float(levels[id]) - Sfx.SYNTH_LUFS) < 0.6
+	_check(level_ok, "bruitages synthétisés ramenés à %.0f LUFS (montée de niveau %.1f, explosion %.1f)"
+		% [Sfx.SYNTH_LUFS, float(levels["levelup"]), float(levels["boom"])])
 	solo._hits = Balance.SOLO_NOTES
 	solo._finish()
 	_check(not hero.casting_solo, "fin du solo, le héros redevient vulnérable")
