@@ -363,4 +363,9 @@ if __name__ == "__main__":
     if args[0] == "prepare":
         prepare()
     elif args[0] == "rig":
-        rig()
+        # Os et poids retouchés à la main par Ulysse dans le .blend : rig les effacerait.
+        if "force" not in args:
+            print("REFUS : Valkyriff a été retouchée à la main dans persof1.blend ; relancer seulement "
+                  "l'export, ou « rig force » pour tout recalculer (retouches perdues).")
+        else:
+            rig()

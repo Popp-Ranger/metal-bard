@@ -30,6 +30,10 @@ blender --background art/persof1/persof1.blend --python art/riffald/retarget_mix
 3. **export** : les 16 animations Mixamo de Riffald sont transférées sur son squelette (même script que
    Riffald, le personnage est choisi d'après le `.blend` ouvert) → `assets/models/persof1/persof1.glb`.
 
+**Retouches à la main.** Ulysse a repeint les poids dans `persof1.blend` : on ne relance plus que
+l'**export** (les rares vertices laissés sans poids y sont complétés d'après leurs voisins, voir
+docs/PNJ_3D.md). `rig` refuse désormais de tout recalculer, sauf `rig force` (retouches perdues).
+
 ## Dans le jeu
 
 - `RaceDB.PRESETS["persof1"]` : apparence (humaine, rousse), modèle, taille, réglages de guitare (`rig`).

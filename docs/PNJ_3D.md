@@ -6,7 +6,7 @@ Modèles fournis par Ulysse (générés par IA, sans squelette) :
 | Modèle | Personnage du jeu | Taille | Clips |
 |---|---|---|---|
 | Mage (sorcier) | Zarathos le Grisonnant | 2,2 m (chapeau compris) | repos, marche, course |
-| Tavernier (orc au tablier) | **Grokk Chope-de-Fer**, le tavernier (remplace Brunhilde) | 2,05 m | repos, marche, course |
+| Tavernier (orc au tablier) | **Grokk Chope-de-Fer**, le tavernier (remplace Brunhilde) | 2,05 m (×1,25 en jeu : 2,56 m) | repos, marche, course |
 | Squelette paysan | tous les squelettes ennemis (soldats, capitaines, chef) | 1,75 m | repos et course de zombie, coup d'épée, sursaut, mort |
 
 ## Préparation (Blender, `art/pnj/build_pnj.py`)

@@ -156,6 +156,11 @@
 - [x] Donjons : les 5 musiques de `audio/music/donjons/` en lecture aléatoire, enchaînées sans répétition
 - [x] Grokk le tavernier : poids repeints à la main dans Blender, glb réexporté
 
+## ✅ v0.1.26 — Continuer, tavernier imposant, Valkyriff retouchée
+- [x] « Continuer » reprend la sauvegarde la plus récente, automatique ou manuelle (idem pour héberger une partie)
+- [x] Grokk le tavernier agrandi de 25 % (foulée et étiquette suivent)
+- [x] Valkyriff : poids repeints à la main dans Blender, glb réexporté
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

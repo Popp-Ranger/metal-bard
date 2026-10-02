@@ -414,7 +414,7 @@ func _test_quest_flow() -> void:
 	GameState.run_dialogue_action("turn_in:plumeau")
 	_check(GameState.quest_state("plumeau") == QuestDB.State.TURNED_IN, "quête rendue")
 	_check(GameState.inventory.has("pendentif_plume"), "récompense : pendentif reçu")
-	_check(GameState.has_save(), "partie sauvegardée")
+	_check(GameState.has_save() and GameState.latest_slot() == 0, "partie sauvegardée (Continuer reprend la sauvegarde la plus récente)")
 	var level := GameState.stats.level
 	_check(GameState.load_game() and GameState.stats.level == level, "chargement de la sauvegarde")
 	await _test_boss_fight_and_surrender()
@@ -558,8 +558,9 @@ func _test_new_features() -> void:
 	var mage: CharacterSkin = skins.get("zarathos")
 	var keeper: CharacterSkin = skins.get("brunhilde")
 	_check(npc_models and animated_npcs >= 2 and mage != null and keeper != null and mage.lengths.has("walk")
-		and keeper.skeleton.get_bone_count() == 17 and DialogueDB.npc_name("brunhilde").begins_with("Grokk"),
-		"PNJ : Zarathos et Grokk le tavernier orc avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout comme Riffald" % animated_npcs)
+		and keeper.skeleton.get_bone_count() == 17 and DialogueDB.npc_name("brunhilde").begins_with("Grokk")
+		and is_equal_approx(keeper.scale.y, 1.25) and keeper.height > 2.5,
+		"PNJ : Zarathos et Grokk le tavernier orc (agrandi de 25 %%) avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout comme Riffald" % animated_npcs)
 	# Chambre : payer ne soigne plus, il faut se coucher sur le lit (1 PV → 100 % en 10 s).
 	var t_tavern := tavern as Node
 	GameState.flags.erase("room_paid")

@@ -420,8 +420,24 @@ var location := {}
 var pending_spawn := Vector3.INF
 
 
+## Une sauvegarde existe (automatique ou manuelle) : de quoi « Continuer ».
 func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
+	return latest_slot() >= 0
+
+
+## Emplacement de la sauvegarde la plus récente, automatique (0) ou manuelle (1 à SAVE_SLOTS) ;
+## -1 s'il n'y en a aucune.
+func latest_slot() -> int:
+	var best := -1
+	var best_time := -1
+	for slot in range(0, SAVE_SLOTS + 1):
+		if not has_slot(slot):
+			continue
+		var t := FileAccess.get_modified_time(slot_path(slot))
+		if t > best_time:
+			best = slot
+			best_time = t
+	return best
 
 
 func slot_path(slot: int) -> String:
@@ -504,8 +520,9 @@ static func location_label(scene: String) -> String:
 	return "Le Crâne Hurlant"
 
 
+## Reprend la sauvegarde la plus récente (bouton « Continuer », hébergement coop).
 func load_game() -> bool:
-	return load_slot(0)
+	return load_slot(latest_slot())
 
 
 func load_slot(slot: int) -> bool:

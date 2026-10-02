@@ -14,6 +14,8 @@ const MODELS := {
 }
 ## Hauteur des modèles (m, chapeau compris) : étiquettes, barres de vie.
 const HEIGHTS := {"mage": 2.2, "tavernier": 2.05, "squelette": 1.75}
+## Agrandissement en jeu (le tavernier orc domine son comptoir) : hauteur et foulée suivent.
+const SCALES := {"tavernier": 1.25}
 
 var skeleton: Skeleton3D
 var player: AnimationPlayer
@@ -38,7 +40,9 @@ static func create(id: String, anim_style: String = "pnj") -> CharacterSkin:
 	var s := CharacterSkin.new()
 	s.name = "Skin"
 	s.style = anim_style
-	s.height = float(HEIGHTS.get(id, 1.8))
+	var k := float(SCALES.get(id, 1.0))
+	s.scale = Vector3.ONE * k
+	s.height = float(HEIGHTS.get(id, 1.8)) * k
 	s.add_child((load(path) as PackedScene).instantiate())
 	return s
 
@@ -106,14 +110,15 @@ func step(delta: float, moving: bool, speed: float) -> void:
 	if _dead or tree == null:
 		return
 	_walk = move_toward(_walk, 1.0 if moving else 0.0, delta * 5.0)
-	HeroAnimator.drive_loco(tree, "parameters/loco/", _walk, (speed if moving else 0.0) / maxf(_leg_ratio * get_parent_scale(), 0.01),
+	HeroAnimator.drive_loco(tree, "parameters/loco/", _walk, (speed if moving else 0.0) / maxf(_leg_ratio * _size_scale(), 0.01),
 		false, delta, style)
 	tree.advance(delta)
 
 
-func get_parent_scale() -> float:
+## Échelle du modèle (la sienne et celle de son parent).
+func _size_scale() -> float:
 	var p := get_parent() as Node3D
-	return p.scale.y if p != null else 1.0
+	return scale.y * (p.scale.y if p != null else 1.0)
 
 
 ## Clip joué une fois par-dessus le déplacement, étiré pour durer `duration` secondes.
