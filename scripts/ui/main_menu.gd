@@ -35,7 +35,7 @@ func _ready() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_constant_override("outline_size", 14)
 	vb.add_child(title)
-	var sub := UiStyle.label("La Ballade de l'Ours-Hibou", 26, UiStyle.BONE)
+	var sub := UiStyle.label("La Ballade du Hibours", 26, UiStyle.BONE)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(sub)
 	var tag := UiStyle.label("Un luth électrique. Trois sorts. Une armée de squelettes.", 16, UiStyle.DIM)
@@ -97,7 +97,7 @@ func _ready() -> void:
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v0.1.13 — Godot 4.7", 13, UiStyle.DIM)
+	var credits := UiStyle.label("Prototype v%s — Godot 4.7" % ProjectSettings.get_setting("application/config/version", "?"), 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30
