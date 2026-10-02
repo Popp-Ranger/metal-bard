@@ -199,8 +199,21 @@ func _test_quest_flow() -> void:
 		hp_after += maxi(e.hp, 0)
 	_check(hp_after < hp_before, "l'Accordage de cordes inflige des dégâts en chaîne")
 	hero.cooldowns["wave"] = 0.0
+	for e in targets:
+		e.hp = 9999
+		e.global_position = hero.global_position + Vector3(1.5, 0, 0)
 	hero.cast_wave()
 	await _frames(2)
+	var banging := 0
+	for e in targets:
+		if is_instance_valid(e) and e.is_in_trance():
+			banging += 1
+	await get_tree().create_timer(Balance.WAVE_HEADBANG + 0.3).timeout
+	var still := 0
+	for e in targets:
+		if is_instance_valid(e) and e.is_in_trance():
+			still += 1
+	_check(banging > 0 and still == 0, "Onde de choc : les ennemis touchés headbanguent %.2f s (%d)" % [Balance.WAVE_HEADBANG, banging])
 	_check(GameState.mana < GameState.max_mana(), "les sorts consomment des décibels")
 	# Riff électrique : combo rythmique ×1 → ×3 (4 paliers), remis à ×1 à contretemps.
 	_check(is_equal_approx(Hero.riff_multiplier(1), 1.0) and is_equal_approx(Hero.riff_multiplier(4), 3.0)

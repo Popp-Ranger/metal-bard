@@ -49,6 +49,7 @@ const WAVE_COST := 20.0
 const WAVE_COOLDOWN := 4.0
 const WAVE_RADIUS := 5.0
 const WAVE_KNOCKBACK := 5.5
+const WAVE_HEADBANG := 1.25 # s : les ennemis touchés headbanguent, figés
 
 const SOLO_COST := 45.0
 const SOLO_COOLDOWN := 18.0

@@ -193,6 +193,10 @@
 - [x] Ambiance plus sombre et plus froide dans le donjon, taverne plus tamisée
 - [x] Guide de l'éditeur de donjon : PDF illustré (docs/guide_editeur) et vidéo commentée (locale)
 
+## ✅ v0.1.34 — Onde de choc headbang, pénombre profonde
+- [x] Onde de choc : les ennemis touchés headbanguent 1,25 s, figés (les boss sont sonnés)
+- [x] Presque aussi sombre que la toute première version (ambiance et lumière principale très basses, torches maîtresses)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

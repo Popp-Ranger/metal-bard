@@ -96,7 +96,7 @@ func _refresh() -> void:
 		"Coup de guitare : 1d8%+d" % GameState.mod("FOR"),
 		"Accordage de cordes : 2d6%+d (5 cibles)" % GameState.mod("CHA"),
 		"Riff électrique : 1d10%+d (×3 en rythme)" % GameState.mod("CHA"),
-		"Onde de choc : 2d8%+d" % GameState.mod("CHA"),
+		"Onde de choc : 2d8%+d, headbang %s s" % [GameState.mod("CHA"), String.num(Balance.WAVE_HEADBANG, 2).replace(".", ",")],
 		"Solo de la Foudre : 4d10%+d" % GameState.mod("CHA"),
 		"Médiators : %d   •   Potions : %d" % [GameState.gold, GameState.potions],
 	]:

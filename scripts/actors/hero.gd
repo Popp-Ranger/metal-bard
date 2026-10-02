@@ -549,6 +549,8 @@ func cast_wave() -> void:
 		if e.saving_throw(dc):
 			dmg = floori(dmg / 2.0)
 		hit_enemy(e, dmg, wave_knock, "sound")
+		if e.is_alive():
+			e.headbang(Balance.WAVE_HEADBANG)
 
 
 ## Sort 3 — Solo de la Foudre : lance le mini-jeu ; le résultat arrive via Events.solo_finished.

@@ -192,28 +192,28 @@ static func label(parent: Node3D, text: String, pos: Vector3, color: Color, size
 	return l
 
 
-## Environnement (« dungeon », « tavern » ou « night ») : pénombre lugubre (v0.1.33 : plus sombre que v0.1.27, moins
-## que les premières versions) où tout reste lisible, sans filtre (ni occlusion ambiante, ni contraste, ni désaturation).
+## Environnement (« dungeon », « tavern » ou « night ») : pénombre lugubre, presque aussi sombre que la toute première
+## version (v0.1.34), mais sans filtre (ni occlusion ambiante, ni contraste, ni désaturation) : les torches éclairent.
 static func make_environment(kind: String) -> WorldEnvironment:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.03, 0.028, 0.035)
+	env.background_color = Color(0.018, 0.015, 0.022)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	if kind == "dungeon":
-		env.ambient_light_color = Color(0.44, 0.46, 0.58) # froid et bleuté : catacombes lugubres
-		env.ambient_light_energy = 0.55
+		env.ambient_light_color = Color(0.38, 0.41, 0.53) # froid et bleuté : catacombes lugubres
+		env.ambient_light_energy = 0.44
 	elif kind == "night":
 		# Nuit sous la lune de sang : ambiance bleu nuit, légère brume rougeâtre.
 		env.background_color = Color(0.08, 0.025, 0.03)
 		env.ambient_light_color = Color(0.6, 0.58, 0.75)
-		env.ambient_light_energy = 0.85
+		env.ambient_light_energy = 0.7
 		env.fog_enabled = true
 		env.fog_light_color = Color(0.12, 0.05, 0.08)
 		env.fog_density = 0.002
 		env.fog_sky_affect = 0.0
 	else:
-		env.ambient_light_color = Color(0.8, 0.72, 0.64)
-		env.ambient_light_energy = 0.85
+		env.ambient_light_color = Color(0.66, 0.58, 0.52)
+		env.ambient_light_energy = 0.62
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 0.95
 	# Léger halo autour des sources lumineuses (torches, runes, gemmes).
@@ -232,7 +232,7 @@ static func make_key_light(kind: String) -> DirectionalLight3D:
 	var l := DirectionalLight3D.new()
 	l.rotation_degrees = Vector3(-72, -30, 0)
 	l.light_color = Color(1.0, 0.9, 0.78) if kind == "tavern" else Color(0.85, 0.88, 1.0)
-	l.light_energy = 0.55 if kind == "tavern" else 0.42
+	l.light_energy = 0.34 if kind == "tavern" else 0.22
 	l.shadow_enabled = true
 	l.shadow_opacity = 0.6
 	l.shadow_blur = 1.5

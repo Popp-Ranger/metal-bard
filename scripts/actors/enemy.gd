@@ -67,6 +67,8 @@ var _alert: Label3D
 var _slow_factor := 1.0
 var _slow_time := 0.0
 var _fear_time := 0.0
+## Transe limitée dans le temps (Onde de choc) ; 0 = transe sans fin (Solo endiablé, jusqu'à exit_trance).
+var _trance_time := 0.0
 var _trance_label: Label3D
 
 
@@ -204,6 +206,10 @@ func _physics_process(delta: float) -> void:
 		State.TRANCE:
 			# Headbang : tout le corps bat la mesure, plus aucune action.
 			model.rotation.x = absf(sin(_anim_t * 11.0)) * 0.45
+			if _trance_time > 0.0:
+				_trance_time -= delta
+				if _trance_time <= 0.0:
+					exit_trance()
 		State.FEAR:
 			_fear_time -= delta
 			if dist < INF:
@@ -253,11 +259,24 @@ func enter_trance() -> void:
 func exit_trance() -> void:
 	if state != State.TRANCE:
 		return
+	_trance_time = 0.0
 	state = State.CHASE
 	model.rotation.x = 0.0
 	if _trance_label != null:
 		_trance_label.queue_free()
 		_trance_label = null
+
+
+## Onde de choc : l'ennemi headbangue `duration` secondes (les boss ne sont que sonnés). Sans effet sur une
+## transe déjà en cours (Solo endiablé).
+func headbang(duration: float) -> void:
+	if state == State.DEAD or state == State.TRANCE:
+		return
+	if is_boss:
+		stun(duration)
+		return
+	enter_trance()
+	_trance_time = duration
 
 
 func is_in_trance() -> bool:
