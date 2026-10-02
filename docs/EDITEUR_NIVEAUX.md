@@ -4,6 +4,8 @@ Les niveaux faits main se construisent directement dans l'éditeur de Godot : on
 case, puis on glisse-dépose les objets. En jeu, le code lit la scène et y branche toute la logique
 (portes, salles dans le noir, ennemis endormis, boss, sauvegarde...).
 
+Débutant ? Commencez par le guide illustré `docs/guide_editeur/Guide_editeur_donjon.pdf` (et sa vidéo).
+
 Ouvrir le projet dans Godot (`project.godot`), puis la scène voulue depuis le panneau **Système de
 fichiers** (en bas à gauche).
 

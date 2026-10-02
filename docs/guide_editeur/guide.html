@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Guide de l'éditeur de donjon</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm; }
+  :root { --ink: #1d1a17; --muted: #5c554d; --accent: #b3261e; --gold: #c58a1c; --line: #ddd5c8; --paper: #fbf8f3; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.45; margin: 0; background: #fff; }
+  h1 { font-size: 26pt; margin: 0 0 4mm; letter-spacing: -0.5px; }
+  h2 { font-size: 15pt; margin: 0 0 3mm; padding-bottom: 1.5mm; border-bottom: 2px solid var(--accent); }
+  h2 .n { display: inline-block; width: 8mm; height: 8mm; line-height: 8mm; text-align: center; border-radius: 50%;
+          background: var(--accent); color: #fff; font-size: 11pt; margin-right: 2.5mm; vertical-align: 1px; }
+  h3 { font-size: 11.5pt; margin: 4mm 0 1.5mm; }
+  p { margin: 0 0 2.2mm; }
+  ol, ul { margin: 0 0 2.5mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .cover { display: flex; flex-direction: column; justify-content: center; min-height: 250mm; }
+  .cover .sub { font-size: 13pt; color: var(--muted); margin-bottom: 10mm; }
+  .cover .box { background: var(--paper); border: 1px solid var(--line); border-radius: 3mm; padding: 6mm 7mm; }
+  .k { display: inline-block; border: 1px solid #b9b0a2; border-bottom-width: 2px; border-radius: 1.2mm; padding: 0 1.6mm;
+       font-family: Consolas, monospace; font-size: 9pt; background: #f4f0ea; white-space: nowrap; }
+  code { font-family: Consolas, monospace; font-size: 9.3pt; background: #f4f0ea; padding: 0 1mm; border-radius: 1mm; }
+  .shot { position: relative; width: 100%; margin: 2mm 0 3mm; border: 1px solid #333; border-radius: 1.5mm; overflow: hidden; }
+  .shot img { display: block; width: 100%; }
+  .mark { position: absolute; border: 3px solid var(--accent); border-radius: 2mm; box-shadow: 0 0 0 2px rgba(255,255,255,0.65); }
+  .tag { position: absolute; background: var(--accent); color: #fff; font-weight: 700; font-size: 9pt; padding: 0.6mm 2mm;
+         border-radius: 1.5mm; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  .tag.gold, .mark.gold { background: var(--gold); border-color: var(--gold); }
+  .mark.gold { background: transparent; }
+  .tip { background: #fff7e6; border-left: 4px solid var(--gold); padding: 2.5mm 3.5mm; margin: 3mm 0; border-radius: 0 1.5mm 1.5mm 0; }
+  .warn { background: #fdecea; border-left: 4px solid var(--accent); padding: 2.5mm 3.5mm; margin: 3mm 0; border-radius: 0 1.5mm 1.5mm 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm; font-size: 9.8pt; }
+  th, td { border: 1px solid var(--line); padding: 1.4mm 2.2mm; text-align: left; vertical-align: top; }
+  th { background: var(--paper); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .small { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ===================================================================== couverture -->
+<section class="page cover">
+  <h1>Créer son donjon<br>dans Godot</h1>
+  <div class="sub">Guide pas à pas de l'éditeur de niveaux de <b>Metal Bard</b></div>
+  <div class="box">
+    <p><b>Ce que vous allez apprendre</b></p>
+    <ol>
+      <li>Ouvrir le donjon et se repérer dans l'éditeur</li>
+      <li>Se déplacer dans la vue 3D</li>
+      <li>Peindre le sol (les murs se posent tout seuls)</li>
+      <li>Ajouter et régler des salles</li>
+      <li>Placer les ennemis, les coffres et le décor</li>
+      <li>Vérifier, tester en jeu et enregistrer</li>
+    </ol>
+    <p class="small" style="margin-top:4mm">Le donjon travaillé ici est celui de la quête « Le Petit Plumeau » (les Catacombes Suintantes).
+      Toutes les captures viennent du vrai projet. Une vidéo commentée accompagne ce guide.</p>
+  </div>
+  <div class="tip" style="margin-top:8mm"><b>Pas d'inquiétude :</b> tant que vous n'avez pas enregistré (<span class="k">Ctrl</span> + <span class="k">S</span>),
+    rien n'est modifié. Et <span class="k">Ctrl</span> + <span class="k">Z</span> annule la dernière action.</div>
+</section>
+
+<!-- ===================================================================== 1. ouvrir -->
+<section class="page">
+  <h2><span class="n">1</span>Ouvrir le donjon</h2>
+  <ol>
+    <li>Lancez Godot et ouvrez le projet <b>Metal Bard</b> (le dossier <code>metal-bard</code>).</li>
+    <li>En bas à gauche, dans le panneau <b>Système de fichiers</b>, ouvrez les dossiers <code>scenes</code> → <code>levels</code>.</li>
+    <li>Double-cliquez sur <b>catacombes.tscn</b>. Le donjon s'affiche au centre.</li>
+    <li>Si la vue au centre n'est pas en 3D, cliquez sur <b>3D</b> tout en haut de la fenêtre.</li>
+  </ol>
+  <div class="shot">
+    <img src="img/01_ensemble.png">
+    <div class="mark" style="left:0.6%;top:9%;width:16.9%;height:42.5%"></div>
+    <div class="tag" style="left:4%;top:47.5%">① Arbre de la scène</div>
+    <div class="mark" style="left:0.6%;top:56.5%;width:16.9%;height:42.5%"></div>
+    <div class="tag" style="left:4%;top:94%">② Système de fichiers</div>
+    <div class="mark gold" style="left:3.8%;top:96.2%;width:13.4%;height:2.8%"></div>
+    <div class="mark" style="left:18%;top:13%;width:64.1%;height:81.8%"></div>
+    <div class="tag" style="left:42%;top:88%">③ Vue 3D</div>
+    <div class="mark" style="left:82.3%;top:5%;width:17.2%;height:94%"></div>
+    <div class="tag" style="left:85%;top:22%">④ Inspecteur</div>
+    <div class="mark gold" style="left:38.5%;top:0.6%;width:3.6%;height:4.4%"></div>
+  </div>
+  <table>
+    <tr><th style="width:30%">Zone</th><th>À quoi elle sert</th></tr>
+    <tr><td>① <b>Arbre de la scène</b></td><td>La liste de tout ce qui compose le donjon : le <b>Sol</b>, les <b>salles</b>
+      (Salle, Depart, Salle_du_boss…) et les dossiers d'objets (<b>Ennemis</b>, <b>Decor</b>, <b>Torches</b>). Cliquer sur un nom le sélectionne.</td></tr>
+    <tr><td>② <b>Système de fichiers</b></td><td>Les fichiers du projet. Les pièces à glisser dans le donjon sont dans
+      <code>scenes/levels/pieces/donjon/</code>.</td></tr>
+    <tr><td>③ <b>Vue 3D</b></td><td>Le donjon vu d'en haut : sol gris, salles en boîtes de couleur, objets avec leur nom.</td></tr>
+    <tr><td>④ <b>Inspecteur</b></td><td>Les réglages de ce qui est sélectionné (taille d'une salle, type d'un objet…) et les boutons spéciaux.</td></tr>
+  </table>
+  <p class="small">Sur cette vue d'ensemble : les boîtes <b>bleues</b> sont les salles normales, la <b>rouge</b> est la salle du boss
+    (Gloubah). Les couloirs gris relient les salles.</p>
+</section>
+
+<!-- ===================================================================== 2. naviguer -->
+<section class="page">
+  <h2><span class="n">2</span>Se déplacer dans la vue 3D</h2>
+  <p>La souris doit être au-dessus de la vue 3D (③).</p>
+  <table>
+    <tr><th style="width:42%">Geste</th><th>Effet</th></tr>
+    <tr><td><b>Molette</b> de la souris</td><td>Zoomer / dézoomer</td></tr>
+    <tr><td><b>Clic molette</b> maintenu + bouger la souris</td><td>Tourner autour du point regardé</td></tr>
+    <tr><td><span class="k">Maj</span> + <b>clic molette</b> maintenu</td><td>Faire glisser la vue (se décaler)</td></tr>
+    <tr><td><b>Clic droit</b> maintenu + <span class="k">Z</span> <span class="k">Q</span> <span class="k">S</span> <span class="k">D</span></td>
+        <td>Voler dans la scène comme dans un jeu (la souris oriente le regard)</td></tr>
+    <tr><td>Sélectionner un objet puis <span class="k">F</span></td><td>Centrer la vue sur cet objet</td></tr>
+    <tr><td>Pavé numérique <span class="k">7</span></td><td>Vue de dessus (très pratique pour peindre le sol)</td></tr>
+  </table>
+  <div class="tip"><b>Astuce :</b> pour retrouver une salle, cliquez sur son nom dans l'arbre ①, puis placez la souris sur la vue 3D et appuyez sur <span class="k">F</span>.</div>
+
+  <h3>Les outils en haut de la vue 3D</h3>
+  <p>Quand un objet est sélectionné, des flèches de couleur apparaissent dessus (on les voit page suivante) :</p>
+  <ul>
+    <li><b>Flèches</b> rouge / verte / bleue : tirer sur une flèche déplace l'objet dans cette direction.</li>
+    <li><b>Cercles</b> : tirer sur un cercle fait tourner l'objet (utile pour orienter un ennemi ou une torche).</li>
+    <li>Cliquer sur l'objet et le faire glisser le déplace librement sur le sol.</li>
+  </ul>
+  <div class="warn"><b>Attention à ne pas tirer la flèche verte</b> (vers le haut) : les objets doivent rester posés au sol.</div>
+</section>
+
+<!-- ===================================================================== 3. sol -->
+<section class="page">
+  <h2><span class="n">3</span>Peindre le sol</h2>
+  <p>Le sol se « peint » case par case (une case = 2 m). <b>Les murs apparaissent tout seuls</b> autour du sol : il ne faut jamais les dessiner.</p>
+  <ol>
+    <li>Dans l'arbre ①, cliquez sur <b>Sol</b>.</li>
+    <li>Une palette s'ouvre sous la vue 3D : cliquez sur la tuile <b>Sol (dalles)</b>.</li>
+    <li>Cliquez (ou cliquez-glissez) dans la vue 3D pour poser du sol.</li>
+    <li>Pour <b>effacer</b> : <b>clic droit</b> sur une case (ou outil gomme de la palette).</li>
+  </ol>
+  <div class="shot">
+    <img src="img/02_sol.png">
+    <div class="mark" style="left:2%;top:16.3%;width:13.6%;height:2.6%"></div>
+    <div class="tag" style="left:15.8%;top:16.2%">1. Cliquer sur Sol</div>
+    <div class="mark" style="left:18.2%;top:77.5%;width:6.8%;height:12%"></div>
+    <div class="tag" style="left:25.6%;top:84%">2. Tuile « Sol (dalles) »</div>
+    <div class="mark gold" style="left:23.2%;top:73.4%;width:2.4%;height:3.6%"></div>
+    <div class="tag gold" style="left:18.5%;top:69.2%">gomme</div>
+  </div>
+  <p>Exemple : un couloir peint à partir de la salle de départ (verte). Les murs se sont ajoutés tout seuls de chaque côté.</p>
+  <div class="two">
+    <div class="shot"><img src="img/07_peinture_0.png"><div class="tag" style="left:2%;top:2%">Avant</div></div>
+    <div class="shot"><img src="img/07_peinture_5.png"><div class="tag" style="left:2%;top:2%">Après 6 cases peintes</div></div>
+  </div>
+  <div class="tip"><b>Astuces :</b> passez en vue de dessus (pavé numérique <span class="k">7</span>) pour peindre plus facilement.
+    Un couloir de <b>1 ou 2 cases</b> de large convient bien. Pour masquer l'aperçu des murs, sélectionnez la racine
+    <b>Catacombes</b> et décochez <i>Show Walls</i> dans l'inspecteur.</div>
+</section>
+
+<!-- ===================================================================== 4. salles -->
+<section class="page">
+  <h2><span class="n">4</span>Les salles</h2>
+  <p>Une salle est une <b>boîte de couleur</b> posée sur le sol : <b>bleue</b> = salle normale, <b>verte</b> = salle de départ
+    (le héros y apparaît), <b>rouge</b> = salle du boss.</p>
+  <h3>Régler une salle</h3>
+  <ol>
+    <li>Cliquez sur la salle dans l'arbre (ex. <b>Salle</b>).</li>
+    <li>Dans l'inspecteur : <b>Kind</b> = type (Normale, Départ, Boss) ; <b>Size</b> = largeur (x) et profondeur (y) en cases.</li>
+    <li>Cliquez sur <b>Peindre le sol de la salle</b> : tout l'intérieur de la boîte se remplit de sol.</li>
+  </ol>
+  <div class="shot">
+    <img src="img/03_salle.png">
+    <div class="mark" style="left:2%;top:21.2%;width:12%;height:2.6%"></div>
+    <div class="mark" style="left:82.6%;top:24.5%;width:16%;height:10.7%"></div>
+    <div class="tag" style="left:70%;top:27.5%">Type et taille</div>
+    <div class="mark gold" style="left:84.2%;top:35.1%;width:12.6%;height:3.7%"></div>
+    <div class="tag gold" style="left:66%;top:38.5%">Remplir de sol</div>
+    <div class="tag" style="left:35%;top:22%">Flèches : déplacer la salle</div>
+  </div>
+  <h3>Ajouter une nouvelle salle</h3>
+  <ol>
+    <li>Dans le Système de fichiers ②, ouvrez <code>scenes/levels/pieces/donjon/</code>.</li>
+    <li><b>Glissez <code>salle.tscn</code> sur le nom « Catacombes »</b> tout en haut de l'arbre ① (une salle doit être directement sous Catacombes).</li>
+    <li>Déplacez-la avec les flèches à l'endroit voulu, réglez sa taille, puis <b>Peindre le sol de la salle</b>.</li>
+    <li>Peignez un couloir (étape 3) pour la relier au reste du donjon.</li>
+  </ol>
+  <div class="tip">Une <b>porte</b> se pose automatiquement à chaque arrivée de couloir dans une salle
+    (au hasard : porte de cachot, porte de crypte ou simple arche ; double porte pour le boss).
+    Un passage de plus de 5 cases de large reste ouvert, sans porte.</div>
+</section>
+
+<section class="page">
+  <h3 style="margin-top:0">La salle ajoutée, juste après l'avoir glissée</h3>
+  <div class="shot">
+    <img src="img/08_nouvelle_salle.png">
+    <div class="mark" style="left:2%;top:49%;width:15.5%;height:2.6%"></div>
+    <div class="tag" style="left:2%;top:52%">nouvelle salle (renommable : double-clic)</div>
+    <div class="mark gold" style="left:4.8%;top:83.6%;width:12%;height:2.6%"></div>
+    <div class="tag gold" style="left:4.8%;top:79.5%">salle.tscn</div>
+    <div class="mark" style="left:82.6%;top:24.5%;width:16%;height:13.8%"></div>
+    <div class="tag" style="left:70%;top:40%">à régler ici</div>
+  </div>
+  <h3>Règles à respecter</h3>
+  <ul>
+    <li><b>Une seule</b> salle de départ (verte) et <b>une seule</b> salle du boss (rouge).</li>
+    <li>La salle du boss doit faire au moins <b>11 × 11</b> cases (Gloubah, son pentagramme et les cages de Plumeau y sont placés).</li>
+    <li>Les salles ne doivent pas se chevaucher.</li>
+    <li>Pour renommer une salle : double-clic sur son nom dans l'arbre.</li>
+    <li>Pour supprimer : clic sur son nom puis <span class="k">Suppr</span>.</li>
+  </ul>
+  <p>En jeu, une salle reste <b>dans le noir</b> et ses monstres <b>endormis</b> tant que le joueur n'a pas ouvert sa porte.</p>
+</section>
+
+<!-- ===================================================================== 5. objets -->
+<section class="page">
+  <h2><span class="n">5</span>Placer ennemis, coffres et décor</h2>
+  <p>Les pièces sont dans <code>scenes/levels/pieces/donjon/</code>. <b>Glissez-les directement dans la vue 3D</b>, sur le sol.</p>
+  <div class="shot">
+    <img src="img/05_objet.png">
+    <div class="mark gold" style="left:4.8%;top:73.6%;width:12%;height:24%"></div>
+    <div class="tag gold" style="left:4.8%;top:69.6%">les pièces à glisser</div>
+    <div class="mark" style="left:3%;top:48.6%;width:11%;height:2.6%"></div>
+    <div class="mark" style="left:82.6%;top:24.5%;width:16%;height:3.6%"></div>
+    <div class="tag" style="left:71%;top:29%">Kind : type de l'objet</div>
+    <div class="tag" style="left:57%;top:56%">objet sélectionné</div>
+  </div>
+  <table>
+    <tr><th style="width:34%">Pièce</th><th>Dans le jeu</th></tr>
+    <tr><td><code>squelette</code>, <code>capitaine</code></td><td>Squelettes ennemis (endormis tant que leur salle est fermée)</td></tr>
+    <tr><td><code>chef_des_squelettes</code></td><td><b>Un seul !</b> Il porte la clé de la salle du boss</td></tr>
+    <tr><td><code>rat</code></td><td>Rat des catacombes</td></tr>
+    <tr><td><code>coffre</code></td><td>Coffre (or, potion, parfois un objet)</td></tr>
+    <tr><td><code>torche</code></td><td>Torche murale : collez-la contre un mur, <b>la flèche bleue vers la pièce</b></td></tr>
+    <tr><td><code>os</code>, <code>bave</code>, <code>pilier</code>, <code>tonneau</code></td><td>Décor (piliers et tonneaux bloquent le passage)</td></tr>
+  </table>
+  <ul>
+    <li><b>Changer le type</b> d'un objet déjà posé : inspecteur, champ <b>Kind</b>.</li>
+    <li><b>Dupliquer</b> : sélectionner puis <span class="k">Ctrl</span> + <span class="k">D</span>, et déplacer la copie.</li>
+    <li><b>Tourner</b> : tirer sur le cercle vert (l'ennemi ou le coffre regarde dans cette direction).</li>
+    <li>Rangez les objets en les glissant dans les dossiers <b>Ennemis</b>, <b>Decor</b>, <b>Torches</b> de l'arbre (facultatif, mais plus clair).</li>
+  </ul>
+</section>
+
+<!-- ===================================================================== 6. vérifier -->
+<section class="page">
+  <h2><span class="n">6</span>Vérifier, tester, enregistrer</h2>
+  <h3>Vérifier le donjon</h3>
+  <ol>
+    <li>Cliquez sur <b>Catacombes</b>, tout en haut de l'arbre.</li>
+    <li>Dans l'inspecteur, cliquez sur <b>Vérifier le donjon</b>.</li>
+    <li>Ouvrez l'onglet <b>Sortie</b>, en bas de la vue 3D : la liste des problèmes s'affiche
+      (pas de salle de départ, chef manquant, salle du boss trop petite, objet posé hors du sol…). « Aucun problème » : tout va bien.</li>
+  </ol>
+  <div class="shot">
+    <img src="img/06_verifier.png">
+    <div class="mark" style="left:2%;top:14.2%;width:12%;height:2.6%"></div>
+    <div class="tag" style="left:14.5%;top:14.2%">1</div>
+    <div class="mark" style="left:86.2%;top:31.4%;width:9.6%;height:3.7%"></div>
+    <div class="tag" style="left:80%;top:36%">2. Vérifier le donjon</div>
+    <div class="mark gold" style="left:18.3%;top:96%;width:3.2%;height:3%"></div>
+    <div class="tag gold" style="left:18.3%;top:91.5%">3. Sortie</div>
+  </div>
+  <h3>Tester en jeu</h3>
+  <p>Appuyez sur <span class="k">F6</span> (ou le bouton ▶ avec un clap, en haut à droite : <i>Lancer la scène actuelle</i>).
+    Une partie démarre directement dans votre donjon. Fermez la fenêtre du jeu pour revenir à l'éditeur.</p>
+  <h3>Enregistrer</h3>
+  <p><span class="k">Ctrl</span> + <span class="k">S</span>. Le jeu utilisera votre donjon pour la quête « Le Petit Plumeau ».</p>
+  <div class="warn">Une sauvegarde faite <b>en plein donjon</b> garde la liste des ennemis tués et des portes ouvertes.
+    Après avoir beaucoup modifié le donjon, commencez une nouvelle partie ou terminez d'abord le donjon.</div>
+  <h3>Récapitulatif express</h3>
+  <table>
+    <tr><td style="width:40%">Ouvrir</td><td><code>scenes/levels/catacombes.tscn</code> (double-clic)</td></tr>
+    <tr><td>Sol</td><td>Sélectionner <b>Sol</b> → tuile → clic (clic droit : effacer)</td></tr>
+    <tr><td>Salle</td><td>Glisser <code>salle.tscn</code> sur <b>Catacombes</b> → Kind, Size → <b>Peindre le sol de la salle</b></td></tr>
+    <tr><td>Objets</td><td>Glisser les pièces dans la vue 3D ; <b>Kind</b> pour changer le type</td></tr>
+    <tr><td>Vérifier / tester / enregistrer</td><td><b>Vérifier le donjon</b> → <span class="k">F6</span> → <span class="k">Ctrl</span>+<span class="k">S</span></td></tr>
+  </table>
+</section>
+
+</body>
+</html>

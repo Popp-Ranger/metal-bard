@@ -188,6 +188,11 @@
 - [x] Salle du boss : double porte voûtée au crâne cornu, toujours scellée par les chaînes du chef
 - [x] Taverne : double porte voûtée tout en bois, tête de chèvre au-dessus (art/portes/build_portes.py)
 
+## ✅ v0.1.33 — Torches témoins, ambiance lugubre, guide de l'éditeur
+- [x] Torches rouge orangé tant qu'une salle a des ennemis en vie, flamme normale une fois nettoyée
+- [x] Ambiance plus sombre et plus froide dans le donjon, taverne plus tamisée
+- [x] Guide de l'éditeur de donjon : PDF illustré (docs/guide_editeur) et vidéo commentée (locale)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

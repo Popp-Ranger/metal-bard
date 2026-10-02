@@ -124,6 +124,17 @@ func _test_quest_flow() -> void:
 		elif normal_door < 0 and not bool(door_list[i]["doorway"]) and int(door_list[i]["room"]) != dg.get("gen").start_room:
 			normal_door = i
 	var normal_room := int(door_list[normal_door]["room"])
+	# Torches : rouge orangé tant que leur salle a des ennemis en vie, flamme normale une fois nettoyée.
+	var alarm: Dictionary = dg.get("_alarm_torches")
+	var alarm_room: int = alarm.keys()[0] if not alarm.is_empty() else -1
+	var torch_mat: StandardMaterial3D = ((alarm[alarm_room] as Array)[0] as Node3D).get_meta("torch")[0] if alarm_room >= 0 else null
+	var was_red := torch_mat != null and torch_mat.emission.is_equal_approx(DungeonDecor.TORCH_ALARM[0])
+	for e: Variant in (dg.get("_room_enemies") as Dictionary).get(alarm_room, []):
+		if is_instance_valid(e):
+			(e as Enemy).take_damage(99999, (e as Enemy).global_position + Vector3(0.1, 0, 0), 0.0, false, "phys")
+	await get_tree().create_timer(0.6).timeout
+	_check(was_red and not alarm.has(alarm_room) and alarm.size() >= 3,
+		"torches rouge orangé dans les salles occupées, flamme normale une fois la salle nettoyée")
 	dg.call("_on_door", normal_door)
 	await _frames(2)
 	_check(bool(door_list[normal_door]["open"]) and not covers.has(normal_room), "ouvrir une porte éclaire la salle")

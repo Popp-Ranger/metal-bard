@@ -7,6 +7,11 @@ const CELL := 2.0
 const WALL_HEIGHT := 2.6
 
 
+## Torches : flamme normale [flamme, cœur, étincelles, lumière] et flamme d'alerte (ennemis vivants dans la salle).
+const TORCH_CALM := [Color(1.0, 0.62, 0.22), Color(1.0, 0.9, 0.55), Color(1.0, 0.7, 0.3), Color(1.0, 0.72, 0.42)]
+const TORCH_ALARM := [Color(1.0, 0.28, 0.05), Color(1.0, 0.55, 0.2), Color(1.0, 0.32, 0.08), Color(1.0, 0.36, 0.14)]
+
+
 ## Torche murale en `pos`, l'applique contre le mur, la flamme vers `inward` (vers l'intérieur de la pièce).
 static func torch(parent: Node3D, pos: Vector3, inward: Vector3, shadows: bool = false) -> Node3D:
 	var iron := Visuals.mat(Color(0.18, 0.17, 0.17), 0.4, 0.8)
@@ -17,8 +22,10 @@ static func torch(parent: Node3D, pos: Vector3, inward: Vector3, shadows: bool =
 	Visuals.box(t, Vector3(0.22, 0.08, 0.06), Vector3(0, 1.75, 0.02), iron) # applique
 	Visuals.box(t, Vector3(0.05, 0.3, 0.05), Vector3(0, 1.85, 0.14), iron, Vector3(30, 0, 0))
 	Visuals.cylinder(t, 0.05, 0.035, 0.45, Vector3(0, 2.0, 0.22), Visuals.mat(Color(0.25, 0.14, 0.07)), Vector3(25, 0, 0), 8)
-	Visuals.sphere(t, 0.1, Vector3(0, 2.27, 0.33), Visuals.glow_mat(Color(1.0, 0.5, 0.12), 6.0), Vector3(1.0, 1.6, 1.0))
-	Visuals.sphere(t, 0.06, Vector3(0, 2.35, 0.33), Visuals.glow_mat(Color(1.0, 0.85, 0.4), 8.0), Vector3(1.0, 1.5, 1.0))
+	var outer := Visuals.glow_mat(TORCH_CALM[0], 6.0)
+	var inner := Visuals.glow_mat(TORCH_CALM[1], 8.0)
+	Visuals.sphere(t, 0.1, Vector3(0, 2.27, 0.33), outer, Vector3(1.0, 1.6, 1.0))
+	Visuals.sphere(t, 0.06, Vector3(0, 2.35, 0.33), inner, Vector3(1.0, 1.5, 1.0))
 	var flame := CPUParticles3D.new()
 	flame.position = Vector3(0, 2.35, 0.33)
 	flame.amount = 10
@@ -33,12 +40,36 @@ static func torch(parent: Node3D, pos: Vector3, inward: Vector3, shadows: bool =
 	var spark := SphereMesh.new()
 	spark.radius = 0.035
 	spark.height = 0.07
-	spark.material = Visuals.glow_mat(Color(1.0, 0.6, 0.2), 5.0)
+	var spark_mat := Visuals.glow_mat(TORCH_CALM[2], 5.0)
+	spark.material = spark_mat
 	flame.mesh = spark
 	t.add_child(flame)
-	var light := Visuals.flicker_light(t, Vector3(0, 2.4, 0.8), Color(1.0, 0.6, 0.3), 3.2, 11.0, shadows)
+	var light := Visuals.flicker_light(t, Vector3(0, 2.4, 0.8), TORCH_CALM[3], 3.2, 11.0, shadows)
 	light.flicker_amount = 0.2
+	t.set_meta("torch", [outer, inner, spark_mat, light])
 	return t
+
+
+## Couleur d'une torche (flamme, cœur, étincelles, lumière) : rouge orangé tant que des ennemis vivent dans sa
+## salle, flamme normale une fois la salle nettoyée (on sait d'un coup d'œil où l'on est déjà passé).
+static func set_torch_alarm(t: Node3D, alarm: bool, animate: bool = false) -> void:
+	if not t.has_meta("torch"):
+		return
+	var parts: Array = t.get_meta("torch")
+	var cols: Array = TORCH_ALARM if alarm else TORCH_CALM
+	for i in 3:
+		var m := parts[i] as StandardMaterial3D
+		if animate:
+			t.create_tween().tween_property(m, "emission", cols[i], 1.2)
+			t.create_tween().tween_property(m, "albedo_color", (cols[i] as Color).darkened(0.3), 1.2)
+		else:
+			m.emission = cols[i]
+			m.albedo_color = (cols[i] as Color).darkened(0.3)
+	var light := parts[3] as OmniLight3D
+	if animate:
+		t.create_tween().tween_property(light, "light_color", cols[3], 1.2)
+	else:
+		light.light_color = cols[3]
 
 
 ## Tas d'os : quelques os éparpillés et un crâne.

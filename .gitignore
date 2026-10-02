@@ -23,3 +23,6 @@ desktop.ini
 # Elles sont converties dans Blender puis intégrées au modèle du héros.
 assets/animations/mixamo/*.fbx
 __pycache__/
+
+# Vidéo du guide de l'éditeur (94 Mo) : gardée en local
+docs/guide_editeur/*.mp4

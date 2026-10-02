@@ -24,6 +24,10 @@ var _rng := RandomNumberGenerator.new()
 var _state := {}
 ## Portes : [{room, node, body, interact, leaves, locked, open}] (index = identifiant sauvegardé).
 var doors: Array[Dictionary] = []
+## Torches murales, et celles de chaque salle encore occupée (salle -> torches en alerte, voir _update_torches).
+var _torches: Array[Node3D] = []
+var _alarm_torches := {}
+var _torch_check := 0.0
 ## Voile noir de chaque salle non découverte (index de salle -> MeshInstance3D).
 var _covers := {}
 ## Décor et lumières de chaque salle non découverte, masqués jusqu'à l'ouverture.
@@ -74,6 +78,7 @@ func _ready() -> void:
 	_spawn_enemies()
 	_spawn_boss_room()
 	_build_room_covers()
+	_assign_torches()
 	var start := cell_to_world(gen.center(gen.start_room))
 	_spawn_flee_portal(start + Vector3(-3.0, 0.0, -3.0))
 	# Retour par le portail bleu : exactement là où on l'avait ouvert.
@@ -96,11 +101,15 @@ func _ready() -> void:
 		Events.notify("Trouvez Plumeau au fond des catacombes...", Events.COLOR_DEFAULT)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if hero != null and _wall_material != null:
 		_wall_material.set_shader_parameter("hero_pos", hero.global_position)
 	if hero != null:
 		_reveal_room_at(hero.global_position) # salle sans porte (côté ouvert) : on la découvre en entrant
+	_torch_check -= delta
+	if _torch_check <= 0.0:
+		_torch_check = 0.4
+		_update_torches()
 
 
 func cell_to_world(c: Vector2i) -> Vector3:
@@ -255,7 +264,7 @@ func _decorate_from_map() -> void:
 		var p: Vector3 = m["pos"]
 		match int(m["kind"]):
 			DungeonMarker.Kind.TORCHE:
-				DungeonDecor.torch(self, p, (m["basis"] as Basis).z, false)
+				_torches.append(DungeonDecor.torch(self, p, (m["basis"] as Basis).z, false))
 			DungeonMarker.Kind.OS:
 				_decor(0, p)
 			DungeonMarker.Kind.BAVE:
@@ -306,7 +315,7 @@ func _place_torches() -> void:
 			if too_close:
 				continue
 			placed.append(p)
-			DungeonDecor.torch(self, p, -Vector3(d.x, 0, d.y), false)
+			_torches.append(DungeonDecor.torch(self, p, -Vector3(d.x, 0, d.y), false))
 
 
 # --- Population ----------------------------------------------------------------
@@ -947,6 +956,38 @@ func _build_room_covers() -> void:
 		for e: Variant in _room_enemies.get(i, []):
 			if is_instance_valid(e):
 				(e as Enemy).set_dormant(true)
+
+
+## Torches des salles où des ennemis (posés au départ) sont encore en vie : flamme rouge orangé.
+func _assign_torches() -> void:
+	for t in _torches:
+		var inward := t.global_basis.z
+		var c := world_to_cell(t.global_position + inward * 0.6)
+		for i in gen.rooms.size():
+			if gen.rooms[i].has_point(c) and _room_alive(i):
+				if not _alarm_torches.has(i):
+					_alarm_torches[i] = []
+				(_alarm_torches[i] as Array).append(t)
+				DungeonDecor.set_torch_alarm(t, true)
+				break
+
+
+func _room_alive(room: int) -> bool:
+	for e: Variant in _room_enemies.get(room, []):
+		if is_instance_valid(e) and (e as Enemy).is_alive():
+			return true
+	return false
+
+
+## Salle nettoyée : ses torches reprennent leur flamme normale (on sait qu'on est déjà passé par là).
+func _update_torches() -> void:
+	for room: int in _alarm_torches.keys():
+		if _room_alive(room):
+			continue
+		for t: Variant in _alarm_torches[room]:
+			if is_instance_valid(t):
+				DungeonDecor.set_torch_alarm(t as Node3D, false, true)
+		_alarm_torches.erase(room)
 
 
 func is_room_revealed(room: int) -> bool:
