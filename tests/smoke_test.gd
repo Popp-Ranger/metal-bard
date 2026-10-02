@@ -857,9 +857,9 @@ func _test_characters() -> void:
 		"création : héroïne prédéfinie %s (nom verrouillé)" % preset_f["name"])
 	var anim_f := heroine._anim
 	_check(heroine._skin != null and heroine._skin.skeleton.get_bone_count() == 17 and anim_f != null
-		and anim_f.lengths.size() >= 16 and anim_f.lengths.has("smash") and anim_f.lengths.has("sleep") and heroine.scale == Vector3.ONE
-		and is_equal_approx(heroine.height(), 1.74) and is_equal_approx(anim_f.guitar_scale, float(preset_f["rig"]["guitar_scale"])),
-		"%s : son modèle, les 17 os et les %d animations de Riffald, 1,74 m" % [preset_f["name"], anim_f.lengths.size() if anim_f else 0])
+		and anim_f.lengths.size() >= 16 and anim_f.lengths.has("smash") and anim_f.lengths.has("sleep") and is_equal_approx(heroine.scale.y, 1.84 / 1.74)
+		and is_equal_approx(heroine.height(), 1.84) and is_equal_approx(anim_f.guitar_scale, float(preset_f["rig"]["guitar_scale"])),
+		"%s : son modèle, les 17 os et les %d animations de Riffald, 1,84 m (agrandie en jeu)" % [preset_f["name"], anim_f.lengths.size() if anim_f else 0])
 	var sk_f := heroine._skin.skeleton
 	await sk_f.skeleton_updated
 	var gt_f := anim_f._skel_to_model().affine_inverse() * heroine._guitar.transform.orthonormalized()
@@ -867,8 +867,8 @@ func _test_characters() -> void:
 	var err_f := maxf((sk_f.get_bone_global_pose(sk_f.find_bone("hand.L")).origin - hands_f["L"]).length(),
 		(sk_f.get_bone_global_pose(sk_f.find_bone("hand.R")).origin - hands_f["R"]).length())
 	var top_f := sk_f.get_bone_global_rest(sk_f.find_bone("head")).origin.y
-	_check(err_f < 0.03 and gt_f.basis.y.x > 0.5 and top_f < riff_head,
-		"%s : mains sur la guitare (écart %.3f m), droitière, plus petite que Riffald" % [preset_f["name"], err_f])
+	_check(err_f < 0.03 and gt_f.basis.y.x > 0.5 and absf(top_f * heroine.scale.y - riff_head) < 0.08,
+		"%s : mains sur la guitare (écart %.3f m), droitière, tête à la hauteur de celle de Riffald (%.2f m / %.2f m)" % [preset_f["name"], err_f, top_f * heroine.scale.y, riff_head])
 	heroine.swing()
 	_check(anim_f.state == "smash", "%s : coups de guitare animés" % preset_f["name"])
 	creation._set_hero_mode(RaceDB.PRESET_ORDER.size())

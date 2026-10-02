@@ -19,7 +19,7 @@ blender --background art/persof1/persof1.blend --python art/riffald/retarget_mix
 ```
 
 1. **prepare** : les 70 tranches du générateur sont ressoudées, le maillage est allégé à 40 000
-   triangles, mis à **1,74 m** (Riffald : 1,84 m), pieds au sol, centré sur le bassin ; textures
+   triangles, mis à **1,74 m** (agrandie à 1,84 m dans le jeu, comme Riffald : `scale` du préréglage), pieds au sol, centré sur le bassin ; textures
    ramenées à 2K / 1K. Résultat : `art/persof1/persof1.blend`.
 2. **rig** : squelette identique à celui de Riffald (mêmes 17 os : bassin, colonne, buste, cou, tête,
    bras, avant-bras, mains, cuisses, tibias, pieds), articulations relevées sur les vues de face et de

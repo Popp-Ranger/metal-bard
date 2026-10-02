@@ -259,7 +259,8 @@ func _build() -> void:
 	_update_arms()
 	var preset_model := RaceDB.preset_model(str(appearance.get("preset", "")))
 	if not preset_model.is_empty() and ResourceLoader.exists(preset_model):
-		scale = Vector3.ONE # le modèle importé est déjà à sa taille réelle
+		# Modèle importé à sa taille réelle, sauf agrandissement prévu par le préréglage.
+		scale = Vector3.ONE * float((RaceDB.PRESETS.get(str(appearance.get("preset", "")), {}) as Dictionary).get("scale", 1.0))
 		_use_skin(preset_model)
 
 

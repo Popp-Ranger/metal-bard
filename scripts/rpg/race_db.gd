@@ -112,6 +112,7 @@ static func random_appearance(sex: String = "") -> Dictionary:
 
 ## Héros prédéfinis proposés à la création de personnage, dans l'ordre de PRESET_ORDER.
 ##  - "height" : taille réelle du modèle (m), affichée à la création et utilisée pour les étiquettes ;
+##  - "scale" : agrandissement du modèle en jeu (1 par défaut), pour atteindre "height" ;
 ##  - "model" : modèle Blender à squelette (17 os) contenant les animations Mixamo (voir docs/ANIMATIONS.md) ;
 ##  - "rig" : réglages de la guitare pour ce modèle (voir HeroAnimator) : "guitar_scale" (taille de la
 ##    guitare, à l'échelle des mains), "play_pick" (point de grattage, repère du squelette au repos) et
@@ -134,7 +135,8 @@ const PRESETS := {
 		"desc": "Humaine, longues tresses rousses, cuir sombre et ventre nu, épaulière à pointes, brassards cloutés, genouillères d'acier, cape bordeaux en lambeaux. Armée de la même Flying V.",
 		"appearance": {"sex": "f", "race": "humain", "horns": 0, "tusks": 0, "beard": 0, "hair": 3, "hair_color": 5, "preset": "persof1"},
 		"model": "res://assets/models/persof1/persof1.glb",
-		"height": 1.74,
+		"height": 1.84,
+		"scale": 1.84 / 1.74, # modèle de 1,74 m agrandi en jeu (son .blend, retouché à la main, reste tel quel)
 		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.07, 1.0, 0.17), "back_pos": Vector3(0.0, 1.1, -0.2)},
 	},
 }

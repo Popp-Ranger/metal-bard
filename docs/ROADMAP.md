@@ -166,6 +166,9 @@
 - [x] Cel shading retiré (lumière en aplats et contour encré) : éclairage réaliste
 - [x] Un peu plus sombre (ambiance et exposition baissées), bien moins que les premières versions
 
+## ✅ v0.1.28 — Valkyriff à 1,84 m
+- [x] Valkyriff agrandie en jeu à 1,84 m, comme Riffald (préréglage `scale`, son .blend reste à 1,74 m)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
