@@ -121,7 +121,7 @@ func _test_quest_flow() -> void:
 	for i in door_list.size():
 		if bool(door_list[i]["locked"]):
 			boss_door = i
-		elif normal_door < 0 and int(door_list[i]["room"]) != dg.get("gen").start_room:
+		elif normal_door < 0 and not bool(door_list[i]["doorway"]) and int(door_list[i]["room"]) != dg.get("gen").start_room:
 			normal_door = i
 	var normal_room := int(door_list[normal_door]["room"])
 	dg.call("_on_door", normal_door)
@@ -1082,7 +1082,7 @@ func _test_town_portal() -> void:
 	var d1_doors: Array = d1.get("doors")
 	var opened := -1
 	for i in d1_doors.size():
-		if not bool(d1_doors[i]["locked"]):
+		if not bool(d1_doors[i]["locked"]) and not bool(d1_doors[i]["doorway"]):
 			opened = i
 			break
 	d1.call("_on_door", opened)

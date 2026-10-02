@@ -768,8 +768,20 @@ func _build_pentagram(c: Vector3) -> void:
 # Portes, salles plongées dans le noir et clé du chef
 # =====================================================================================
 
-## Une porte à deux battants à chaque arrivée de couloir dans une salle. Celles de la salle
-## du boss sont scellées : il faut la clé que porte le chef des squelettes.
+## Une porte à chaque arrivée de couloir dans une salle (art/portes/build_portes.py, à taille réelle) :
+## porte de cachot, porte de crypte ou simple ouverture de pierre, au hasard (toujours la même pour une
+## porte donnée) ; double porte voûtée au crâne cornu pour la salle du boss, scellée : il faut la clé
+## que porte le chef des squelettes. Le reste de l'ouverture du couloir est muré.
+const DOOR_MODELS := {
+	"cachot": "res://assets/models/portes/cachot.glb",
+	"crypte": "res://assets/models/portes/crypte.glb",
+	"ouverture": "res://assets/models/portes/ouverture.glb",
+	"boss": "res://assets/models/portes/boss.glb",
+}
+const DOOR_VARIANTS := ["cachot", "crypte", "ouverture"]
+const DOOR_WALL_DEPTH := 0.45
+
+
 func _build_doors() -> void:
 	for i in gen.rooms.size():
 		for o in gen.room_openings(i):
@@ -779,6 +791,13 @@ func _build_doors() -> void:
 		var idx := int(v)
 		if idx >= 0 and idx < doors.size():
 			_open_door(idx, false)
+
+
+## Modèle d'une porte ordinaire, tiré au hasard mais toujours le même pour cette porte de ce donjon.
+func _door_variant(o: Dictionary) -> String:
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([GameState.dungeon_seed, o["cell"], o["out"]])
+	return DOOR_VARIANTS[r.randi() % DOOR_VARIANTS.size()]
 
 
 func _build_door(room: int, o: Dictionary) -> void:
@@ -795,38 +814,33 @@ func _build_door(room: int, o: Dictionary) -> void:
 	node.transform = Transform3D(Basis(x_axis, Vector3.UP, inward), center)
 	add_child(node)
 	var locked := room == gen.boss_room
-	var wood := Visuals.mat(Color(0.45, 0.28, 0.14) if not locked else Color(0.35, 0.12, 0.08), 0.85)
-	var dark := Visuals.mat(Color(0.16, 0.09, 0.05), 0.9)
-	var iron := Visuals.mat(Color(0.2, 0.2, 0.22), 0.45, 0.7)
-	var h := WALL_HEIGHT
-	# Chambranle.
-	for side: float in [-1.0, 1.0]:
-		Visuals.box(node, Vector3(0.3, h, 0.45), Vector3(side * (width * 0.5 - 0.15), h * 0.5, 0), _wall_material)
-	Visuals.box(node, Vector3(width, 0.35, 0.45), Vector3(0, h - 0.175, 0), _wall_material)
-	# Deux battants de bois cerclés de fer, pivotant vers l'intérieur de la salle.
+	var variant := "boss" if locked else _door_variant(o)
+	var model := (load(DOOR_MODELS[variant]) as PackedScene).instantiate() as Node3D
+	model.rotation.y = PI # face décorée côté couloir (-Z local), battants qui s'ouvrent vers la salle
+	node.add_child(model)
 	var leaves: Array[Node3D] = []
-	var leaf_w := width * 0.5 - 0.3
-	var leaf_h := h - 0.4
-	for side: float in [-1.0, 1.0]:
-		var hinge := Node3D.new()
-		hinge.position = Vector3(side * (width * 0.5 - 0.3), 0, 0)
-		node.add_child(hinge)
-		var mid := -side * leaf_w * 0.5
-		Visuals.box(hinge, Vector3(leaf_w - 0.02, leaf_h, 0.12), Vector3(mid, leaf_h * 0.5, 0), wood)
-		for k in int(leaf_w / 0.35):
-			var x := -side * (0.2 + k * 0.35)
-			Visuals.box(hinge, Vector3(0.025, leaf_h - 0.05, 0.13), Vector3(x, leaf_h * 0.5, 0), dark) # planches
-		for y: float in [0.45, leaf_h - 0.55]:
-			Visuals.box(hinge, Vector3(leaf_w - 0.05, 0.1, 0.15), Vector3(mid, y, 0), iron)
-		Visuals.torus(hinge, 0.07, 0.1, Vector3(-side * (leaf_w - 0.25), 1.1, 0.1), iron, Vector3(90, 0, 0)) # anneau
-		leaves.append(hinge)
+	var frame_size := Vector3(1.6, 2.4, 0.5)
+	for c in model.get_children():
+		if c.name.contains("battant"):
+			leaves.append(c as Node3D)
+		elif c.name.contains("cadre") and c is MeshInstance3D:
+			frame_size = (c as MeshInstance3D).get_aabb().size
+	_door_walls(node, width, frame_size)
+	var idx := doors.size()
+	if variant == "ouverture":
+		# Simple ouverture : rien à ouvrir, la salle se découvre quand on y entre (voir _reveal_room_at).
+		doors.append({"room": room, "node": node, "body": null, "interact": null, "leaves": leaves,
+			"lock": [], "locked": false, "open": true, "doorway": true})
+		return
+	var iron := Visuals.mat(Color(0.2, 0.2, 0.22), 0.45, 0.7)
 	var lock_parts: Array[Node3D] = []
 	if locked:
 		# Chaînes en croix, gros cadenas et lueur rouge : scellée par le chef des squelettes.
+		var span := minf(frame_size.x, width) * 0.8
 		for sgn: float in [-1.0, 1.0]:
-			lock_parts.append(Visuals.box(node, Vector3(width * 0.9, 0.07, 0.07), Vector3(0, leaf_h * 0.5, -0.12), iron, Vector3(0, 0, 28 * sgn)))
-		lock_parts.append(Visuals.box(node, Vector3(0.35, 0.4, 0.15), Vector3(0, leaf_h * 0.5, -0.18), Visuals.mat(Color(0.35, 0.3, 0.1), 0.4, 0.8)))
-		lock_parts.append(Visuals.torus(node, 0.1, 0.14, Vector3(0, leaf_h * 0.5 + 0.28, -0.18), iron))
+			lock_parts.append(Visuals.box(node, Vector3(span, 0.07, 0.07), Vector3(0, 1.1, -0.14), iron, Vector3(0, 0, 28 * sgn)))
+		lock_parts.append(Visuals.box(node, Vector3(0.35, 0.4, 0.15), Vector3(0, 1.1, -0.2), Visuals.mat(Color(0.35, 0.3, 0.1), 0.4, 0.8)))
+		lock_parts.append(Visuals.torus(node, 0.1, 0.14, Vector3(0, 1.38, -0.2), iron))
 		var glow := Visuals.flicker_light(node, Vector3(0, 1.6, -0.9), Color(1.0, 0.15, 0.1), 1.6, 5.0)
 		glow.flicker_amount = 0.4
 		lock_parts.append(glow)
@@ -836,16 +850,31 @@ func _build_door(room: int, o: Dictionary) -> void:
 	body.collision_mask = 0
 	var col := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(width, h, 0.3)
+	shape.size = Vector3(minf(frame_size.x, width), WALL_HEIGHT, 0.3)
 	col.shape = shape
-	col.position.y = h * 0.5
+	col.position.y = WALL_HEIGHT * 0.5
 	body.add_child(col)
 	node.add_child(body)
-	var idx := doors.size()
 	var prompt := "Ouvrir la porte" if not locked else "Porte scellée (clé du chef des squelettes)"
-	var interact := Interactable.create(self, center, prompt, _on_door.bind(idx), width * 0.5 + 1.3)
+	var interact := Interactable.create(self, center, prompt, _on_door.bind(idx), 1.9)
 	doors.append({"room": room, "node": node, "body": body, "interact": interact, "leaves": leaves,
-		"lock": lock_parts, "locked": locked, "open": false})
+		"lock": lock_parts, "locked": locked, "open": false, "doorway": false})
+
+
+## Mur autour du cadre de la porte : de chaque côté jusqu'aux bords de l'ouverture du couloir (avec
+## collision), et au-dessus du cadre jusqu'en haut du mur.
+func _door_walls(node: Node3D, width: float, frame_size: Vector3) -> void:
+	var side_w := (width - frame_size.x) * 0.5
+	if side_w > 0.02:
+		for s: float in [-1.0, 1.0]:
+			var size := Vector3(side_w, WALL_HEIGHT, DOOR_WALL_DEPTH)
+			var pos := Vector3(s * (frame_size.x * 0.5 + side_w * 0.5), WALL_HEIGHT * 0.5, 0)
+			Visuals.box(node, size, pos, _wall_material)
+			Visuals.solid(node, size, pos)
+	var top := WALL_HEIGHT - frame_size.y
+	if top > 0.02:
+		Visuals.box(node, Vector3(minf(frame_size.x, width), top, DOOR_WALL_DEPTH),
+			Vector3(0, frame_size.y + top * 0.5, 0), _wall_material)
 
 
 func _on_door(idx: int) -> void:
@@ -874,7 +903,10 @@ func _open_door(idx: int, animate: bool) -> void:
 		part.queue_free()
 	var leaves: Array[Node3D] = d["leaves"]
 	for k in leaves.size():
-		var target := deg_to_rad(-95.0 if k == 0 else 95.0)
+		# Chaque battant pivote sur ses gonds vers l'intérieur de la salle (selon le côté où il s'étend).
+		var mi := leaves[k] as MeshInstance3D
+		var extends_right := mi == null or mi.get_aabb().get_center().x > 0.0
+		var target := deg_to_rad(95.0 if extends_right else -95.0)
 		if animate:
 			leaves[k].create_tween().tween_property(leaves[k], "rotation:y", target, 0.6).set_trans(Tween.TRANS_SINE)
 		else:

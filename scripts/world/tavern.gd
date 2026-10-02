@@ -195,7 +195,7 @@ func _moonlight() -> void:
 		moon.look_at(center + inward * 3.5, Vector3.UP)
 
 
-## Portes d'entrée à deux battants. Elles se referment derrière le héros à la fin de
+## Portes d'entrée (double porte de bois, tête de chèvre). Elles se referment derrière le héros à la fin de
 ## l'intro et restent verrouillées jusqu'à une quête ultérieure (drapeau « tavern_doors_open »).
 func _build_front_doors(m: TavernMarker) -> void:
 	var opened: bool = GameState.flags.get("tavern_doors_open", false)
@@ -204,7 +204,7 @@ func _build_front_doors(m: TavernMarker) -> void:
 	for i in _door_hinges.size():
 		var side := -1.0 if i == 0 else 1.0
 		_door_hinges[i].rotation.y = side * deg_to_rad(100.0) if (opened or arriving) else 0.0
-	_door_block = Visuals.solid(self, Vector3(2.6, 3.0, 0.3), Vector3.ZERO)
+	_door_block = Visuals.solid(self, Vector3(2.5, 3.0, 0.3), Vector3.ZERO)
 	_door_block.transform = m.global_transform * Transform3D(Basis.IDENTITY, Vector3(0, 1.5, 0))
 	_door_block.add_to_group(TavernDecor.NAV_GROUP)
 	if opened:

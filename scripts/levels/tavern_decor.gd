@@ -289,19 +289,24 @@ static func rune_circle(p: Node3D) -> void:
 			Visuals.glow_mat(Color(0.6, 0.4, 1.0), 2.0), Vector3(0, -rad_to_deg(a), 0))
 
 
-## Portes d'entrée à deux battants (ouverture de 2,6 m le long de X) et leurs montants ; renvoie les gonds.
+## Portes d'entrée : double porte voûtée tout en bois, tête de chèvre au-dessus (art/portes/build_portes.py,
+## « taverne ») ; elle remplit le trou de 4 m du muret (poteaux et panneaux de planches à hauteur du muret).
+## Face décorée vers +Z (la rue). Renvoie les battants [gauche, droit], qui pivotent sur leurs gonds.
+const FRONT_DOORS := "res://assets/models/portes/taverne.glb"
+
 static func front_doors(p: Node3D) -> Array[Node3D]:
 	var hinges: Array[Node3D] = []
+	var model := (load(FRONT_DOORS) as PackedScene).instantiate() as Node3D
+	p.add_child(model)
+	for c in model.get_children():
+		if c.name.ends_with("_g"):
+			hinges.insert(0, c as Node3D)
+		elif c.name.ends_with("_d"):
+			hinges.append(c as Node3D)
+	# Poteaux et panneaux de part et d'autre du passage (2,5 m) : on ne passe pas à travers.
 	for side: float in [-1.0, 1.0]:
-		Visuals.box(p, Vector3(0.7, 1.6, 0.5), Vector3(1.65 * side, 0.8, 0), mat("wood_dark")) # montants
-		var hinge := Node3D.new()
-		hinge.position = Vector3(1.3 * side, 0, 0)
-		p.add_child(hinge)
-		Visuals.box(hinge, Vector3(1.3, 2.3, 0.12), Vector3(-0.65 * side, 1.15, 0), mat("wood"))
-		for y: float in [0.5, 1.8]:
-			Visuals.box(hinge, Vector3(1.3, 0.1, 0.16), Vector3(-0.65 * side, y, 0), mat("iron"))
-		Visuals.torus(hinge, 0.07, 0.1, Vector3(-1.05 * side, 1.15, -0.1), mat("iron"), Vector3(90, 0, 0))
-		hinges.append(hinge)
+		var wall := Visuals.solid(p, Vector3(0.75, 3.0, 0.4), Vector3(1.625 * side, 1.5, 0))
+		wall.add_to_group(NAV_GROUP)
 	return hinges
 
 
