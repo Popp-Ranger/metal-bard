@@ -197,6 +197,9 @@
 - [x] Onde de choc : les ennemis touchés headbanguent 1,25 s, figés (les boss sont sonnés)
 - [x] Presque aussi sombre que la toute première version (ambiance et lumière principale très basses, torches maîtresses)
 
+## ✅ v0.1.35 — Aussi sombre que la première version
+- [x] Mêmes réglages d'ambiance que la v0.1 (sans ses filtres), plus de lumière principale : seules torches, lanternes et halo du héros éclairent
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
