@@ -2,7 +2,7 @@
 #
 # Sources : C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\PNJ\<dossier>\*.glb
 #
-# Usage (sans interface), <perso> = mage | tavernier | squelette :
+# Usage (sans interface), <perso> = mage | tavernier | squelette | demon (héros jouable, dans art/demon) :
 #   blender --background --factory-startup --python art/pnj/build_pnj.py -- prepare <perso>
 #       -> art/pnj/<perso>.blend : maillage ressoudé et allégé, à la taille du jeu, textures 2K
 #   blender --background art/pnj/<perso>.blend --python art/pnj/build_pnj.py -- views <perso> <dossier>
@@ -47,6 +47,16 @@ CHARS = {
         "shoulder.R": (-0.25, 0.12, 1.37), "elbow.R": (-0.35, 0.14, 1.06), "wrist.R": (-0.40, 0.03, 0.81),
         "hip.L": (0.12, 0.04, 0.90), "knee.L": (0.17, 0.06, 0.47), "ankle.L": (0.20, 0.10, 0.12),
         "hip.R": (-0.12, 0.04, 0.90), "knee.R": (-0.17, 0.06, 0.47), "ankle.R": (-0.20, 0.10, 0.12)}},
+    # Démon jouable (héros prédéfini, pas un PNJ) : source et .blend ailleurs (art/demon). Ébauche des poids faite par
+    # « rig » le 2 oct. 2026, Ulysse finit la peinture à la main : « retouche » protège son travail.
+    "demon": {"src": r"C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\Démon",
+              "out": "demon", "name": "Demon", "height": 1.95, "tris": 40000, "retouche": True, "joints": {
+        "hips": (0.0, -0.035, 1.02), "spine": (0.0, -0.04, 1.17), "chest": (0.0, -0.04, 1.33),
+        "neck": (0.0, -0.06, 1.53), "head": (0.0, -0.07, 1.60), "head_top": (0.0, -0.07, 1.93),
+        "shoulder.L": (0.21, 0.0, 1.43), "elbow.L": (0.27, 0.04, 1.22), "wrist.L": (0.355, -0.07, 1.0),
+        "shoulder.R": (-0.21, 0.0, 1.43), "elbow.R": (-0.27, 0.04, 1.22), "wrist.R": (-0.355, -0.07, 1.0),
+        "hip.L": (0.10, -0.03, 1.0), "knee.L": (0.16, -0.01, 0.60), "ankle.L": (0.22, 0.06, 0.15),
+        "hip.R": (-0.10, -0.03, 1.0), "knee.R": (-0.18, -0.01, 0.60), "ankle.R": (-0.24, 0.06, 0.15)}},
 }
 
 HAND_LEN = 0.09  # poignet -> articulations des doigts
@@ -58,7 +68,7 @@ def cfg():
 
 
 def blend_path():
-    return os.path.join(HERE, ARGS[1] + ".blend")
+    return os.path.join(HERE, "..", cfg()["out"], ARGS[1] + ".blend") if "out" in cfg() else os.path.join(HERE, ARGS[1] + ".blend")
 
 
 def col():
@@ -84,7 +94,7 @@ def _is_color(img):
 
 def prepare():
     c = cfg()
-    src = glob.glob(os.path.join(SRC_DIR, c["dir"], "*.glb"))[0]
+    src = glob.glob(os.path.join(c.get("src") or os.path.join(SRC_DIR, c["dir"]), "*.glb"))[0]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=src)
     meshes = [o for o in bpy.data.objects if o.type == "MESH"]
@@ -104,9 +114,10 @@ def prepare():
     bm.to_mesh(body.data)
     bm.free()
     faces = len(body.data.polygons)
-    if faces > TARGET_TRIS:
+    target = c.get("tris", TARGET_TRIS)
+    if faces > target:
         dec = body.modifiers.new("Decimate", "DECIMATE")
-        dec.ratio = TARGET_TRIS / faces
+        dec.ratio = target / faces
         dec.use_collapse_triangulate = True
         with bpy.context.temp_override(object=body, active_object=body):
             bpy.ops.object.modifier_apply(modifier=dec.name)
@@ -236,10 +247,49 @@ def _candidates(co, j):
     les cuisses."""
     if co.z > j["head"].z + 0.02:
         return ["head"]
+    if ARGS[1] == "demon":
+        # Ébauche (Ulysse finit la peinture) : cheveux longs dans le dos sur la tête, le cou et le buste ;
+        # cape sur le bassin et le dos seulement.
+        if co.z > 1.25 and co.y > 0.06 and abs(co.x) < 0.22:
+            return ["head", "neck", "chest"]
+        if _demon_cape(co, j):
+            return ["hips", "spine", "chest"]
     if ARGS[1] == "mage" and co.z > j["knee.L"].z and co.z < j["hips"].z and abs(co.x) < 0.35 \
             and min(_seg_dist(co, j["elbow.L"], j["wrist.L"]), _seg_dist(co, j["elbow.R"], j["wrist.R"])) > 0.12:
         return ["hips", "thigh.L", "thigh.R"]
     return None
+
+
+def _demon_cape(co, j):
+    """Cape du démon (même maillage que le corps) : sous les épaulières, derrière ou sur les côtés, loin
+    des jambes (bottes comprises) et des mains."""
+    if co.z > 1.35 or co.z < 0.1 or (co.y < 0.0 and abs(co.x) < 0.28):
+        return False
+    hands = min(_seg_dist(co, j["elbow." + s], j["knuckles." + s]) for s in ("L", "R"))
+    legs = min(min(_seg_dist(co, j["hip." + s], j["knee." + s]) - 0.02, _seg_dist(co, j["knee." + s], j["ankle." + s]),
+                   _seg_dist(co, j["ankle." + s], j["toe." + s]) - 0.02) for s in ("L", "R"))
+    arms = min(_seg_dist(co, j["shoulder." + s], j["elbow." + s]) for s in ("L", "R"))
+    return hands > 0.16 and legs > (0.16 if co.z < 0.55 else 0.12) and arms > 0.13
+
+
+def _cut_demon_cape(body, j, segs):
+    """Le générateur a soudé la cape aux jambes par endroits : ces ponts s'étireraient à chaque pas.
+    On supprime les faces qui relient la cape à une jambe."""
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    cape = {v.index: _demon_cape(v.co, j) for v in bm.verts}
+    leg = {}
+    for v in bm.verts:
+        if not cape[v.index]:
+            bn = min(segs, key=lambda b: _seg_dist(v.co, *segs[b]))
+            leg[v.index] = bn.split(".")[0] in ("thigh", "shin", "foot")
+    bridges = [f for f in bm.faces if any(cape[v.index] for v in f.verts) and any(leg.get(v.index, False) for v in f.verts)]
+    bmesh.ops.delete(bm, geom=bridges, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(body.data)
+    bm.free()
+    body.data.update()
+    return len(bridges)
 
 
 def rig():
@@ -279,6 +329,8 @@ def rig():
     segs = {n: (Vector(h), Vector(t)) for n, (h, t, p) in layout.items()}
     for bn in segs:
         body.vertex_groups.new(name=bn)
+    if ARGS[1] == "demon":
+        print("CUT bridges=%d" % _cut_demon_cape(body, j, segs))
     for v in body.data.vertices:
         p = v.co
         cands = _candidates(p, j) or list(segs)

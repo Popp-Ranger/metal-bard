@@ -118,7 +118,7 @@ static func random_appearance(sex: String = "") -> Dictionary:
 ##    guitare, à l'échelle des mains), "play_pick" (point de grattage, repère du squelette au repos) et
 ##    "back_pos" (guitare dans le dos).
 ## Riffald suit la planche docs/concept/riffald_turnaround.jpg (voir docs/RIFFALD.md) ; l'héroïne est le
-## modèle fourni par Ulysse (art/persof1, voir docs/PERSOF1.md).
+## modèle fourni par Ulysse (art/persof1, voir docs/PERSOF1.md), le démon aussi (art/demon, voir docs/DEMON.md).
 const PRESETS := {
 	"riffald": {
 		"name": "Riffald",
@@ -139,8 +139,17 @@ const PRESETS := {
 		"scale": 1.84 / 1.74, # modèle de 1,74 m agrandi en jeu (son .blend, retouché à la main, reste tel quel)
 		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.07, 1.0, 0.17), "back_pos": Vector3(0.0, 1.1, -0.2)},
 	},
+	"demon": {
+		"name": "Belzeluth",
+		"title": "Belzeluth, le démon du power chord",
+		"desc": "Démon à la peau écarlate, cornes de bélier et longue crinière noire, yeux de braise, épaulières et brassards à pointes, cuir noir et genouillères d'acier, cape bordeaux. Armé de la même Flying V.",
+		"appearance": {"sex": "m", "race": "demon", "horns": 0, "tusks": 0, "beard": 0, "hair": 3, "hair_color": 0, "preset": "demon"},
+		"model": "res://assets/models/demon/demon.glb",
+		"height": 1.95,
+		"rig": {"guitar_scale": 1.2, "play_pick": Vector3(-0.08, 1.1, 0.23), "back_pos": Vector3(0.0, 1.2, -0.27)},
+	},
 }
-const PRESET_ORDER := ["riffald", "persof1"]
+const PRESET_ORDER := ["riffald", "persof1", "demon"]
 
 
 ## Modèle 3D d'un héros prédéfini ("" si personnage personnalisé ou sans modèle).

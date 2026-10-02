@@ -169,6 +169,10 @@
 ## ✅ v0.1.28 — Valkyriff à 1,84 m
 - [x] Valkyriff agrandie en jeu à 1,84 m, comme Riffald (préréglage `scale`, son .blend reste à 1,74 m)
 
+## ✅ v0.1.29 — Belzeluth, le démon jouable
+- [x] Troisième héros prédéfini : Belzeluth, démon d'après le modèle fourni (1,95 m, 17 os, animations de Riffald, Flying V)
+- [x] Ébauche des poids automatique, peinture finie à la main par Ulysse dans Blender (docs/DEMON.md)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

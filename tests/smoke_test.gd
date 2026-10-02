@@ -871,6 +871,16 @@ func _test_characters() -> void:
 		"%s : mains sur la guitare (écart %.3f m), droitière, tête à la hauteur de celle de Riffald (%.2f m / %.2f m)" % [preset_f["name"], err_f, top_f * heroine.scale.y, riff_head])
 	heroine.swing()
 	_check(anim_f.state == "smash", "%s : coups de guitare animés" % preset_f["name"])
+	# Démon prédéfini (modèle fourni, poids peints par Ulysse).
+	var demon_i := RaceDB.PRESET_ORDER.find("demon")
+	creation._set_hero_mode(demon_i)
+	creation._refresh()
+	await _frames(3)
+	var demon: HeroModel = creation._model
+	_check(demon_i >= 0 and creation._name_edit.text == "Belzeluth" and str(creation.appearance["race"]) == "demon"
+		and demon._skin != null and demon._skin.skeleton.get_bone_count() == 17 and demon._anim != null
+		and demon._anim.lengths.size() >= 16 and is_equal_approx(demon.height(), 1.95),
+		"Belzeluth : démon prédéfini, son modèle, les 17 os et les animations de Riffald, 1,95 m")
 	creation._set_hero_mode(RaceDB.PRESET_ORDER.size())
 	creation._refresh()
 	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")
