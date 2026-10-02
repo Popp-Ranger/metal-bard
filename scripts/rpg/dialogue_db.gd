@@ -163,6 +163,7 @@ static func _brunhilde() -> Dictionary:
 		"choices": [
 			["Acheter une potion de soin (%d médiators)" % ItemDB.potion_price(), "buy_potion", true],
 			["Louer une chambre pour se reposer à l'étage (%d médiators)" % ItemDB.rest_price(), "rest", true],
+			["Vendre ou racheter des reliques", "shop"],
 			["« Des rumeurs ? »", "goto:brunhilde_rumeurs"],
 			["« À plus tard. »", "close"],
 		],

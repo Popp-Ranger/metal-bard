@@ -35,6 +35,8 @@ signal solo_note_hit(mode: String, hits: int)
 signal talents_changed
 signal shield_changed(amount: int)
 signal portal_opened
+## Échange avec Grokk (vendre et racheter des reliques) : ouvre l'inventaire en mode boutique.
+signal shop_requested
 ## Touche T : portail bleu de retour à la taverne (traité par le donjon).
 signal town_portal_requested
 ## Choix de dialogue qui fait avancer l'histoire (ex. « gloubah_fight »), traité par le niveau.

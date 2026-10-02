@@ -37,6 +37,16 @@ Tous les objets sont définis dans **[`data/items.json`](../data/items.json)**. 
 
 Les reliques communes tombent sur les ennemis (8 % de chance, `DROP_ITEM_CHANCE` dans `scripts/rpg/balance.gd`) et dans les coffres des salles cul-de-sac.
 
+### Inventaire et revente (touche B)
+
+- **B** ouvre l'inventaire : reliques portées (avec leur description) et total de leurs bonus. Le jeu ne se met
+  pas en pause, mais le héros ne bouge plus tant que la fenêtre est ouverte.
+- Chez **Grokk**, le choix « Vendre ou racheter des reliques » ouvre la même fenêtre en boutique : chaque relique
+  se vend selon sa rareté (`monnaie.vente` dans `data/items.json` : commun 8, peu commun 15, rare 30, épique 60
+  médiators). Une relique vendue perd ses bonus.
+- Les **10 dernières reliques vendues** peuvent être rachetées, au prix où Grokk les a payées (historique
+  sauvegardé avec la partie).
+
 ## Modifier un objet
 
 Chaque relique ressemble à ceci :

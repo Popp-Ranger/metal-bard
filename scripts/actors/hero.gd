@@ -108,7 +108,7 @@ func _physics_process(delta: float) -> void:
 				GameState.heal_hero(1) # Régénération trollesque
 
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if DialogueBox.active:
+	if DialogueBox.active or InventoryWindow.active:
 		# En pleine conversation (le jeu continue) : le héros écoute, sans bouger ni agir.
 		input = Vector2.ZERO
 		_click_mode = ClickMode.NONE
@@ -154,7 +154,7 @@ func _physics_process(delta: float) -> void:
 	model.tired = GameState.hp <= GameState.max_hp() * 0.3 # posture épuisée (modèle animé)
 
 	# Maj + clic : frapper sur place (sans bouger), comme dans Diablo.
-	if Input.is_action_pressed("attack") and Input.is_key_pressed(KEY_SHIFT) and not DialogueBox.active:
+	if Input.is_action_pressed("attack") and Input.is_key_pressed(KEY_SHIFT) and not (DialogueBox.active or InventoryWindow.active):
 		melee()
 	_update_interaction()
 
@@ -294,7 +294,7 @@ func _cursor_distance(feet: Vector3, height: float, radius: float) -> float:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if dead or get_tree().paused or captive or DialogueBox.active:
+	if dead or get_tree().paused or captive or DialogueBox.active or InventoryWindow.active:
 		return
 	var mb := event as InputEventMouseButton
 	var left_click := mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT
@@ -733,7 +733,7 @@ func _update_interaction() -> void:
 			best_d = d
 	_interact_target = best
 	var text := ""
-	if best != null and not DialogueBox.active: # pas d'invite par-dessus la conversation
+	if best != null and not (DialogueBox.active or InventoryWindow.active): # pas d'invite par-dessus la conversation
 		text = "[%s] %s" % [Controls.key_label("interact"), str(best.call("get_prompt"))]
 	if text != _prompt_text:
 		_prompt_text = text

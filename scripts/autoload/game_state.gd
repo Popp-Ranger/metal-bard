@@ -12,6 +12,9 @@ var mana := 0.0
 var gold := 0
 var potions := 0
 var inventory: Array[String] = []
+## Reliques vendues à Grokk, la plus récente en premier : on peut les lui racheter (BUYBACK_MAX au plus).
+var buyback: Array[String] = []
+const BUYBACK_MAX := 10
 var quests := {} # quest_id -> QuestDB.State
 var flags := {}
 var active_quest := ""
@@ -46,6 +49,7 @@ func new_game() -> void:
 	gold = ItemDB.starting_money()
 	potions = ItemDB.starting_potions()
 	inventory.clear()
+	buyback.clear()
 	flags = {}
 	quests = {}
 	for id: String in QuestDB.QUESTS:
@@ -177,6 +181,31 @@ func add_item(id: String) -> void:
 	var item := ItemDB.get_item(id)
 	Events.notify("Relique obtenue : %s (%s)" % [item.get("name", id), ItemDB.bonus_text(id)], ItemDB.color_of(id))
 	_on_stats_changed()
+
+
+## Vend une relique à Grokk : elle quitte l'inventaire (ses bonus aussi) et rejoint l'historique de rachat.
+func sell_item(id: String) -> bool:
+	if not inventory.has(id):
+		return false
+	inventory.erase(id)
+	buyback.push_front(id)
+	if buyback.size() > BUYBACK_MAX:
+		buyback.resize(BUYBACK_MAX)
+	add_gold(ItemDB.sell_price(id))
+	_on_stats_changed()
+	return true
+
+
+## Rachète à Grokk une relique vendue, au prix où il l'a payée.
+func buy_back(id: String) -> bool:
+	var price := ItemDB.sell_price(id)
+	if not buyback.has(id) or gold < price or inventory.has(id):
+		return false
+	add_gold(-price)
+	buyback.erase(id)
+	inventory.append(id)
+	_on_stats_changed()
+	return true
 
 
 func add_xp(amount: int) -> void:
@@ -399,6 +428,8 @@ func run_dialogue_action(action: String) -> void:
 				Events.notify("Chambre 2 louée : monte à l'étage et couche-toi sur le lit pour te reposer.", Events.COLOR_GOOD)
 			else:
 				Events.notify("Pas assez de médiators pour une chambre.", Events.COLOR_BAD)
+		"shop":
+			Events.shop_requested.emit()
 		"reset_talents":
 			reset_talents()
 		"flag":
@@ -468,6 +499,7 @@ func _snapshot() -> Dictionary:
 		"gold": gold,
 		"potions": potions,
 		"inventory": inventory,
+		"buyback": buyback,
 		"quests": quests,
 		"flags": flags,
 		"active_quest": active_quest,
@@ -536,6 +568,9 @@ func load_slot(slot: int) -> bool:
 	inventory.clear()
 	for id: Variant in data.get("inventory", []):
 		inventory.append(str(id))
+	buyback.clear()
+	for id: Variant in data.get("buyback", []):
+		buyback.append(str(id))
 	var saved_quests: Dictionary = data.get("quests", {})
 	for id: String in saved_quests:
 		quests[id] = int(saved_quests[id])

@@ -11,6 +11,7 @@ func _ready() -> void:
 	_test_rules()
 	_test_generator()
 	_test_audio()
+	_test_inventory()
 	await _test_characters()
 	await _test_skeleton_body()
 	await _test_level_editor()
@@ -756,6 +757,32 @@ func _count_portals(root: Node) -> int:
 	for child in root.get_children():
 		count += _count_portals(child)
 	return count
+
+
+## Inventaire (touche B) : vente des reliques à Grokk et rachat des 10 dernières.
+func _test_inventory() -> void:
+	print("[Inventaire]")
+	GameState.new_game()
+	var relics: Array = ItemDB.relics().keys()
+	for id: String in relics:
+		GameState.inventory.append(id)
+	var cha_before := GameState.ability("CHA")
+	var gold0 := GameState.gold
+	var first: String = relics[0]
+	var price := ItemDB.sell_price(first)
+	_check(GameState.sell_item(first) and not GameState.inventory.has(first) and GameState.gold == gold0 + price
+		and GameState.buyback[0] == first and price > 0, "vendre une relique à Grokk : +%d médiators, dans l'historique de rachat" % price)
+	_check(GameState.buy_back(first) and GameState.inventory.has(first) and GameState.gold == gold0 and GameState.buyback.is_empty(),
+		"racheter une relique au prix de vente")
+	for i in 12:
+		GameState.buyback.push_front("x%d" % i)
+	GameState.sell_item(first)
+	_check(GameState.buyback.size() == GameState.BUYBACK_MAX and GameState.buyback[0] == first, "historique de rachat limité aux 10 dernières")
+	_check(GameState.ability("CHA") <= cha_before and InputMap.has_action("inventory")
+		and InputMap.action_get_events("inventory").size() > 0, "inventaire sur la touche B ; une relique vendue perd ses bonus")
+	var snap: Dictionary = GameState._snapshot()
+	_check((snap["buyback"] as Array).has(first), "l'historique de rachat est sauvegardé")
+	GameState.new_game()
 
 
 func _test_audio() -> void:

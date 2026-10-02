@@ -21,6 +21,7 @@ const SKILLS := [
 var dialogue: DialogueBox
 var solo: SoloMinigame
 var sheet: CharacterSheet
+var inventory: InventoryWindow
 var options: OptionsMenu
 var save_menu: SaveMenu
 var coop_menu: CoopMenu
@@ -81,6 +82,8 @@ func _ready() -> void:
 	_root.add_child(solo)
 	sheet = CharacterSheet.new()
 	_root.add_child(sheet)
+	inventory = InventoryWindow.new()
+	_root.add_child(inventory)
 	talent_tree = TalentTree.new()
 	_root.add_child(talent_tree)
 	options = OptionsMenu.new()
@@ -233,8 +236,8 @@ func _build_skills() -> void:
 	_riff_combo_label.position = Vector2(-10, -30)
 	_riff_combo_label.size = Vector2(104, 26)
 	riff_panel.add_child(_riff_combo_label)
-	var help := UiStyle.label("ZQSD / clic : se déplacer  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : talents  •  %s : portail  •  Échap : pause" % [
-		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
+	var help := UiStyle.label("ZQSD / clic : se déplacer  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : inventaire  •  %s : talents  •  %s : portail  •  Échap : pause" % [
+		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("inventory"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
 	help.anchor_right = 0.5
 	help.anchor_top = 1.0
@@ -407,13 +410,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _death_screen.visible or options.visible or talent_tree.visible or _recap != null or save_menu.visible or coop_menu.visible:
 		return
 	if event.is_action_pressed("pause"):
-		if sheet.visible:
+		if inventory.visible:
+			inventory.close()
+		elif sheet.visible:
 			sheet.close()
 		elif not dialogue.visible and not solo.visible:
 			_toggle_pause()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("character_sheet") and not dialogue.visible and not solo.visible and not _pause_menu.visible:
 		sheet.toggle()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("inventory") and not dialogue.visible and not solo.visible and not _pause_menu.visible and not sheet.visible:
+		inventory.toggle()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("talents") and not dialogue.visible and not solo.visible and not _pause_menu.visible and not sheet.visible:
 		talent_tree.open()

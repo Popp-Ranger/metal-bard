@@ -200,6 +200,10 @@
 ## ✅ v0.1.35 — Aussi sombre que la première version
 - [x] Mêmes réglages d'ambiance que la v0.1 (sans ses filtres), plus de lumière principale : seules torches, lanternes et halo du héros éclairent
 
+## ✅ v0.1.36 — Inventaire et échoppe de Grokk
+- [x] Inventaire sur la touche B : reliques portées, descriptions, total des bonus
+- [x] Grokk rachète les reliques (8 à 60 médiators selon la rareté) ; rachat possible des 10 dernières vendues
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -157,3 +157,12 @@ static func starting_money() -> int:
 ## Chance qu'un ennemi lâche une relique (réglée dans Balance).
 static func relic_drop_chance() -> float:
 	return Balance.DROP_ITEM_CHANCE
+
+
+## Prix auquel Grokk rachète une relique (selon sa rareté, data/items.json : monnaie.vente) ; on peut la lui
+## racheter au même prix.
+static func sell_price(id: String) -> int:
+	var prices: Dictionary = (data().get("monnaie", {}) as Dictionary).get("vente", {})
+	var fallback := {"commun": 8, "peu commun": 15, "rare": 30, "épique": 60}
+	var rarity := str(get_item(id).get("rarity", "commun"))
+	return int(prices.get(rarity, fallback.get(rarity, 8)))

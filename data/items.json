@@ -6,6 +6,8 @@
 		"desc": "La monnaie du royaume : des médiators de guitare, en écaille, en os ou en or.",
 		"chance_butin": 0.45,
 		"perte_a_la_mort": 0.25,
+		"_vente": "Prix auquel Grokk rachète une relique, selon sa rareté (on peut la lui racheter au même prix).",
+		"vente": {"commun": 8, "peu commun": 15, "rare": 30, "épique": 60},
 		"depart": 30
 	},
 	"consommables": {
