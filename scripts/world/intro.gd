@@ -201,7 +201,6 @@ func _build_ground() -> void:
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
 	m.roughness = 1.0
-	Visuals.toon(m)
 	mmi.material_override = m
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
@@ -242,7 +241,6 @@ func _build_road() -> void:
 	var m := StandardMaterial3D.new()
 	m.vertex_color_use_as_albedo = true
 	m.roughness = 0.85
-	Visuals.toon(m)
 	mmi.material_override = m
 	add_child(mmi)
 	# Bas-côtés de terre battue.

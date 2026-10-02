@@ -1,24 +1,22 @@
-[gd_resource type="MeshLibrary" format=4]
+[gd_resource type="MeshLibrary" format=4 uid="uid://b88smvx6lanw1"]
 
-[ext_resource type="Shader" path="res://shaders/stone_wall.gdshader" id="1_p3nkv"]
+[ext_resource type="Shader" uid="uid://glmoelc2u6xk" path="res://shaders/stone_wall.gdshader" id="1_p3nkv"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_auxgp"]
 render_priority = 0
 shader = ExtResource("1_p3nkv")
 shader_parameter/stone_color = Color(0.3, 0.27, 0.25, 1)
-shader_parameter/mortar_color = null
-shader_parameter/moss_color = null
-shader_parameter/brick_height = null
-shader_parameter/brick_length = null
-shader_parameter/moss_amount = null
-shader_parameter/hero_pos = null
+shader_parameter/mortar_color = Color(0.07, 0.065, 0.075, 1)
+shader_parameter/moss_color = Color(0.16, 0.22, 0.12, 1)
+shader_parameter/brick_height = 0.42
+shader_parameter/brick_length = 0.9
+shader_parameter/moss_amount = 0.25
+shader_parameter/hero_pos = Vector3(0, -1000, 0)
 shader_parameter/cut_radius = 0.0
-shader_parameter/cut_min_height = null
-shader_parameter/camera_dir = null
+shader_parameter/cut_min_height = 0.7
+shader_parameter/camera_dir = Vector2(0.70710677, 0.70710677)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ixob8"]
-diffuse_mode = 3
-specular_mode = 1
 albedo_color = Color(0.2, 0.11, 0.06, 1)
 roughness = 0.8
 
@@ -127,15 +125,15 @@ size = Vector3(1, 3, 0.4)
 render_priority = 0
 shader = ExtResource("1_p3nkv")
 shader_parameter/stone_color = Color(0.32, 0.28, 0.25, 1)
-shader_parameter/mortar_color = null
-shader_parameter/moss_color = null
-shader_parameter/brick_height = null
-shader_parameter/brick_length = null
-shader_parameter/moss_amount = null
-shader_parameter/hero_pos = null
+shader_parameter/mortar_color = Color(0.07, 0.065, 0.075, 1)
+shader_parameter/moss_color = Color(0.16, 0.22, 0.12, 1)
+shader_parameter/brick_height = 0.42
+shader_parameter/brick_length = 0.9
+shader_parameter/moss_amount = 0.25
+shader_parameter/hero_pos = Vector3(0, -1000, 0)
 shader_parameter/cut_radius = 3.4
-shader_parameter/cut_min_height = null
-shader_parameter/camera_dir = null
+shader_parameter/cut_min_height = 0.7
+shader_parameter/camera_dir = Vector2(0.70710677, 0.70710677)
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_vebnc"]
 _surfaces = [{

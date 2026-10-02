@@ -161,6 +161,11 @@
 - [x] Grokk le tavernier agrandi de 25 % (foulée et étiquette suivent)
 - [x] Valkyriff : poids repeints à la main dans Blender, glb réexporté
 
+## ✅ v0.1.27 — Dialogues sans pause, rendu sans cel shading, pénombre
+- [x] Parler à un PNJ ne met plus le jeu en pause : le monde continue (ennemis, autres joueurs), seul le héros attend
+- [x] Cel shading retiré (lumière en aplats et contour encré) : éclairage réaliste
+- [x] Un peu plus sombre (ambiance et exposition baissées), bien moins que les premières versions
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

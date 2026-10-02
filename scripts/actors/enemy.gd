@@ -126,7 +126,7 @@ func _attack_anim(_windup: float) -> void:
 
 ## Matériau « flashable » (clignote en blanc quand l'ennemi est touché).
 func own_mat(color: Color, roughness: float = 0.8) -> StandardMaterial3D:
-	var m := Visuals.char_mat(color, roughness) # cel shading + contour encré
+	var m := Visuals.char_mat(color, roughness)
 	m.emission_enabled = true
 	m.emission = Color.BLACK
 	_flash_mats.append(m)

@@ -388,7 +388,13 @@ func _test_quest_flow() -> void:
 	hero.global_position = boss.global_position + Vector3(4.0, 0, 4.0)
 	await _frames(5)
 	_check(dlg.visible and boss.passive, "Gloubah engage la conversation au lieu d'attaquer")
+	var hero_at := hero.global_position
+	var boss_t := boss._anim_t
+	await _frames(5)
+	_check(not get_tree().paused and DialogueBox.active and boss._anim_t > boss_t and hero.global_position.distance_to(hero_at) < 0.01,
+		"dialogue sans pause : le monde continue, le héros attend sans bouger")
 	dlg.close()
+	_check(not DialogueBox.active, "fin du dialogue : le héros reprend la main")
 	# Réponse « il est kiki » : amicale, clé donnée, double XP, pas de combat.
 	var xp_friend := GameState.stats.xp
 	GameState.run_dialogue_action("story:gloubah_friend")

@@ -448,11 +448,6 @@ func _build_arm(upper: Node3D, sleeve: Material, _skin_mat: Material) -> Node3D:
 ## `side` = -1 main gauche, +1 main droite (position du pouce).
 func _build_hand(fore: Node3D, skin: Material, glove: Material, side: float) -> Node3D:
 	var hand := _pivot(fore, Vector3(0, -FOREARM, 0))
-	# Doigts : cel shading sans contour (un contour les rendrait trop épais à cette échelle).
-	var finger_mat := (skin as StandardMaterial3D).duplicate() as StandardMaterial3D
-	finger_mat.next_pass = null
-	_flash_mats.append(finger_mat)
-	skin = finger_mat
 	Visuals.box(hand, Vector3(0.075, 0.085, 0.028), Vector3(0, -0.045, 0), glove) # paume (mitaine de cuir)
 	var fingers: Array = []
 	# Pouce : part du côté de la paume, vers l'avant.
@@ -584,7 +579,7 @@ func _build_imported_guitar(g: Node3D) -> void:
 			var src := mi.mesh.surface_get_material(i) as StandardMaterial3D
 			if src == null:
 				continue
-			var m := Visuals.toon(src.duplicate() as StandardMaterial3D)
+			var m := src.duplicate() as StandardMaterial3D
 			match src.resource_name:
 				"MB_g_cordes":
 					# Cordes : légère lueur magique, plus vive pendant le solo (solo_pose).
@@ -602,7 +597,7 @@ func _build_imported_guitar(g: Node3D) -> void:
 
 
 func _own_mat(color: Color, roughness: float) -> StandardMaterial3D:
-	var m := Visuals.char_mat(color, roughness) # cel shading + contour encré
+	var m := Visuals.char_mat(color, roughness)
 	m.emission_enabled = true
 	m.emission = Color.BLACK
 	_flash_mats.append(m)

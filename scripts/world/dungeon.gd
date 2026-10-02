@@ -183,7 +183,6 @@ func _build_floor() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	mat.roughness = 0.9
-	Visuals.toon(mat)
 	mmi.material_override = mat
 	add_child(mmi)
 	# Joints sombres entre les dalles.

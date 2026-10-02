@@ -1,9 +1,9 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dnm5p1rd8woie"]
 
-[ext_resource type="Script" path="res://scripts/levels/tavern_map.gd" id="1_1j0m2"]
-[ext_resource type="MeshLibrary" path="res://assets/levels/taverne_sols.tres" id="2_ejww5"]
-[ext_resource type="MeshLibrary" path="res://assets/levels/taverne_murs.tres" id="3_1ye2q"]
-[ext_resource type="Script" path="res://scripts/levels/tavern_marker.gd" id="4_bwn7x"]
+[ext_resource type="Script" uid="uid://cyaf22lr4mlmu" path="res://scripts/levels/tavern_map.gd" id="1_1j0m2"]
+[ext_resource type="MeshLibrary" uid="uid://c8t6uh1gdrmqy" path="res://assets/levels/taverne_sols.tres" id="2_ejww5"]
+[ext_resource type="MeshLibrary" uid="uid://b88smvx6lanw1" path="res://assets/levels/taverne_murs.tres" id="3_1ye2q"]
+[ext_resource type="Script" uid="uid://d3cd4hvamu5bn" path="res://scripts/levels/tavern_marker.gd" id="4_bwn7x"]
 
 [node name="Taverne" type="Node3D" unique_id=1909581330]
 script = ExtResource("1_1j0m2")

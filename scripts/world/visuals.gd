@@ -8,39 +8,14 @@ const STONE_SHADER := preload("res://shaders/stone_wall.gdshader")
 const PORTAL_SHADER := preload("res://shaders/portal.gdshader")
 
 static var _mat_cache := {}
-static var _outline: StandardMaterial3D
-
-## Épaisseur du contour encré des personnages (cel shading), en mètres.
-const OUTLINE_WIDTH := 0.012
 
 
-## Cel shading : lumière en aplats (toon) au lieu d'un dégradé réaliste.
-static func toon(m: StandardMaterial3D, outline: bool = false) -> StandardMaterial3D:
-	m.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	m.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	if outline:
-		m.next_pass = outline_material()
-	return m
-
-
-## Contour noir des personnages (technique de la « coque inversée »).
-static func outline_material() -> StandardMaterial3D:
-	if _outline == null:
-		_outline = StandardMaterial3D.new()
-		_outline.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_outline.albedo_color = Color(0.02, 0.015, 0.02)
-		_outline.cull_mode = BaseMaterial3D.CULL_FRONT
-		_outline.grow = true
-		_outline.grow_amount = OUTLINE_WIDTH
-	return _outline
-
-
-## Matériau de personnage : cel shading + contour encré.
+## Matériau de personnage (éclairage réaliste, sans cel shading ni contour encré).
 static func char_mat(color: Color, roughness: float = 0.8) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = color
 	m.roughness = roughness
-	return toon(m, true)
+	return m
 
 
 static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0) -> StandardMaterial3D:
@@ -52,7 +27,6 @@ static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0) ->
 	m.albedo_color = color
 	m.roughness = roughness
 	m.metallic = metallic
-	toon(m)
 	_mat_cache[key] = m
 	return m
 
@@ -215,30 +189,30 @@ static func label(parent: Node3D, text: String, pos: Vector3, color: Color, size
 	return l
 
 
-## Environnement (« dungeon », « tavern » ou « night ») : lumière ambiante généreuse pour que tout
-## reste lisible, sans filtre (ni occlusion ambiante, ni contraste, ni désaturation).
+## Environnement (« dungeon », « tavern » ou « night ») : pénombre (un peu plus sombre que v0.1.15, bien moins
+## que les premières versions) où tout reste lisible, sans filtre (ni occlusion ambiante, ni contraste, ni désaturation).
 static func make_environment(kind: String) -> WorldEnvironment:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.03, 0.028, 0.035)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	if kind == "dungeon":
-		env.ambient_light_color = Color(0.58, 0.58, 0.68)
-		env.ambient_light_energy = 1.0
+		env.ambient_light_color = Color(0.52, 0.53, 0.64)
+		env.ambient_light_energy = 0.7
 	elif kind == "night":
 		# Nuit sous la lune de sang : ambiance bleu nuit, légère brume rougeâtre.
 		env.background_color = Color(0.08, 0.025, 0.03)
 		env.ambient_light_color = Color(0.6, 0.58, 0.75)
-		env.ambient_light_energy = 1.25
+		env.ambient_light_energy = 1.0
 		env.fog_enabled = true
 		env.fog_light_color = Color(0.12, 0.05, 0.08)
 		env.fog_density = 0.002
 		env.fog_sky_affect = 0.0
 	else:
 		env.ambient_light_color = Color(0.8, 0.72, 0.64)
-		env.ambient_light_energy = 1.3
+		env.ambient_light_energy = 1.0
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.2
+	env.tonemap_exposure = 1.0
 	# Léger halo autour des sources lumineuses (torches, runes, gemmes).
 	env.glow_enabled = true
 	env.glow_intensity = 0.35
@@ -255,7 +229,7 @@ static func make_key_light(kind: String) -> DirectionalLight3D:
 	var l := DirectionalLight3D.new()
 	l.rotation_degrees = Vector3(-72, -30, 0)
 	l.light_color = Color(1.0, 0.9, 0.78) if kind == "tavern" else Color(0.85, 0.88, 1.0)
-	l.light_energy = 0.8 if kind == "tavern" else 0.7
+	l.light_energy = 0.7 if kind == "tavern" else 0.6
 	l.shadow_enabled = true
 	l.shadow_opacity = 0.6
 	l.shadow_blur = 1.5

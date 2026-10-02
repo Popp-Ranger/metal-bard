@@ -1,7 +1,8 @@
 class_name DialogueBox
 extends PanelContainer
 ## Boîte de dialogue en bas de l'écran : texte qui défile, puis choix de réponses.
-## Le jeu est en pause pendant le dialogue.
+## Le jeu continue pendant le dialogue (ennemis, autres joueurs, PNJ) : seul le héros qui parle
+## attend, sans bouger ni agir (DialogueBox.active), jusqu'à la fin de la conversation.
 
 var _speaker: Label
 var _text: RichTextLabel
@@ -15,6 +16,8 @@ var _typing := false
 var _voice_pitch := 1.0
 var _last_blip := -1
 var _open := false
+## Une conversation est ouverte : le héros local ne bouge plus et n'agit plus (voir Hero).
+static var active := false
 
 
 func _ready() -> void:
@@ -61,7 +64,7 @@ func open(dialogue_id: String) -> void:
 	_index = 0
 	_open = true
 	visible = true
-	get_tree().paused = true
+	active = true
 	Events.interaction_prompt.emit("")
 	_show_line()
 
@@ -69,8 +72,14 @@ func open(dialogue_id: String) -> void:
 func close() -> void:
 	_open = false
 	visible = false
-	get_tree().paused = false
+	active = false
 	Events.dialogue_closed.emit()
+
+
+## Changement de scène en pleine conversation (portail...) : le héros suivant ne reste pas figé.
+func _exit_tree() -> void:
+	if _open:
+		active = false
 
 
 func _show_line() -> void:

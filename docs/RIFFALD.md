@@ -39,7 +39,7 @@ cheveux « Roux flamboyant ».
 - Garder la **Flying V** (accessoire séparé) et les **mains à cinq doigts** (jeu de guitare animé).
 - Squelette d'animation compatible avec les poses actuelles : marche, course, frappe, solo,
   glissade sur les genoux, saut à la Angus Young, allongé au lit.
-- Style **cel shading** : aplats de couleur, contour encré ; peu de polygones.
+- Style dessiné (ombres peintes dans la texture), peu de polygones ; rendu sans cel shading depuis v0.1.27.
 
 ## Modèle 3D (Blender)
 - Planche 3D : [concept/riffald_planche2_3d.jpg](concept/riffald_planche2_3d.jpg) (face, dos, profil, pose A).

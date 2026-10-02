@@ -34,7 +34,7 @@ désormais de tout recalculer (sauf avec `force`, qui effacerait les retouches).
 
 ## Dans le jeu
 
-`CharacterSkin` charge le modèle, l'habille en cel shading (contour encré, clignote quand il est touché)
+`CharacterSkin` charge le modèle, lui donne des matières mates (qui clignotent quand il est touché)
 et joue ses clips (déplacement selon la vitesse, action par-dessus, sursaut, mort). On y accroche des
 objets aux os : épée dans la main droite et bouclier sur l'avant-bras des squelettes, casque du capitaine,
 peau de loup et clé du chef.

@@ -11,7 +11,7 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 
 ## Le jeu en bref
 
-- **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon**, en **cel shading** : lumière en aplats, contour noir encré autour des personnages, vignette, torches vacillantes.
+- **Vue isométrique façon Diablo**, ambiance sombre façon **Darkest Dungeon**, pénombre éclairée de torches vacillantes.
 - **Personnages aux proportions réalistes** (jambes ≈ la moitié de la taille, tête ≈ 1/7,5), démarche réaliste (foulée et cadence selon la vitesse, genoux qui plient, pieds qui se déroulent, épaules en contre-rotation, respiration) et **mains à cinq doigts** : la main gauche change de case sur le manche, la main droite pince le médiator.
 - **Héros** : un barde que vous créez (6 races, homme ou femme ; par défaut Riffald, inspiré de Dave Mustaine et Ronnie James Dio), armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
 - **Intro** : la nuit de la **Lune de Sang**. Cinématique sur une lune sanglante dans la brume, puis un cimetière près d'une chapelle : tombes déterrées et vides, cadavres de toutes les races. Le héros lâche « Aaaaaah... une bonne vieille balade par ce temps est si agréable. Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un ! » en coop), puis ~20 s de marche sur une route pavée qui serpente en virages serrés entre champs et prairies, cadavres ensanglantés et chauves-souris, sous un orage sans pluie (éclairs hors de la route, flashs, tremblements d'écran). Les portes de la taverne se referment derrière lui.

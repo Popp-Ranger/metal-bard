@@ -12,9 +12,6 @@ extends Node3D
 ## Correspondance des côtés : dans HeroModel, « _l » est du côté -X (main du manche) ; dans le
 ## modèle Blender, les os « .R » sont du côté -X.
 
-## Surfaces sans contour encré (petites pièces : le contour les masquerait ou les grossirait).
-const NO_OUTLINE := ["MB_oeil", "MB_iris", "MB_paupiere", "MB_sourcils", "MB_bouche", "MB_gemme", "MB_argent",
-	"MB_cheveux_ombre"]
 ## Surfaces lumineuses (ne clignotent pas en rouge quand le héros est touché).
 const GLOWING := {"MB_gemme": [Color(1.0, 0.1, 0.08), 1.6]}
 ## Teintes assombries pour l'éclairage du jeu (0 = inchangé) : peau et cheveux très clairs ; cuir et acier
@@ -54,7 +51,7 @@ func _ready() -> void:
 		_style(mi as MeshInstance3D)
 
 
-## Cel shading comme le reste du jeu : lumière en aplats, contour encré sur les grandes pièces.
+## Matériaux du modèle : teintes ajustées à l'éclairage du jeu, clignotement quand il est touché.
 func _style(mi: MeshInstance3D) -> void:
 	for i in mi.mesh.get_surface_count():
 		var src := mi.mesh.surface_get_material(i) as StandardMaterial3D
@@ -62,9 +59,8 @@ func _style(mi: MeshInstance3D) -> void:
 			continue
 		var m := src.duplicate() as StandardMaterial3D
 		var mat_name := src.resource_name
-		Visuals.toon(m, not NO_OUTLINE.has(mat_name))
 		if m.metallic < 0.2:
-			# Matières mates (peau, cheveux, tissu, cuir) : pas de reflet toon, qui les brûle
+			# Matières mates (peau, cheveux, tissu, cuir) : pas de reflet, qui les brûle
 			# en blanc sous les projecteurs ; teintes claires légèrement assombries.
 			m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 			if DARKEN.has(mat_name):

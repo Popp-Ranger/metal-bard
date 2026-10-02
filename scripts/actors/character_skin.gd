@@ -68,14 +68,13 @@ func _ready() -> void:
 	tree.active = true
 
 
-## Cel shading comme le reste du jeu, contour encré ; teintes qui clignotent quand il est touché.
+## Matériaux mats (sans reflet) qui clignotent quand le personnage est touché.
 func _style(mi: MeshInstance3D) -> void:
 	for i in mi.mesh.get_surface_count():
 		var src := mi.mesh.surface_get_material(i) as StandardMaterial3D
 		if src == null:
 			continue
 		var m := src.duplicate() as StandardMaterial3D
-		Visuals.toon(m, true)
 		m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 		m.metallic = 0.0
 		m.emission_enabled = true

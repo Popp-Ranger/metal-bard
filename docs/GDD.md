@@ -224,7 +224,7 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 
 ## 14. Interface
 - **HUD** : PV / décibels / XP (en haut à gauche), suivi de quête (en haut à droite), barre de vie du boss (en haut au centre), barre de compétences avec recharges et coûts (en bas), invite d'interaction, messages flottants, nombres de dégâts colorés (blanc = physique, bleu = électrique, violet = son, or = critique).
-- **Fenêtres** : dialogues à choix (texte qui défile, choix au clavier 1-2-3), fiche de personnage D&D, pause, écran de mort, mini-jeu du solo.
+- **Fenêtres** : dialogues à choix (texte qui défile, choix au clavier 1-2-3 ; le jeu continue, seul le héros qui parle attend), fiche de personnage D&D, pause, écran de mort, mini-jeu du solo.
 
 ## 14 bis. Création de personnage
 
