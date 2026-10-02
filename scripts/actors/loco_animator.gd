@@ -13,7 +13,7 @@ extends Node3D
 
 const SOURCE := "res://assets/models/riffald/riffald.glb"
 ## Clips supplémentaires, sur le même squelette (art/riffald/retarget_mixamo.py -- clips) : bibliothèque
-## « squelettes » (style « zombie » des squelettes ennemis, voir HeroAnimator.STYLES).
+## « squelettes » (styles « zombie » des squelettes ennemis et « pnj_corps » des PNJ, voir HeroAnimator.STYLES).
 const EXTRA_CLIPS := {"squelettes": "res://assets/animations/squelettes.glb"}
 
 ## Squelette et animations de Riffald sans maillage (construit une seule fois).

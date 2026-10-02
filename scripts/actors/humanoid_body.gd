@@ -36,7 +36,7 @@ var forearm := 0.26
 var head_turn := 0.0
 ## Repos épuisé (vie basse).
 var tired := false
-## Style de déplacement (HeroAnimator.STYLES) : "" = Riffald, "zombie" = squelettes ennemis.
+## Style de déplacement (HeroAnimator.STYLES) : "" = Riffald, "pnj_corps" = PNJ, "zombie" = squelettes ennemis.
 var style := ""
 ## Clips de Riffald : créé à la première image animée (null si le modèle de Riffald manque).
 var loco: LocoAnimator

@@ -184,11 +184,15 @@ static func clip(lengths: Dictionary, anim_name: String, loop: bool, timeline :=
 ## Styles de déplacement : clips (repos, repos épuisé, marche, course), vitesse naturelle de la marche
 ## et de la course (m/s, à l'échelle de Riffald) et cadence minimale (1 = jamais ralentie : en dessous de
 ## la marche, les pieds glissent un peu ; un cycle unique peut être ralenti pour suivre la vitesse).
-##  - "" : Riffald (héros, PNJ) ;
+##  - "" : Riffald (héros) ;
+##  - "pnj_corps" : PNJ à corps procédural (clients, Gérald...) : repos « pnjPose » (bibliothèque « squelettes »),
+##    marche et course de Riffald ;
 ##  - "zombie" : squelettes ennemis, clips de assets/animations/squelettes.glb (bibliothèque « squelettes »,
 ##    voir LocoAnimator) : repos et course de zombie, qui trottine à 1,6 m/s.
 const STYLES := {
 	"": {"idle": "idle", "tired": "idle_tired", "walk": "walk", "run": "run",
+		"walk_speed": WALK_SPEED, "run_speed": RUN_SPEED, "min_pace": 1.0},
+	"pnj_corps": {"idle": "squelettes/idle_pnj", "tired": "squelettes/idle_pnj", "walk": "walk", "run": "run",
 		"walk_speed": WALK_SPEED, "run_speed": RUN_SPEED, "min_pace": 1.0},
 	"zombie": {"idle": "squelettes/zombie_idle", "tired": "squelettes/zombie_idle", "walk": "squelettes/zombie_run",
 		"run": "squelettes/zombie_run", "walk_speed": 1.6, "run_speed": 1.6, "min_pace": 0.6},

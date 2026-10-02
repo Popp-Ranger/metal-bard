@@ -73,7 +73,7 @@ Conversion : `blender --background art/riffald/riffald.blend --python art/riffal
 
 | Dans le jeu | Clip Mixamo (images) | Déclenché par |
 |---|---|---|
-| Repos | Happy Idle | immobile |
+| Repos | heroPose (fourni par Ulysse ; avant : Happy Idle) | immobile |
 | Repos épuisé | Mutant Breathing Idle | vie ≤ 30 % |
 | Marche / course | Walking, Running (en place) | vitesse (BlendSpace1D, accéléré au-delà de 2,9 m/s) |
 | Frappe verticale | Great Sword High Spin Attack (26-47) | coup de guitare, en alternance |
@@ -98,7 +98,7 @@ les mains, dans le prolongement des bras.
 ## Héros personnalisés et PNJ (v0.1.19)
 
 Tous les personnages humanoïdes ont la posture et le déplacement de Riffald : `LocoAnimator` joue les
-mêmes clips (Happy Idle, Mutant Breathing Idle, Walking, Running, même mélange que `HeroAnimator`) sur
+mêmes clips (heroPose, Mutant Breathing Idle, Walking, Running, même mélange que `HeroAnimator`) sur
 une copie invisible du squelette de Riffald, sans maillage, puis les recopie sur le corps procédural
 du personnage (`HumanoidBody`) :
 
@@ -108,6 +108,11 @@ du personnage (`HumanoidBody`) :
 - guitare en main : les bras restent sur la guitare (IK de HeroModel), le reste du corps suit les clips.
 
 Concerne les héros personnalisés (création de personnage, coop), les clients de la taverne et les PNJ.
+
+**Repos des PNJ (v0.1.30).** Les PNJ à corps procédural (clients, Gérald...) se reposent avec `pnjPose`
+(style « pnj_corps », clip `idle_pnj` de `assets/animations/squelettes.glb`, mode `clips` du script) ;
+Zarathos aussi (`idle` de son glb) ; Grokk le tavernier avec `Orc Idle`. Dans `retarget_mixamo.py`, un PNJ
+importé peut prendre un clip source sous un autre nom (`CHARACTERS`, ex. `{"idle": "idle_orc", ...}`).
 Gérald, Zarathos et l'Inconnue, autrefois des silhouettes figées, sont désormais des corps articulés
 en costume (`Npc.COSTUMES` et `_dress`) : chapeau de paille et salopette, robe, chapeau pointu et
 bâton tenu en main, long manteau et capuche.

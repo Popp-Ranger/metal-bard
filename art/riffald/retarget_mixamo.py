@@ -22,14 +22,15 @@ from mathutils import Matrix, Quaternion, Vector
 ROOT = os.environ.get("MB_ROOT") or os.path.abspath(os.path.join(os.path.dirname(bpy.data.filepath), "..", ".."))
 SRC = os.path.join(ROOT, "assets", "animations", "mixamo")
 # Personnage choisi d'après le fichier .blend ouvert : (armature, collection exportée, glb du jeu, clips à
-# exporter : None = tous ceux de ANIMS). PNJ et ennemis (art/pnj) : seulement leurs clips.
+# exporter : None = tous ceux de ANIMS ; liste = ces clips ; dict = nom dans le jeu -> clip source, ex. le repos
+# « idle » du tavernier pris dans « Orc Idle »). PNJ et ennemis (art/pnj) : seulement leurs clips.
 PNJ_GLB = os.path.join(ROOT, "assets", "models", "pnj")
 CHARACTERS = {
     "riffald": ("Riffald_rig", "Riffald", os.path.join(ROOT, "assets", "models", "riffald", "riffald.glb"), None),
     "persof1": ("PersoF1_rig", "PersoF1", os.path.join(ROOT, "assets", "models", "persof1", "persof1.glb"), None),
     "demon": ("Demon_rig", "Demon", os.path.join(ROOT, "assets", "models", "demon", "demon.glb"), None),
-    "mage": ("Mage_rig", "Mage", os.path.join(PNJ_GLB, "mage.glb"), ["idle", "walk", "run"]),
-    "tavernier": ("Tavernier_rig", "Tavernier", os.path.join(PNJ_GLB, "tavernier.glb"), ["idle", "walk", "run"]),
+    "mage": ("Mage_rig", "Mage", os.path.join(PNJ_GLB, "mage.glb"), {"idle": "idle_pnj", "walk": "walk", "run": "run"}),
+    "tavernier": ("Tavernier_rig", "Tavernier", os.path.join(PNJ_GLB, "tavernier.glb"), {"idle": "idle_orc", "walk": "walk", "run": "run"}),
     "squelette": ("Squelette_rig", "Squelette", os.path.join(PNJ_GLB, "squelette.glb"),
                   ["zombie_idle", "zombie_run", "slash", "hit", "die"]),
 }
@@ -49,7 +50,8 @@ BONES = {
 #   root : "keep" = conservé, "strip" = supprimé, "loop" = dérive linéaire retirée (cycle en place)
 # Passages choisis d'après les planches de contrôle (sheets).
 ANIMS = {
-    "idle": ("Happy Idle", None, None, "keep"),
+    # Repos des héros (pose fournie par Ulysse, 2 oct. 2026 ; avant : « Happy Idle »).
+    "idle": ("heroPose", None, None, "keep"),
     "walk": ("Walking", None, None, "loop"),
     "run": ("Running", None, None, "loop"),
     # Coups de guitare, alternés : levée au-dessus de la tête puis abattue (fin de « High Spin
@@ -79,8 +81,12 @@ ANIMS = {
 CLIPS = {
     "zombie_idle": ("Zombie Idle", None, None, "keep"),
     "zombie_run": ("Zombie Running", None, None, "loop"),
+    # Repos des PNJ à corps procédural (clients, Gérald...), style « pnj_corps » de HeroAnimator.
+    "idle_pnj": ("pnjPose", None, None, "keep"),
 }
 CLIPS_GLB = os.path.join(ROOT, "assets", "animations", "squelettes.glb")
+# Repos propres à un PNJ importé (voir CHARACTERS).
+NPC_CLIPS = {"idle_orc": ("Orc Idle", None, None, "keep")}
 
 
 def _q(m):
@@ -338,6 +344,9 @@ if __name__ == "__main__":
     else:
         if ONLY is None:
             acts = build_all(rig)
+        elif isinstance(ONLY, dict):
+            full = dict(ANIMS, **CLIPS, **NPC_CLIPS)
+            acts = build_all(rig, None, {out: full[src] for out, src in ONLY.items()})
         else:
             acts = build_all(rig, ONLY, dict(ANIMS, **CLIPS))
         export(rig, acts)

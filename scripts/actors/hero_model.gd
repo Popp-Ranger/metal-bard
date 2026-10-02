@@ -49,6 +49,8 @@ const SLEEP_OFFSET := Vector3(0.06, 0.6, -0.04)
 
 ## Apparence à afficher (clés de RaceDB.DEFAULT_APPEARANCE). Vide = celle de GameState.
 var appearance := {}
+## Style de déplacement du corps procédural (HeroAnimator.STYLES) : "pnj_corps" pour les PNJ.
+var anim_style := ""
 
 var _torso: Node3D
 var _head: Node3D
@@ -288,6 +290,7 @@ func _make_body() -> void:
 	b.shin = SHIN
 	b.upper_arm = UPPER_ARM
 	b.forearm = FOREARM
+	b.style = anim_style
 	_body = b
 
 

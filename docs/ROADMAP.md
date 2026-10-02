@@ -173,6 +173,10 @@
 - [x] Troisième héros prédéfini : Belzeluth, démon d'après le modèle fourni (1,95 m, 17 os, animations de Riffald, Flying V)
 - [x] Ébauche des poids automatique, peinture finie à la main par Ulysse dans Blender (docs/DEMON.md)
 
+## ✅ v0.1.30 — Nouvelles poses de repos
+- [x] Héros (Riffald, Valkyriff, Belzeluth, personnalisés) : repos « heroPose »
+- [x] PNJ (clients, Gérald, Zarathos...) : repos « pnjPose » ; Grokk le tavernier : « Orc Idle »
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

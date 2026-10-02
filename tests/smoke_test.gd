@@ -557,7 +557,7 @@ func _test_new_features() -> void:
 		var n := c as Npc
 		if n != null:
 			npc_models = npc_models and (n.model != null or n.skin != null)
-			if n.model != null and n.model._loco_on:
+			if n.model != null and n.model._loco_on and n.model._body.style == "pnj_corps":
 				animated_npcs += 1
 			if n.skin != null:
 				skins[n.npc_id] = n.skin
@@ -566,7 +566,17 @@ func _test_new_features() -> void:
 	_check(npc_models and animated_npcs >= 2 and mage != null and keeper != null and mage.lengths.has("walk")
 		and keeper.skeleton.get_bone_count() == 17 and DialogueDB.npc_name("brunhilde").begins_with("Grokk")
 		and is_equal_approx(keeper.scale.y, 1.25) and keeper.height > 2.5,
-		"PNJ : Zarathos et Grokk le tavernier orc (agrandi de 25 %%) avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout comme Riffald" % animated_npcs)
+		"PNJ : Zarathos et Grokk le tavernier orc (agrandi de 25 %%) avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout (repos pnjPose)" % animated_npcs)
+	var pnj_idle := ""
+	for c in tavern.get_children():
+		var n := c as Npc
+		if n != null and n.model != null and n.model._body.loco != null:
+			pnj_idle = str((n.model._body.loco.tree.tree_root.get_node("idle") as AnimationNodeAnimation).animation)
+	var idle_of := func(s: CharacterSkin) -> String:
+		return str(((s.tree.tree_root as AnimationNodeBlendTree).get_node("loco").get_node("idle") as AnimationNodeAnimation).animation)
+	_check(pnj_idle == "squelettes/idle_pnj" and idle_of.call(keeper) == "idle" and keeper.lengths.has("idle")
+		and not is_equal_approx(float(keeper.lengths["idle"]), float(mage.lengths["idle"])),
+		"repos : pnjPose pour les PNJ, Orc Idle pour le tavernier (%.1f s)" % float(keeper.lengths.get("idle", 0.0)))
 	# Chambre : payer ne soigne plus, il faut se coucher sur le lit (1 PV → 100 % en 10 s).
 	var t_tavern := tavern as Node
 	GameState.flags.erase("room_paid")

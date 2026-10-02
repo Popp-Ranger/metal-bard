@@ -83,6 +83,7 @@ func _ready() -> void:
 		full_look["guitar"] = false
 		full_look["hunched"] = false
 		model = HeroModel.new()
+		model.anim_style = "pnj_corps" # repos « pnjPose »
 		model.appearance = full_look
 		_body.add_child(model)
 		_dress()
