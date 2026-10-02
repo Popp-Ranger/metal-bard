@@ -177,6 +177,12 @@
 - [x] Héros (Riffald, Valkyriff, Belzeluth, personnalisés) : repos « heroPose »
 - [x] PNJ (clients, Gérald, Zarathos...) : repos « pnjPose » ; Grokk le tavernier : « Orc Idle »
 
+## ✅ v0.1.31 — Portraits de dialogue, alerte de vie basse
+- [x] Guitare plus basse : main droite juste sous la ceinture (Riffald, Valkyriff, Belzeluth), manche plus relevé (35°)
+- [x] Vie sous 20 % : aura rouge sur le pourtour de l'écran, qui clignote toutes les 0,75 s
+- [x] Dialogues : portrait en direct du PNJ à gauche et du héros à droite (celui qui parle est éclairé)
+- [x] Dialogues : clic gauche ou Espace affiche la réplique en entier au lieu du défilement
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -42,6 +42,11 @@ var _boss_box: VBoxContainer
 var _boss_bar: ProgressBar
 var _boss_name: Label
 var _flash: ColorRect
+## Aura rouge clignotante sur le pourtour de l'écran quand la vie passe sous LOW_HP.
+var _low_hp: ColorRect
+var _low_hp_t := 0.0
+const LOW_HP := 0.2
+const LOW_HP_PERIOD := 0.75
 var _slots := {} # id -> {"overlay": ColorRect, "panel": Panel, "remaining": float, "duration": float, "extra": Label}
 var _pause_menu: PanelContainer
 var _death_screen: Control
@@ -128,6 +133,14 @@ func _build_flash() -> void:
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash.color = Color(1, 1, 1, 0)
 	_root.add_child(_flash)
+	_low_hp = ColorRect.new()
+	_low_hp.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_low_hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sm := ShaderMaterial.new()
+	sm.shader = preload("res://shaders/low_hp.gdshader")
+	_low_hp.material = sm
+	_low_hp.visible = false
+	_root.add_child(_low_hp)
 
 
 func _build_status() -> void:
@@ -363,6 +376,7 @@ func _build_death_screen() -> void:
 # --- Mise à jour --------------------------------------------------------------
 
 func _process(delta: float) -> void:
+	_update_low_hp(delta)
 	_update_riff_meter()
 	for id: String in _slots:
 		var slot: Dictionary = _slots[id]
@@ -375,6 +389,18 @@ func _process(delta: float) -> void:
 		var cost: float = slot["cost"]
 		var panel: Panel = slot["panel"]
 		panel.modulate = Color(0.5, 0.5, 0.6) if cost > GameState.mana else Color.WHITE
+
+
+## Vie sous 20 % : le pourtour de l'écran clignote en rouge, une fois toutes les 0,75 s.
+func _update_low_hp(delta: float) -> void:
+	var low := GameState.hp > 0 and GameState.hp < GameState.max_hp() * LOW_HP
+	_low_hp.visible = low
+	if not low:
+		_low_hp_t = 0.0
+		return
+	_low_hp_t = fmod(_low_hp_t + delta, LOW_HP_PERIOD)
+	var pulse := 0.5 - 0.5 * cos(TAU * _low_hp_t / LOW_HP_PERIOD)
+	(_low_hp.material as ShaderMaterial).set_shader_parameter("intensity", pulse)
 
 
 func _unhandled_input(event: InputEvent) -> void:

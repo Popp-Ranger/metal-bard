@@ -139,6 +139,16 @@ func height() -> float:
 	return RaceDB.hero_height(appearance)
 
 
+## Centre du visage (repère du monde) : portraits de la fenêtre de dialogue.
+func face_point() -> Vector3:
+	if _skin != null and _skin.skeleton != null:
+		var sk := _skin.skeleton
+		var head := sk.find_bone("head")
+		if head >= 0:
+			return sk.global_transform * (sk.get_bone_global_pose(head).origin + Vector3(0, 0.08, 0))
+	return _head.global_transform * Vector3(0, 0.2, 0.05)
+
+
 func _build() -> void:
 	_skin = null
 	_anim = null

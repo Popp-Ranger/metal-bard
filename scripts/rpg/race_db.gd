@@ -127,7 +127,7 @@ const PRESETS := {
 		"appearance": {"sex": "m", "race": "humain", "horns": 0, "tusks": 0, "beard": 3, "hair": 3, "hair_color": 5, "preset": "riffald"},
 		"model": "res://assets/models/riffald/riffald.glb",
 		"height": 1.84,
-		"rig": {"guitar_scale": 1.3, "play_pick": Vector3(-0.08, 1.06, 0.2), "back_pos": Vector3(0.0, 1.15, -0.25)},
+		"rig": {"guitar_scale": 1.3, "play_pick": Vector3(-0.15, 0.9, 0.16), "back_pos": Vector3(0.0, 1.15, -0.25)},
 	},
 	"persof1": {
 		"name": "Valkyriff",
@@ -137,7 +137,7 @@ const PRESETS := {
 		"model": "res://assets/models/persof1/persof1.glb",
 		"height": 1.84,
 		"scale": 1.84 / 1.74, # modèle de 1,74 m agrandi en jeu (son .blend, retouché à la main, reste tel quel)
-		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.07, 1.0, 0.17), "back_pos": Vector3(0.0, 1.1, -0.2)},
+		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.11, 0.86, 0.16), "back_pos": Vector3(0.0, 1.1, -0.2)},
 	},
 	"demon": {
 		"name": "Belzeluth",
@@ -146,7 +146,7 @@ const PRESETS := {
 		"appearance": {"sex": "m", "race": "demon", "horns": 0, "tusks": 0, "beard": 0, "hair": 3, "hair_color": 0, "preset": "demon"},
 		"model": "res://assets/models/demon/demon.glb",
 		"height": 1.95,
-		"rig": {"guitar_scale": 1.2, "play_pick": Vector3(-0.08, 1.1, 0.23), "back_pos": Vector3(0.0, 1.2, -0.27)},
+		"rig": {"guitar_scale": 1.2, "play_pick": Vector3(-0.12, 0.93, 0.21), "back_pos": Vector3(0.0, 1.2, -0.27)},
 	},
 }
 const PRESET_ORDER := ["riffald", "persof1", "demon"]

@@ -46,7 +46,7 @@ const PALM_DIR := Vector3(0.0, 0.0, -1.0)
 ## Position de jeu du modèle importé : point de grattage (repère du squelette, au repos ; valeur de Riffald,
 ## remplacée par "play_pick" du héros) et inclinaison du manche au-dessus de l'horizontale.
 const PLAY_PICK := Vector3(-0.08, 1.06, 0.2)
-const PLAY_TILT_DEG := 25.0
+const PLAY_TILT_DEG := 35.0
 ## Guitare dans le dos (repère du squelette, au repos) : jonction manche/caisse au milieu du dos,
 ## par-dessus la cape ; orientation : HeroModel.back_basis().
 const BACK_POS := Vector3(0.0, 1.15, -0.25)
@@ -153,7 +153,7 @@ static func rest_palms(sk: Skeleton3D) -> Dictionary:
 func _fit_mount(sk: Skeleton3D) -> void:
 	var chest := sk.get_bone_global_rest(_bone["chest"])
 	var shoulder := sk.get_bone_global_rest(_bone["upper_arm.R"]).origin
-	var reach := (sk.get_bone_rest(_bone["forearm.R"]).origin.length() + sk.get_bone_rest(_bone["hand.R"]).origin.length()) * 0.92
+	var reach := (sk.get_bone_rest(_bone["forearm.R"]).origin.length() + sk.get_bone_rest(_bone["hand.R"]).origin.length()) * 0.98
 	var wrist := chest * _mount * (PICK_WRIST * guitar_scale)
 	var excess := wrist.distance_to(shoulder) - reach
 	if excess > 0.0:

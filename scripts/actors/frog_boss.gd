@@ -13,6 +13,8 @@ extends Enemy
 var spawn_minion: Callable # Callable(pos: Vector3) fourni par le donjon
 ## Passive tant que le dialogue n'a pas tranché ; amicale si le héros l'a amadouée.
 var passive := true
+## Dialogue qu'il engage (portrait de la fenêtre de dialogue, voir DialogueBox).
+var dialogue_id := "gloubah"
 var friendly := false
 var _talked := false
 
@@ -245,7 +247,7 @@ func _physics_process(delta: float) -> void:
 			if passive and not _talked and to.length() <= detect_radius and not is_down(hero):
 				_talked = true
 				Sfx.play("croak", 0.0)
-				Events.dialogue_requested.emit("gloubah")
+				Events.dialogue_requested.emit(dialogue_id)
 		_anim_t += delta
 		_animate(delta, false)
 		return

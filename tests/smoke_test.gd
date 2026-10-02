@@ -393,8 +393,22 @@ func _test_quest_flow() -> void:
 	await _frames(5)
 	_check(not get_tree().paused and DialogueBox.active and boss._anim_t > boss_t and hero.global_position.distance_to(hero_at) < 0.01,
 		"dialogue sans pause : le monde continue, le héros attend sans bouger")
+	_check(dlg._npc_face["target"] == boss and dlg._hero_face["target"] == hero and (dlg._npc_face["frame"] as Control).visible
+		and (dlg._hero_face["frame"] as Control).visible, "dialogue : portraits de Gloubah à gauche et du héros à droite")
+	dlg._show_line()
+	dlg.skip_typing()
+	_check(not dlg._typing and is_equal_approx(dlg._text.visible_ratio, 1.0), "dialogue : clic ou Espace affiche la réplique en entier")
 	dlg.close()
 	_check(not DialogueBox.active, "fin du dialogue : le héros reprend la main")
+	# Vie sous 20 % : aura rouge clignotante sur le pourtour de l'écran.
+	var low_hud := (dungeon as Level).hud
+	var hp_saved := GameState.hp
+	GameState.hp = maxi(1, floori(GameState.max_hp() * 0.15))
+	await _frames(2)
+	var low_on := low_hud._low_hp.visible
+	GameState.hp = hp_saved
+	await _frames(2)
+	_check(low_on and not low_hud._low_hp.visible, "vie sous 20 %% : aura rouge clignotante (toutes les %.2f s)" % Hud.LOW_HP_PERIOD)
 	# Réponse « il est kiki » : amicale, clé donnée, double XP, pas de combat.
 	var xp_friend := GameState.stats.xp
 	GameState.run_dialogue_action("story:gloubah_friend")

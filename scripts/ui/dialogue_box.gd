@@ -13,29 +13,44 @@ var _choice_data: Array = []
 var _index := 0
 var _npc_id := ""
 var _typing := false
+var _type_tween: Tween
 var _voice_pitch := 1.0
 var _last_blip := -1
 var _open := false
 ## Une conversation est ouverte : le héros local ne bouge plus et n'agit plus (voir Hero).
 static var active := false
+## Portraits en direct : visage du PNJ à gauche, du héros à droite (petite caméra devant chaque visage,
+## dans le monde de la scène). {"frame", "view", "cam", "target"}.
+const PORTRAIT := 150
+const PORTRAIT_DIST := 0.62
+var _npc_face := {}
+var _hero_face := {}
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	custom_minimum_size = Vector2(860, 0)
+	custom_minimum_size = Vector2(1180, 0)
 	anchor_left = 0.5
 	anchor_right = 0.5
 	anchor_top = 1.0
 	anchor_bottom = 1.0
-	offset_left = -430
-	offset_right = 430
+	offset_left = -590
+	offset_right = 590
 	offset_top = -200
 	offset_bottom = -30
 	grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 14)
+	add_child(hb)
+	_npc_face = _portrait()
+	hb.add_child(_npc_face["frame"])
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
-	add_child(vb)
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb.add_child(vb)
+	_hero_face = _portrait()
+	hb.add_child(_hero_face["frame"])
 	_speaker = UiStyle.label("", 22, Color(1.0, 0.8, 0.45))
 	vb.add_child(_speaker)
 	_text = RichTextLabel.new()
@@ -65,6 +80,11 @@ func open(dialogue_id: String) -> void:
 	_open = true
 	visible = true
 	active = true
+	_hero_face["target"] = get_tree().get_first_node_in_group("hero") as Node3D
+	if _npc_id == dialogue_id:
+		_npc_face["target"] = _find_speaker(dialogue_id)
+	for p: Dictionary in [_npc_face, _hero_face]:
+		_aim(p)
 	Events.interaction_prompt.emit("")
 	_show_line()
 
@@ -73,6 +93,9 @@ func close() -> void:
 	_open = false
 	visible = false
 	active = false
+	for p: Dictionary in [_npc_face, _hero_face]:
+		p["target"] = null
+		(p["view"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED
 	Events.dialogue_closed.emit()
 
 
@@ -96,11 +119,18 @@ func _show_line() -> void:
 	if speaker == DialogueDB.hero():
 		color = Color(0.55, 0.85, 1.0)
 	_speaker.add_theme_color_override("font_color", color)
+	# Celui qui parle est éclairé, l'autre un peu estompé.
+	var hero_speaks := speaker == DialogueDB.hero()
+	(_hero_face["frame"] as Control).modulate = Color.WHITE if hero_speaks else Color(0.6, 0.6, 0.6)
+	(_npc_face["frame"] as Control).modulate = Color(0.6, 0.6, 0.6) if hero_speaks else Color.WHITE
 	_text.text = str(line[1])
 	_text.visible_ratio = 0.0
 	_typing = true
 	var duration := clampf(_text.text.length() * 0.018, 0.2, 2.0)
+	if _type_tween != null:
+		_type_tween.kill()
 	var tw := create_tween()
+	_type_tween = tw
 	tw.tween_property(_text, "visible_ratio", 1.0, duration)
 	tw.tween_callback(_on_typed)
 	_hint.text = ""
@@ -157,6 +187,8 @@ func _on_choice(choice: Array) -> void:
 		if not _lines.is_empty():
 			var line: Array = _lines[_index]
 			_text.text = str(line[1])
+			if _type_tween != null:
+				_type_tween.kill()
 			_text.visible_ratio = 1.0
 		_typing = false
 		_show_choices()
@@ -175,7 +207,8 @@ func _input(event: InputEvent) -> void:
 			(_choices.get_child(idx) as Button).emit_signal("pressed")
 			get_viewport().set_input_as_handled()
 			return
-	var advance := event.is_action_pressed("interact") or event.is_action_pressed("ui_accept")
+	var advance := event.is_action_pressed("interact") or event.is_action_pressed("ui_accept") \
+		or (key != null and key.pressed and not key.echo and key.keycode == KEY_SPACE)
 	var mb := event as InputEventMouseButton
 	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 		advance = true
@@ -185,7 +218,7 @@ func _input(event: InputEvent) -> void:
 		return # on laisse les boutons gérer
 	get_viewport().set_input_as_handled()
 	if _typing:
-		_text.visible_ratio = 1.0
+		skip_typing()
 		return
 	if _index < _lines.size() - 1:
 		_index += 1
@@ -194,9 +227,12 @@ func _input(event: InputEvent) -> void:
 		close()
 
 
-## Babillement pendant que le texte s'affiche (une syllabe toutes les 3 lettres),
+## Portraits qui suivent les visages ; babillement pendant que le texte s'affiche (une syllabe toutes les 3 lettres),
 ## sur le canal audio « Dialogues ».
 func _process(_delta: float) -> void:
+	if _open:
+		for p: Dictionary in [_npc_face, _hero_face]:
+			_aim(p) # les personnages bougent (animation, PNJ qui marche, tête qui se tourne)
 	if not _open or not _typing:
 		return
 	var shown := int(_text.visible_ratio * _text.get_total_character_count())
@@ -227,3 +263,83 @@ static func hero_voice_pitch() -> float:
 		"squelette":
 			pitch *= 1.1
 	return pitch
+
+
+## Clic gauche, Espace ou touche d'interaction pendant le défilement : la réplique s'affiche en entier.
+func skip_typing() -> void:
+	if not _typing:
+		return
+	if _type_tween != null:
+		_type_tween.kill()
+	_text.visible_ratio = 1.0
+	_on_typed()
+
+
+# --- Portraits ---------------------------------------------------------------------------
+
+func _portrait() -> Dictionary:
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = Vector2(PORTRAIT, PORTRAIT)
+	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := SubViewportContainer.new()
+	box.stretch = true
+	box.custom_minimum_size = Vector2(PORTRAIT - 12, PORTRAIT - 12)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(box)
+	var view := SubViewport.new()
+	view.size = Vector2i(PORTRAIT - 12, PORTRAIT - 12)
+	view.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	box.add_child(view)
+	var cam := Camera3D.new()
+	cam.fov = 32.0
+	cam.near = 0.05
+	cam.far = 20.0
+	cam.cull_mask = 0xFFFFF & ~Visuals.LABEL_LAYER # sans les noms flottants
+	view.add_child(cam)
+	return {"frame": frame, "view": view, "cam": cam, "target": null}
+
+
+## Interlocuteur du dialogue `id` : PNJ (npc_id ou dialogue_id) ou ennemi qui parle (Gloubah).
+func _find_speaker(id: String) -> Node3D:
+	for group: String in ["npcs", "enemies"]:
+		for n in get_tree().get_nodes_in_group(group):
+			if str(n.get("npc_id")) == id or str(n.get("dialogue_id")) == id:
+				return n as Node3D
+	return null
+
+
+## Visage d'un personnage (repère du monde), direction de son regard et taille (1 = humain : recul de la caméra).
+static func face_of(n: Node3D) -> Array:
+	var skin := n.get("skin") as CharacterSkin
+	if skin != null:
+		return [skin.face_point(), skin.global_basis.z, skin.global_basis.get_scale().y]
+	var model := n.get("model") as Node3D
+	if model is HeroModel:
+		return [(model as HeroModel).face_point(), model.global_basis.z, 1.0]
+	var h := float(n.get("height")) if n.get("height") != null else 1.8
+	var look := model.global_basis.z if model != null else n.global_basis.z
+	return [n.global_position + Vector3(0, h * 0.62, 0), look, h / 1.8]
+
+
+## Place la caméra du portrait devant le visage de sa cible (ou masque le portrait sans cible).
+func _aim(p: Dictionary) -> void:
+	var target := p["target"] as Node3D
+	var frame := p["frame"] as Control
+	var view := p["view"] as SubViewport
+	if target == null or not is_instance_valid(target) or not target.is_inside_tree():
+		frame.visible = false
+		view.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		return
+	frame.visible = true
+	view.world_3d = get_viewport().find_world_3d()
+	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	var f: Array = face_of(target)
+	var face: Vector3 = f[0]
+	var fwd: Vector3 = f[1]
+	var size: float = f[2]
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.BACK
+	var cam := p["cam"] as Camera3D
+	cam.global_position = face + fwd * PORTRAIT_DIST * size
+	cam.look_at(face, Vector3.UP)

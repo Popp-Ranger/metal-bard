@@ -147,6 +147,12 @@ func die() -> void:
 		player.play("die")
 
 
+## Centre du visage (repère du monde) : portraits de la fenêtre de dialogue.
+func face_point() -> Vector3:
+	var head := skeleton.find_bone("head")
+	return skeleton.global_transform * (skeleton.get_bone_global_pose(head).origin + Vector3(0, 0.08, 0))
+
+
 ## Accroche `node` à l'os `bone` (il suit l'animation) ; renvoie le point d'attache.
 func attach(bone: String, node: Node3D) -> BoneAttachment3D:
 	var a := BoneAttachment3D.new()

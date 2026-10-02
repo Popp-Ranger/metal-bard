@@ -8,6 +8,8 @@ const STONE_SHADER := preload("res://shaders/stone_wall.gdshader")
 const PORTAL_SHADER := preload("res://shaders/portal.gdshader")
 
 static var _mat_cache := {}
+## Calque de rendu des étiquettes 3D (noms, dégâts...) : les caméras des portraits de dialogue ne le voient pas.
+const LABEL_LAYER := 1 << 19
 
 
 ## Matériau de personnage (éclairage réaliste, sans cel shading ni contour encré).
@@ -184,6 +186,7 @@ static func label(parent: Node3D, text: String, pos: Vector3, color: Color, size
 	l.pixel_size = 0.008
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
+	l.layers = LABEL_LAYER
 	l.fixed_size = false
 	parent.add_child(l)
 	return l
