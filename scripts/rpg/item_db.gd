@@ -26,10 +26,12 @@ const DEFAULT_RELICS := {
 		"bonus": {"CHA": 1}, "rarete": "peu commun", "butin": true},
 	"grimoire_tablatures": {"nom": "Grimoire de tablatures", "desc": "Des accords interdits notés à l'encre de seiche.",
 		"bonus": {"INT": 1, "SAG": 1}, "rarete": "peu commun", "butin": true},
-	"pendentif_plume": {"nom": "Pendentif de plume d'ours-hibou", "desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
+	"pendentif_plume": {"nom": "Pendentif de plume de hibours", "desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
 		"bonus": {"CHA": 1, "SAG": 1}, "rarete": "rare", "butin": false},
 	"couronne_gloubah": {"nom": "Couronne de nénuphar de Gloubah", "desc": "Encore humide. Toujours humide. Pour l'éternité, humide.",
 		"bonus": {"CON": 2, "CHA": 1}, "rarete": "épique", "butin": false},
+	"portrait_aieule": {"nom": "Portrait de l'arrière-arrière-arrière-grand-mère de Gérald", "desc": "Une dame moustachue qui fixe l'âme de quiconque la regarde.",
+		"bonus": {"SAG": 1, "CHA": 1}, "rarete": "rare", "butin": false},
 }
 
 static var _data := {}

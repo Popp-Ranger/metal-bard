@@ -1,6 +1,6 @@
 class_name FrogBoss
 extends Enemy
-## Gloubah, la Grenouille des Marées Mortes — boss des Catacombes Suintantes.
+## Gloubah, le Roi Grenouille — roi de tous les squelettes des Catacombes Suintantes (pourquoi ? on évite la question).
 ## Capacités :
 ##   • Vague déferlante (toutes les ~6 s) : cône d'eau vers le héros → esquiver sur le côté.
 ##     En phase 2 : anneau complet avec une brèche → se placer dans la brèche.
@@ -8,7 +8,7 @@ extends Enemy
 ##   • Coup de langue au corps-à-corps (attaque de base, 1 toutes les 2,5 s).
 ##   • Phase 2 (sous 50 % PV) : rage, vagues plus fréquentes, invoque 2 squelettes.
 ## Avant le combat : dès que le héros arrive à portée, Gloubah l'interpelle (dialogue
-## « gloubah ») ; selon les réponses, elle combat, capture le héros ou devient amicale.
+## « gloubah ») ; selon les réponses, il combat, capture le héros ou devient amical.
 
 var spawn_minion: Callable # Callable(pos: Vector3) fourni par le donjon
 ## Passive tant que le dialogue n'a pas tranché ; amicale si le héros l'a amadouée.
@@ -29,7 +29,7 @@ var _throat: MeshInstance3D
 
 
 func _configure() -> void:
-	display_name = "Gloubah, Grenouille des Marées Mortes"
+	display_name = "Gloubah, le Roi Grenouille"
 	is_boss = true
 	max_hp = 120 + 30 * (level - 1)
 	armor_class = 12
@@ -271,7 +271,7 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 	super.take_damage(amount, from, knockback, crit, kind)
 
 
-## Choix « il est kiki » : Gloubah devient amicale (plus une ennemie).
+## Choix « il est kiki » : Gloubah devient amical (plus un ennemi).
 func befriend() -> void:
 	passive = false
 	friendly = true

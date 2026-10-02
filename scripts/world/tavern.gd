@@ -1,5 +1,5 @@
 extends Level
-## Le Crâne Hurlant — auberge-hub sur trois niveaux :
+## La Chèvre Fringante — auberge-hub sur trois niveaux :
 ##   • rez-de-chaussée : salle commune, comptoir, clients, PNJ, portail ;
 ##   • étage (zone éloignée, reliée par l'escalier) : couloir et chambres ;
 ##   • sous-sol (zone éloignée) : salle d'entraînement avec mannequins et cible amicale.
@@ -22,6 +22,12 @@ var _seats: Array[Dictionary] = [] # {pos, yaw, chair}
 var _katrkar_seat := {}
 var _gerald: Npc
 var _gerald_home := Vector3.ZERO
+## Chaise et table du héros (thé glacé à la goyave et plateau de fromages) : {pos, yaw}, gardée libre.
+var _hero_seat := {}
+## Gérald revient demander de l'aide après chaque refus (toutes les PLEA_DELAY secondes).
+var _plea_timer := 0.0
+var _gerald_busy := false
+const PLEA_DELAY := 12.0
 var _rune_circle := Vector3.ZERO
 var _blue_portal_pos := Vector3.ZERO
 var _training_zones: Array[TavernMarker] = []
@@ -34,7 +40,7 @@ var bed_interact: Interactable
 
 
 func _ready() -> void:
-	setup_level("tavern", "Le Crâne Hurlant")
+	setup_level("tavern", "La Chèvre Fringante")
 	var fill := DirectionalLight3D.new()
 	fill.light_color = Color(0.6, 0.65, 0.9)
 	fill.light_energy = 0.35
@@ -60,7 +66,7 @@ func _ready() -> void:
 	spawn_hero(spawn)
 	if GameState.flags.get("intro_arrival", false):
 		GameState.flags.erase("intro_arrival")
-		_close_doors_behind_hero()
+		_arrival_scene()
 	if GameState.flags.get("portal_open", false) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE:
 		_open_portal()
 	Events.portal_opened.connect(_open_portal)
@@ -71,7 +77,8 @@ func _ready() -> void:
 	GameState.save_game()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_pleas(delta)
 	if hero != null:
 		if _cut_stone != null:
 			_cut_stone.set_shader_parameter("hero_pos", hero.global_position)
@@ -215,7 +222,7 @@ func _build_front_doors(m: TavernMarker) -> void:
 
 func _on_locked_door() -> void:
 	Sfx.play("thud", -6.0)
-	Events.notify("Les portes du Crâne Hurlant sont verrouillées. Grokk : « Personne ne sort tant que la Lune de Sang est levée ! »", Events.COLOR_BAD)
+	Events.notify("Les portes de la Chèvre Fringante sont verrouillées. Grokk : « Personne ne sort tant que la Lune de Sang est levée ! »", Events.COLOR_BAD)
 
 
 ## Fin de l'intro : les portes claquent derrière le héros.
@@ -305,6 +312,7 @@ func _spawn_npcs() -> void:
 		add_child(n)
 	# Clients générés avec l'outil de création de personnage.
 	var seats := _seats.duplicate()
+	_reserve_hero_seat(seats)
 	seats.shuffle()
 	var used_names: Array[String] = []
 	var specials := [
@@ -416,6 +424,112 @@ func _reunion() -> void:
 	if GameState.quest_state("plumeau") == QuestDB.State.TURNED_IN:
 		GameState.flags["plumeau_reunited"] = true
 	_gerald.walk_to(_gerald_home)
+
+
+
+# =====================================================================================
+# Arrivée de l'intro : thé glacé, brie, et Gérald le fromager
+# =====================================================================================
+
+## Garde pour le héros la chaise la plus proche de l'entrée (les clients ne s'y assoient pas) et pose sur
+## sa table un thé glacé à la goyave et un plateau de fromages.
+func _reserve_hero_seat(seats: Array) -> void:
+	if seats.is_empty():
+		return
+	var door := _marker_pos(TavernMarker.Kind.APPARITION, Vector3(0.0, 0.0, 9.5))
+	var best: Dictionary = seats[0]
+	for s: Dictionary in seats:
+		if (s["pos"] as Vector3).distance_to(door) < (best["pos"] as Vector3).distance_to(door):
+			best = s
+	seats.erase(best)
+	_hero_seat = best
+	var yaw := float(best["yaw"])
+	var to_table := Vector3(sin(yaw), 0.0, cos(yaw))
+	var top := (best["pos"] as Vector3) + to_table * 0.62 + Vector3(0, 0.84, 0)
+	var side := to_table.cross(Vector3.UP)
+	# Thé glacé à la goyave : grand verre rose orangé, glaçons, paille.
+	var glass := Visuals.transparent_mat(Color(1.0, 0.55, 0.45, 0.75))
+	Visuals.cylinder(self, 0.055, 0.045, 0.2, top + side * 0.22 + Vector3(0, 0.1, 0), glass, Vector3.ZERO, 14)
+	var ice := Visuals.transparent_mat(Color(0.9, 0.95, 1.0, 0.6))
+	Visuals.box(self, Vector3(0.035, 0.035, 0.035), top + side * 0.21 + Vector3(0, 0.18, 0), ice, Vector3(20, 30, 0))
+	Visuals.cylinder(self, 0.006, 0.006, 0.26, top + side * 0.24 + Vector3(0.01, 0.24, 0), Visuals.mat(Color(0.95, 0.3, 0.35)), Vector3(0, 0, 14), 6)
+	# Plateau de fromages : planche, meule de brie entamée, quartiers, raisin.
+	var board := Visuals.box(self, Vector3(0.4, 0.03, 0.28), top + Vector3(0, 0.015, 0), Visuals.mat(Color(0.5, 0.33, 0.18)))
+	board.rotation.y = yaw
+	var brie := Visuals.mat(Color(0.96, 0.92, 0.8), 0.9)
+	var crust := Visuals.mat(Color(0.98, 0.97, 0.93), 0.95)
+	Visuals.cylinder(self, 0.09, 0.09, 0.045, top - side * 0.06 + Vector3(0, 0.055, 0), crust, Vector3.ZERO, 18)
+	Visuals.cylinder(self, 0.06, 0.06, 0.046, top - side * 0.06 + to_table * 0.02 + Vector3(0, 0.056, 0), brie, Vector3.ZERO, 12)
+	var yellow := Visuals.mat(Color(0.95, 0.75, 0.3), 0.7)
+	for k in 3:
+		var p := top + side * (0.07 + k * 0.045) - to_table * 0.06 + Vector3(0, 0.05, 0)
+		Visuals.box(self, Vector3(0.04, 0.04, 0.07), p, yellow, Vector3(0, rad_to_deg(yaw) + 20 * k, 0))
+	var grape := Visuals.mat(Color(0.35, 0.12, 0.35), 0.4)
+	for k in 5:
+		Visuals.sphere(self, 0.018, top + side * 0.1 + to_table * (0.07 + 0.012 * (k % 2)) + Vector3(0.01 * k, 0.05, 0), grape)
+
+
+## Fin de l'intro : les portes claquent, puis le héros s'attable devant son thé glacé et son brie,
+## et Gérald Pissenlit trottine jusqu'à lui.
+func _arrival_scene() -> void:
+	await _close_doors_behind_hero()
+	await get_tree().create_timer(1.2, false).timeout
+	if _hero_seat.is_empty() or hero == null:
+		return
+	Events.screen_flash.emit(Color.BLACK, 1.4)
+	hero.sit_at(_hero_seat["pos"], float(_hero_seat["yaw"]))
+	camera.snap_to_target()
+	Events.notify("Un thé glacé à la goyave... et un plateau de fromages. Impossible de résister.", Color(1.0, 0.85, 0.6))
+	await get_tree().create_timer(3.0, false).timeout
+	if GameState.quest_state("plumeau") == QuestDB.State.AVAILABLE:
+		await _gerald_comes()
+
+
+## Gérald vient jusqu'au héros, lui parle (dialogue « gerald »), puis retourne à sa place.
+func _gerald_comes() -> void:
+	if _gerald == null or hero == null or _gerald_busy:
+		return
+	_gerald_busy = true
+	# À côté du héros (s'il est attablé, à côté de sa chaise, du côté le plus proche ; la table barre le reste).
+	var spot := hero.global_position + (_gerald.global_position - hero.global_position).normalized() * 1.2
+	if hero.sitting:
+		var side := hero.facing.cross(Vector3.UP)
+		if side.dot(_gerald.global_position - hero.global_position) < 0.0:
+			side = -side
+		spot = hero.global_position + side * 0.9 - hero.facing * 0.3
+	# Point du sol praticable le plus proche (chaises et tables bloquent).
+	var nav_map := get_world_3d().navigation_map
+	if NavigationServer3D.map_get_iteration_id(nav_map) > 0:
+		spot = NavigationServer3D.map_get_closest_point(nav_map, spot)
+		spot.y = 0.0
+	_gerald.walk_to(spot, 2.2)
+	var guard := 0.0
+	while is_instance_valid(hero) and _gerald.walker.walking and guard < 25.0:
+		await get_tree().create_timer(0.25, false).timeout
+		guard += 0.25
+	_gerald.walker.stop()
+	var to_hero := hero.global_position - _gerald.global_position
+	_gerald.rotation.y = atan2(to_hero.x, to_hero.z)
+	Events.dialogue_requested.emit("gerald")
+	await Events.dialogue_closed
+	_plea_timer = 0.0
+	_gerald.walk_to(_gerald_home)
+	_gerald_busy = false
+
+
+## Quête refusée : Gérald revient à la charge toutes les PLEA_DELAY secondes, tant que le héros est dans la
+## salle commune (pas à l'étage, au sous-sol, au lit ni en pleine conversation).
+func _update_pleas(delta: float) -> void:
+	if _gerald == null or hero == null or _gerald_busy or DialogueBox.active or InventoryWindow.active:
+		return
+	if GameState.quest_state("plumeau") != QuestDB.State.AVAILABLE or int(GameState.flags.get("gerald_refus", 0)) <= 0:
+		return
+	if hero.resting or hero.global_position.distance_to(_gerald_home) > 25.0:
+		return
+	_plea_timer += delta
+	if _plea_timer >= PLEA_DELAY:
+		_plea_timer = 0.0
+		_gerald_comes()
 
 
 # =====================================================================================

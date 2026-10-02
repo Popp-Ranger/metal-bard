@@ -12,6 +12,7 @@ func _ready() -> void:
 	_test_generator()
 	_test_audio()
 	_test_inventory()
+	_test_story()
 	await _test_characters()
 	await _test_skeleton_body()
 	await _test_level_editor()
@@ -458,7 +459,7 @@ func _test_quest_flow() -> void:
 	await _frames(5)
 	GameState.run_dialogue_action("turn_in:plumeau")
 	_check(GameState.quest_state("plumeau") == QuestDB.State.TURNED_IN, "quête rendue")
-	_check(GameState.inventory.has("pendentif_plume"), "récompense : pendentif reçu")
+	_check(GameState.inventory.has("portrait_aieule"), "récompense : le portrait de l'arrière-arrière-arrière-grand-mère de Gérald")
 	_check(GameState.has_save() and GameState.latest_slot() == 0, "partie sauvegardée (Continuer reprend la sauvegarde la plus récente)")
 	var level := GameState.stats.level
 	_check(GameState.load_game() and GameState.stats.level == level, "chargement de la sauvegarde")
@@ -746,7 +747,7 @@ func _test_new_features() -> void:
 	await get_tree().create_timer(1.5).timeout
 	_check(true, "un éclair frappe le décor sans erreur")
 	var intro_lines: Array = DialogueDB.get_dialogue("intro_hero")["lines"]
-	_check(str(intro_lines[1][1]) == "Et si j'allais m'en jeter un !", "réplique du héros seul")
+	_check(str(intro_lines[1][1]) == "...J'ai rien vu." and str(intro_lines[3][1]).contains("thé glacé à la goyave"), "intro : le héros fait mine de rien et file boire un thé glacé à la goyave")
 	intro.queue_free()
 	await _frames(5)
 	get_tree().paused = false
@@ -757,6 +758,34 @@ func _count_portals(root: Node) -> int:
 	for child in root.get_children():
 		count += _count_portals(child)
 	return count
+
+
+## Histoire : Gérald le fromager, refus en boucle jusqu'au fromage d'hibours (+20 % de PV 20 min).
+func _test_story() -> void:
+	print("[Histoire]")
+	GameState.new_game()
+	_check(GameState.location_label("") == "La Chèvre Fringante" and QuestDB.get_quest("plumeau")["reward"]["gold"] == 50,
+		"taverne : la Chèvre Fringante ; récompense de Gérald : 50 médiators")
+	var first: Array = DialogueDB.get_dialogue("gerald")["choices"]
+	_check(str(first[1][1]) == "refuse:plumeau", "on peut refuser la quête de Gérald")
+	var pleas: Array[String] = []
+	var hp0 := GameState.max_hp()
+	for i in DialogueDB.GERALD_PLEAS.size():
+		GameState.run_dialogue_action("refuse:plumeau")
+		var d := DialogueDB.get_dialogue("gerald")
+		pleas.append(str((d["lines"] as Array)[0][1]))
+	_check(pleas[0] == "Et maintenant, tu veux bien ?" and pleas[3].begins_with("Allé") and pleas[4] == "Je te donnerai du fromage d'hibours !",
+		"Gérald revient à la charge : %s" % " / ".join(pleas))
+	var cheese: Array = DialogueDB.get_dialogue("gerald")["choices"]
+	GameState.run_dialogue_action(str(cheese[1][1]))
+	_check(GameState.cheese_time > 0.0 and GameState.max_hp() == roundi(hp0 * 1.2) and int(GameState.flags["gerald_refus"]) == 5
+		and str(DialogueDB.get_dialogue("gerald")["lines"][0][1]) == "Je te donnerai du fromage d'hibours !",
+		"fromage d'hibours : +20 %% de PV max (%d → %d) pendant 20 min, puis la proposition tourne en boucle" % [hp0, GameState.max_hp()])
+	GameState.run_dialogue_action("cheese")
+	_check(is_equal_approx(GameState.cheese_time, GameState.CHEESE_DURATION), "le fromage n'est offert qu'une fois")
+	GameState.run_dialogue_action(str(DialogueDB.get_dialogue("gerald")["choices"][0][1]))
+	_check(GameState.quest_state("plumeau") == QuestDB.State.ACTIVE, "on peut toujours accepter après avoir refusé")
+	GameState.new_game()
 
 
 ## Inventaire (touche B) : vente des reliques à Grokk et rachat des 10 dernières.

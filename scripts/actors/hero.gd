@@ -18,6 +18,8 @@ var planted := false
 var dashing := false
 ## Allongé sur un lit de la taverne : la vie remonte progressivement ; bouger fait se lever.
 var resting := false
+## Assis à une table de la taverne (arrivée de l'intro) : on se lève en bougeant.
+var sitting := false
 var _rest_from := Vector3.ZERO
 var _rest_heal := 0.0
 var _regen_tick := 0.0
@@ -112,6 +114,13 @@ func _physics_process(delta: float) -> void:
 		# En pleine conversation (le jeu continue) : le héros écoute, sans bouger ni agir.
 		input = Vector2.ZERO
 		_click_mode = ClickMode.NONE
+	if sitting:
+		velocity = Vector3.ZERO
+		if input.length() > 0.1:
+			stand_up()
+		else:
+			_update_interaction()
+			return
 	if resting:
 		_rest_tick(delta, input)
 		return
@@ -303,6 +312,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_up() # un clic pour se lever du lit
 			get_viewport().set_input_as_handled()
 		return
+	if sitting and left_click:
+		stand_up() # un clic pour se lever de table
 	if left_click:
 		_on_left_click(mb.shift_pressed)
 		get_viewport().set_input_as_handled()
@@ -742,6 +753,29 @@ func _update_interaction() -> void:
 
 # --- Repos dans un lit (chambre louée à la taverne) ----------------------------------------
 
+
+
+## S'asseoir sur la chaise `seat` (regard `yaw`, vers la table).
+func sit_at(seat: Vector3, yaw: float) -> void:
+	if dead or resting:
+		return
+	sitting = true
+	velocity = Vector3.ZERO
+	_click_mode = ClickMode.NONE
+	global_position = Vector3(seat.x, 0.0, seat.z)
+	facing = Vector3(sin(yaw), 0.0, cos(yaw))
+	model.rotation = Vector3(0, yaw, 0)
+	model.set_moving(false)
+	model.set_seated(true)
+
+
+## Se lever de table : un pas en arrière, loin de la table.
+func stand_up() -> void:
+	if not sitting:
+		return
+	sitting = false
+	model.set_seated(false)
+	global_position -= facing * 0.55
 ## S'allonge sur le lit (centre `bed_center`, tête vers -Z tourné de `yaw`).
 func lie_down(bed_center: Vector3, yaw: float = 0.0) -> void:
 	if resting or dead:

@@ -11,7 +11,7 @@ fichiers** (en bas à gauche).
 
 | Niveau | Scène |
 |---|---|
-| La taverne (le Crâne Hurlant) | `scenes/levels/taverne.tscn` |
+| La taverne (la Chèvre Fringante) | `scenes/levels/taverne.tscn` |
 | Le premier donjon (Catacombes Suintantes) | `scenes/levels/catacombes.tscn` |
 
 ## Premier donjon : `scenes/levels/catacombes.tscn`
@@ -97,7 +97,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tools/levels/
 
 ## La taverne : `scenes/levels/taverne.tscn`
 
-Le Crâne Hurlant sur trois zones de la même scène, éloignées les unes des autres et reliées par les
+La Chèvre Fringante sur trois zones de la même scène, éloignées les unes des autres et reliées par les
 escaliers : le **rez-de-chaussée** (autour de l'origine), l'**étage** (70 m au nord) et le **sous-sol**
 (70 m à l'est). Dans l'arbre de la scène, les objets sont rangés dans les dossiers **Rez-de-chaussee**,
 **Etage** et **Sous-sol** (facultatifs).
@@ -148,7 +148,7 @@ Pour relier un escalier : sélectionner l'escalier, puis dans l'Inspecteur cliqu
 ### Repartir de la taverne d'origine
 
 `tools/levels/build_tavern_assets.gd` recrée les tuiles et les pièces ; avec `-- taverne`, il **écrase**
-`taverne.tscn` par le Crâne Hurlant d'origine :
+`taverne.tscn` par la Chèvre Fringante d'origine :
 
 ```
 Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tools/levels/build_tavern_assets.gd -- taverne

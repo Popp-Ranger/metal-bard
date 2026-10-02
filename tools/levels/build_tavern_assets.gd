@@ -2,7 +2,7 @@ extends SceneTree
 ## Crée les ressources de l'éditeur de taverne et convertit la taverne d'origine en scène modifiable :
 ##  - assets/levels/taverne_sols.tres et taverne_murs.tres : tuiles des GridMap (cases de 1 m) ;
 ##  - scenes/levels/pieces/taverne/*.tscn : pièces à glisser-déposer (mobilier, décor, points du jeu) ;
-##  - scenes/levels/taverne.tscn (seulement avec l'argument « taverne ») : le Crâne Hurlant tel qu'il était
+##  - scenes/levels/taverne.tscn (seulement avec l'argument « taverne ») : la Chèvre Fringante telle qu'elle était
 ##    construit par le code (rez-de-chaussée, étage, sous-sol). ATTENTION : écrase la scène existante.
 ## Usage : Godot --headless --path . -s res://tools/levels/build_tavern_assets.gd [-- taverne]
 
@@ -137,7 +137,7 @@ func _pieces() -> void:
 		m.free()
 
 
-# --- Conversion du Crâne Hurlant ---------------------------------------------------------------
+# --- Conversion de la Chèvre Fringante ---------------------------------------------------------------
 
 func _own(n: Node) -> void:
 	n.owner = _root
@@ -267,8 +267,8 @@ func _ground(g: Node3D) -> void:
 	_m(g, TavernMarker.Kind.ESCALIER_DESCENDANT, Vector3(-12.0, 0, 6.4), 180.0,
 		{"name": "Escalier_vers_sous_sol", "text": "Descendre au sous-sol (salle d'entraînement)"})
 	_m(g, TavernMarker.Kind.ECRITEAU, Vector3(-12.0, 1.5, 7.0), 0.0, {"text": "Sous-sol — entraînement", "color": Color(0.9, 0.7, 0.4)})
-	_m(g, TavernMarker.Kind.ARRIVEE, Vector3(12.4, 0, -3.2), 0.0, {"name": "Arrivee_depuis_etage", "text": "Le Crâne Hurlant"})
-	_m(g, TavernMarker.Kind.ARRIVEE, Vector3(-10.2, 0, 5.8), 0.0, {"name": "Arrivee_depuis_sous_sol", "text": "Le Crâne Hurlant"})
+	_m(g, TavernMarker.Kind.ARRIVEE, Vector3(12.4, 0, -3.2), 0.0, {"name": "Arrivee_depuis_etage", "text": "La Chèvre Fringante"})
+	_m(g, TavernMarker.Kind.ARRIVEE, Vector3(-10.2, 0, 5.8), 0.0, {"name": "Arrivee_depuis_sous_sol", "text": "La Chèvre Fringante"})
 	for p: Vector3 in [Vector3(-13.8, 0, 9.8), Vector3(-13.9, 0, 3.8), Vector3(10.0, 0, 9.8), Vector3(11.0, 0, 9.9)]:
 		_m(g, TavernMarker.Kind.TONNEAU, p)
 	_m(g, TavernMarker.Kind.CAISSE, Vector3(12.2, 0, 9.6), 20.0)

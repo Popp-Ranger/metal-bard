@@ -73,7 +73,7 @@
 			"actif": true
 		},
 		"pendentif_plume": {
-			"nom": "Pendentif de plume d'ours-hibou",
+			"nom": "Pendentif de plume de hibours",
 			"desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
 			"bonus": {"CHA": 1, "SAG": 1},
 			"rarete": "rare",
@@ -85,6 +85,14 @@
 			"desc": "Encore humide. Toujours humide. Pour l'éternité, humide.",
 			"bonus": {"CON": 2, "CHA": 1},
 			"rarete": "épique",
+			"butin": false,
+			"actif": true
+		},
+		"portrait_aieule": {
+			"nom": "Portrait de l'arrière-arrière-arrière-grand-mère de Gérald",
+			"desc": "Une dame moustachue qui fixe l'âme de quiconque la regarde. Dans la famille Pissenlit depuis sept générations de fromagers. Personne ne sait pourquoi on la garde.",
+			"bonus": {"SAG": 1, "CHA": 1},
+			"rarete": "rare",
 			"butin": false,
 			"actif": true
 		}

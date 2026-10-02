@@ -203,7 +203,7 @@ static func quest_board(p: Node3D) -> void:
 			Visuals.mat(Color(0.85, 0.8, 0.65)), Vector3(0, 0, 7.0 * sin(k * 2.9)))
 
 
-## Bannière du Crâne Hurlant accrochée au mur (face vers +Z).
+## Bannière de la Chèvre Fringante accrochée au mur (face vers +Z).
 static func banner(p: Node3D) -> void:
 	Visuals.box(p, Vector3(1.0, 1.6, 0.05), Vector3.ZERO, Visuals.mat(Color(0.35, 0.05, 0.05)))
 	Visuals.sphere(p, 0.18, Vector3(0, 0.1, 0.05), Visuals.mat(Color(0.85, 0.8, 0.65)))

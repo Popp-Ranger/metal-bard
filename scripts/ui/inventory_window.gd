@@ -99,7 +99,7 @@ func _refresh() -> void:
 		for ab: String in ["FOR", "DEX", "CON", "INT", "SAG", "CHA"]:
 			if total.has(ab):
 				hint.add_child(UiStyle.label("%s +%d" % [ab, int(total[ab])], 17, Color(0.6, 0.95, 0.6)))
-		hint.add_child(UiStyle.label("Grokk, au Crâne Hurlant, rachète les reliques contre quelques médiators.", 14, UiStyle.DIM))
+		hint.add_child(UiStyle.label("Grokk, à la Chèvre Fringante, rachète les reliques contre quelques médiators.", 14, UiStyle.DIM))
 
 	_content.add_child(HSeparator.new())
 	var close_btn := Button.new()

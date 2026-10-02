@@ -1,13 +1,13 @@
 extends Level
-## Introduction : la Nuit de la Lune de Sang.
+## Introduction : une nuit de Lune de Sang (encore un truc cliché de métalleux).
 ##   1. Cinématique : une lune sanglante dans la brume, puis le cimetière près de la
 ##      chapelle — tombes déterrées et vides, cadavres de toutes les races amicales.
-##   2. Le héros : « Aaaaaah, une bonne vieille balade par ce temps est si agréable.
-##      Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un » en coop).
+##   2. Le héros, au sortir de la messe noire : les morts se sont ENCORE échappés ; il fait mine de rien et file
+##      boire un thé glacé à la goyave à la Chèvre Fringante (dialogue « intro_hero »).
 ##   3. Environ 20 s de marche sur une route pavée sinueuse, entre champs et
 ##      prairies, cadavres ensanglantés et chauves-souris ; orage sans pluie : des éclairs
 ##      frappent le décor hors de la route (flash + légers tremblements d'écran).
-##   4. Au bout de la route, le Crâne Hurlant : on entre, et les portes se referment.
+##   4. Au bout de la route, la Chèvre Fringante : on entre, et les portes se referment.
 ## La route part vers le « haut de l'écran » de la caméra isométrique puis serpente.
 
 const ROAD_LENGTH := 110.0 # ≈ 20 s de marche à 5,5 m/s (longueur réelle du tracé sinueux)
@@ -461,7 +461,7 @@ func _build_road_side() -> void:
 		Visuals.box(self, Vector3(0.14, 2.2, 0.14), p + Vector3(0, 1.1, 0), wood)
 		var board := Visuals.box(self, Vector3(1.3, 0.35, 0.06), p + Vector3(0.3, 1.9, 0), wood)
 		board.rotation.y = atan2(road_dir(sign_s).x, road_dir(sign_s).z) + PI * 0.5
-		Visuals.label(self, "Le Crâne Hurlant →", p + Vector3(0, 2.5, 0), Color(0.85, 0.7, 0.5), 26)
+		Visuals.label(self, "La Chèvre Fringante →", p + Vector3(0, 2.5, 0), Color(0.85, 0.7, 0.5), 26)
 
 
 func _build_tavern_exterior() -> void:
@@ -504,7 +504,7 @@ func _build_tavern_exterior() -> void:
 	var body := Visuals.solid(self, Vector3(14.0, 5.0, 9.0), center + Vector3(0, 2.5, 0))
 	body.rotation.y = yaw + PI
 	var door := road_point(s) + dir * 1.2
-	Interactable.create(self, door, "Entrer au Crâne Hurlant", _enter_tavern, 2.6)
+	Interactable.create(self, door, "Entrer à la Chèvre Fringante", _enter_tavern, 2.6)
 	Visuals.flicker_light(self, door + Vector3(0, 2.6, 0), Color(1.0, 0.6, 0.3), 2.0, 8.0)
 
 
@@ -635,7 +635,7 @@ func _play_cinematic() -> void:
 	_cine_cam.position = start_pos
 	_cine_cam.look_at(moon, Vector3.UP)
 	hud.visible = false
-	var caption := _caption("La nuit de la Lune de Sang...")
+	var caption := _caption("Une nuit de Lune de Sang... (encore un truc cliché de métalleux)")
 	Sfx.play("thunder", -6.0)
 	# ... puis la caméra descend sur le cimetière, les tombes vides et les cadavres, et revient sur
 	# notre héros. Une seule séquence, que la touche Espace ou Échap interrompt (voir _input).
@@ -646,9 +646,10 @@ func _play_cinematic() -> void:
 	var on_hero := Basis.looking_at(hero.global_position + Vector3(0, 1.4, 0) - close, Vector3.UP).get_rotation_quaternion()
 	_cine_tween = create_tween()
 	_cine_tween.tween_interval(3.5)
-	_cine_tween.tween_callback(func() -> void: caption.text = "Les morts ont quitté leurs tombes.")
+	_cine_tween.tween_callback(func() -> void: caption.text = "Au sortir de la messe noire, on admire les tombes du cimetière...")
 	_cine_tween.tween_method(_cine_look.bind(start_pos, end_pos, moon, graves), 0.0, 1.0, 4.5).set_trans(Tween.TRANS_SINE)
-	_cine_tween.tween_interval(1.5)
+	_cine_tween.tween_callback(func() -> void: caption.text = "...et les morts se sont ENCORE échappés de leurs tombes.")
+	_cine_tween.tween_interval(2.5)
 	_cine_tween.tween_callback(func() -> void: caption.text = "")
 	_cine_tween.tween_property(_cine_cam, "position", close, 2.0).set_trans(Tween.TRANS_SINE)
 	_cine_tween.parallel().tween_method(_cine_aim, over_graves, on_hero, 2.0)
@@ -685,8 +686,8 @@ func _end_cinematic() -> void:
 	await Events.dialogue_closed
 	_cinematic = false
 	hero.captive = false
-	hud.show_area_name("La route du Crâne Hurlant")
-	Events.notify("Suivez la route pavée jusqu'à la taverne.", Events.COLOR_DEFAULT)
+	hud.show_area_name("La route de la Chèvre Fringante")
+	Events.notify("Suivez la route pavée jusqu'à la Chèvre Fringante.", Events.COLOR_DEFAULT)
 
 
 func _cine_look(k: float, from_pos: Vector3, to_pos: Vector3, from_target: Vector3, to_target: Vector3) -> void:

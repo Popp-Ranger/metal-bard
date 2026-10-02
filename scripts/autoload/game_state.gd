@@ -14,6 +14,10 @@ var potions := 0
 var inventory: Array[String] = []
 ## Reliques vendues à Grokk, la plus récente en premier : on peut les lui racheter (BUYBACK_MAX au plus).
 var buyback: Array[String] = []
+## Fromage d'hibours de Gérald (offert si on refuse sa quête jusqu'au bout) : +20 % de PV max pendant 20 min.
+var cheese_time := 0.0
+const CHEESE_HP_BONUS := 0.2
+const CHEESE_DURATION := 1200.0
 const BUYBACK_MAX := 10
 var quests := {} # quest_id -> QuestDB.State
 var flags := {}
@@ -44,12 +48,33 @@ func _ready() -> void:
 	Events.enemy_killed.connect(func(_e: Node3D) -> void: run_add("kills", 1))
 
 
+## Le fromage d'hibours s'épuise (le temps du jeu, pas celui des menus en pause).
+func _process(delta: float) -> void:
+	if cheese_time > 0.0 and not get_tree().paused:
+		cheese_time -= delta
+		if cheese_time <= 0.0:
+			cheese_time = 0.0
+			_on_stats_changed()
+			Events.hero_hp_changed.emit(hp, max_hp())
+			Events.notify("L'effet du fromage d'hibours s'est dissipé (PV max normaux).", Events.COLOR_DEFAULT)
+
+
+## Fromage d'hibours : +20 % de PV max (et autant de PV) pendant 20 minutes.
+func eat_cheese() -> void:
+	var before := max_hp()
+	cheese_time = CHEESE_DURATION
+	hp += max_hp() - before
+	_on_stats_changed()
+	Events.hero_hp_changed.emit(hp, max_hp())
+
+
 func new_game() -> void:
 	stats = CharacterStats.new()
 	gold = ItemDB.starting_money()
 	potions = ItemDB.starting_potions()
 	inventory.clear()
 	buyback.clear()
+	cheese_time = 0.0
 	flags = {}
 	quests = {}
 	for id: String in QuestDB.QUESTS:
@@ -93,8 +118,9 @@ func proficiency() -> int:
 
 func max_hp() -> int:
 	var con := mod("CON")
-	return maxi(10, Balance.HERO_BASE_HP + Balance.HERO_HP_PER_CON * con
+	var base := maxi(10, Balance.HERO_BASE_HP + Balance.HERO_HP_PER_CON * con
 		+ (stats.level - 1) * (Balance.HERO_HP_PER_LEVEL + con)) + (15 if race() == "ogre" else 0)
+	return roundi(base * (1.0 + CHEESE_HP_BONUS)) if cheese_time > 0.0 else base
 
 
 func max_mana() -> float:
@@ -393,6 +419,11 @@ func turn_in_quest(id: String) -> void:
 
 ## Exécute une action choisie dans un dialogue (ex. « accept:plumeau »).
 func run_dialogue_action(action: String) -> void:
+	# Plusieurs actions d'un coup : « cheese+accept:plumeau ».
+	if action.contains("+"):
+		for part in action.split("+"):
+			run_dialogue_action(part)
+		return
 	var parts := action.split(":")
 	var verb := parts[0]
 	var arg := parts[1] if parts.size() > 1 else ""
@@ -430,6 +461,15 @@ func run_dialogue_action(action: String) -> void:
 				Events.notify("Pas assez de médiators pour une chambre.", Events.COLOR_BAD)
 		"shop":
 			Events.shop_requested.emit()
+		"refuse":
+			# Quête refusée : son donneur reviendra à la charge (voir DialogueDB.GERALD_PLEAS).
+			flags["gerald_refus"] = mini(int(flags.get("gerald_refus", 0)) + 1, DialogueDB.GERALD_PLEAS.size())
+		"cheese":
+			if not bool(flags.get("cheese_given", false)):
+				flags["cheese_given"] = true
+				eat_cheese()
+				Sfx.play("levelup", -8.0, 0.0)
+				Events.notify("Fromage d'hibours englouti : +20 % de PV max pendant 20 minutes !", Events.COLOR_GOOD)
 		"reset_talents":
 			reset_talents()
 		"flag":
@@ -506,6 +546,7 @@ func _snapshot() -> Dictionary:
 		"dungeon_seed": dungeon_seed,
 		"dungeon_state": dungeon_state,
 		"town_portal": town_portal,
+		"cheese_time": cheese_time,
 		"location": location,
 	}
 
@@ -546,10 +587,10 @@ func slot_summary(slot: int) -> String:
 static func location_label(scene: String) -> String:
 	match scene:
 		Router.INTRO:
-			return "Route du Crâne Hurlant"
+			return "Route de la Chèvre Fringante"
 		Router.DUNGEON:
 			return "Catacombes Suintantes"
-	return "Le Crâne Hurlant"
+	return "La Chèvre Fringante"
 
 
 ## Reprend la sauvegarde la plus récente (bouton « Continuer », hébergement coop).
@@ -571,6 +612,7 @@ func load_slot(slot: int) -> bool:
 	buyback.clear()
 	for id: Variant in data.get("buyback", []):
 		buyback.append(str(id))
+	cheese_time = float(data.get("cheese_time", 0.0))
 	var saved_quests: Dictionary = data.get("quests", {})
 	for id: String in saved_quests:
 		quests[id] = int(saved_quests[id])

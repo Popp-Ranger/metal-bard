@@ -32,7 +32,8 @@ Tous les objets sont définis dans **[`data/items.json`](../data/items.json)**. 
 | `bracelet_force` | Bracelet à pointes | FOR +1 | commun | oui |
 | `cordes_dragon` | Cordes en boyau de dragon | CHA +1 | peu commun | oui |
 | `grimoire_tablatures` | Grimoire de tablatures | INT +1, SAG +1 | peu commun | oui |
-| `pendentif_plume` | Pendentif de plume d'ours-hibou | CHA +1, SAG +1 | rare | non (récompense de Gérald) |
+| `pendentif_plume` | Pendentif de plume de hibours | CHA +1, SAG +1 | rare | non (plus distribué) |
+| `portrait_aieule` | Portrait de l'arrière-arrière-arrière-grand-mère de Gérald | SAG +1, CHA +1 | rare | non (récompense de Gérald, avec 50 médiators) |
 | `couronne_gloubah` | Couronne de nénuphar de Gloubah | CON +2, CHA +1 | épique | non (butin de Gloubah) |
 
 Les reliques communes tombent sur les ennemis (8 % de chance, `DROP_ITEM_CHANCE` dans `scripts/rpg/balance.gd`) et dans les coffres des salles cul-de-sac.

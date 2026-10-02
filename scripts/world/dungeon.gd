@@ -650,7 +650,7 @@ func _try_open_cage() -> void:
 	if _cage_open:
 		return
 	if not _has_key:
-		Events.notify("La cage est fermée à clé. Gloubah doit l'avoir sur elle...", Events.COLOR_BAD)
+		Events.notify("La cage est fermée à clé. Gloubah doit l'avoir sur lui...", Events.COLOR_BAD)
 		Sfx.play("dud", -8.0)
 		return
 	_cage_open = true
@@ -669,18 +669,24 @@ func _try_open_cage() -> void:
 	Events.notify("Plumeau est libre ! Hou-hou !", Color(0.95, 0.8, 0.5))
 	await get_tree().create_timer(1.2, false).timeout
 	_spawn_victory_portal()
-	Events.notify("Zarathos : « Beau vacarme, barde ! Je t'ouvre un passage. »", Events.COLOR_MAGIC)
+	Events.notify("Un portail s'ouvre juste à côté de vous. Comment ? C'est Zarathos : il est mage, il fait des trucs de mage.", Events.COLOR_MAGIC)
 
 
+## Le portail de Zarathos s'ouvre à côté du héros (s'il est sur un sol praticable, sinon au centre de la salle).
 func _spawn_victory_portal() -> void:
 	var portal := Portal.new()
-	portal.position = cell_to_world(gen.center(gen.boss_room)) + Vector3(2.0, 0, 2.0)
+	var p := cell_to_world(gen.center(gen.boss_room)) + Vector3(2.0, 0, 2.0)
+	if hero != null:
+		var beside := hero.global_position + hero.facing * 1.8
+		if is_walkable(beside):
+			p = Vector3(beside.x, 0.0, beside.z)
+	portal.position = p
 	portal.prompt = "Retourner à la taverne (portail de Zarathos)"
 	portal.on_enter = _end_dungeon.bind("Catacombes nettoyées !", true)
 	add_child(portal)
 
 
-## Choix « Bah oui, il est kiki... » : Gloubah devient amicale et donne la clé.
+## Choix « Bah oui, il est kiki... » : Gloubah devient amical et donne la clé.
 ## Récompense : le double de l'XP qu'aurait rapporté sa mort.
 func _befriend_gloubah() -> void:
 	boss.befriend()
@@ -1071,7 +1077,7 @@ func open_town_portal() -> void:
 	p.y = 0.0
 	_spawn_town_portal(p)
 	GameState.town_portal = {"pos": [snappedf(p.x, 0.01), snappedf(p.z, 0.01)]}
-	Events.notify("Un portail bleu s'ouvre vers le Crâne Hurlant.", Color(0.5, 0.75, 1.0))
+	Events.notify("Un portail bleu s'ouvre vers la Chèvre Fringante.", Color(0.5, 0.75, 1.0))
 
 
 func _spawn_town_portal(p: Vector3) -> void:

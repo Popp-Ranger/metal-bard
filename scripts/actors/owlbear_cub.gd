@@ -1,6 +1,6 @@
 class_name OwlbearCub
 extends Node3D
-## Plumeau, le bébé ours-hibou. Enfermé dans une cage au fond du donjon ;
+## Plumeau, le bébé hibours de Gérald. Enfermé dans une cage au fond du donjon ;
 ## une fois libéré, il suit le héros en sautillant.
 
 var following := false

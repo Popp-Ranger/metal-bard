@@ -149,13 +149,13 @@ color = Color(0.9, 0.7, 0.4, 1)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.4, 0, -3.2)
 script = ExtResource("4_bwn7x")
 kind = 28
-text = "Le Crâne Hurlant"
+text = "La Chèvre Fringante"
 
 [node name="Arrivee_depuis_sous_sol" type="Node3D" parent="Rez-de-chaussee" unique_id=1616700805]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.2, 0, 5.8)
 script = ExtResource("4_bwn7x")
 kind = 28
-text = "Le Crâne Hurlant"
+text = "La Chèvre Fringante"
 
 [node name="Tonneau4" type="Node3D" parent="Rez-de-chaussee" unique_id=1112525090]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.8, 0, 9.8)

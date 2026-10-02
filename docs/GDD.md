@@ -15,7 +15,7 @@
 
 ## 1. Pitch
 
-Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Crâne Hurlant**, il accepte des quêtes, traverse les portails du vieux mage Zarathos et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
+Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Chèvre Fringante**, il accepte des quêtes, traverse les portails du vieux mage Zarathos et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
 
 ## 2. Piliers de conception
 
@@ -50,7 +50,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 ### 4.2 Lieux
 | Lieu | Rôle | Ambiance |
 |---|---|---|
-| **Le Crâne Hurlant** | Hub, taverne | Bois sombre, cheminée, lanternes, clair de lune par les fenêtres |
+| **La Chèvre Fringante** | Hub, taverne | Bois sombre, cheminée, lanternes, clair de lune par les fenêtres |
 | **Catacombes Suintantes** | Donjon 1 (implémenté) | Pierre humide, mousse, flaques de bave verte, torches |
 | Le Beffroi Muet | Donjon 2 | Cloches arrachées, vent, corbeaux squelettes |
 | La Fosse aux Tambours | Donjon 3 | Forge souterraine, rythmes tribaux inversés |
@@ -58,14 +58,14 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 
 ### 4.3 Personnages
 - **Riffald, Barde du Tonnerre** (joueur) — mélange de Dave Mustaine (crinière rousse, attitude) et Ronnie James Dio (médaillon à cornes, charisme mystique), en version dark fantasy. Manteau de cuir, épaulières à pointes. Il joue d'une **réplique de Gibson Flying V** (finition cerise, plaque blanche, deux humbuckers, cordier en V, tête en flèche) portée bas à la sangle, manche vers le haut, comme un guitariste de metal. **Posture et démarche de Réprouvé (World of Warcraft)** : dos voûté, épaules haussées, tête projetée en avant, genoux fléchis, pas traînants et boiteux, balancement du buste et petites saccades nerveuses de la tête. Pendant le solo : cambré en arrière, manche dressé, headbang.
-- **Gérald Pissenlit** — fermier éploré, propriétaire de Plumeau. Donneur de la première quête.
-- **Plumeau** — bébé ours-hibou, mascotte ; suit le héros après le sauvetage et apparaît ensuite dans la taverne.
-- **Brunhilde Chope-de-Fer** — tenancière, boutique (potions, chambre), rumeurs.
+- **Gérald Pissenlit** — petit fromager « de la Comt... du coin », pieds nus fort bien épilés, éleveur de hibours (pour le lait). Donneur de la première quête ; si on refuse, il revient à la charge jusqu'à offrir du fromage d'hibours.
+- **Plumeau** — bébé hibours adoré de Gérald, mascotte ; suit le héros après le sauvetage et apparaît ensuite dans la taverne.
+- **Grokk Chope-de-Fer** — tavernier orc de la Chèvre Fringante (réputée pour le meilleur brie de tous les comtés) : potions, chambre, rachat de reliques, rumeurs.
 - **Zarathos le Grisonnant** — vieux mage des portails, transport vers les donjons.
 - **L'Inconnue encapuchonnée** — fil rouge narratif, annonce Morne.
 - **Borin Barbe-de-Bière** — nain ivre, répliques aléatoires.
 - **Sylvaine Luth-d'Argent** — barde elfe rivale ; futur duel de solos.
-- **Gloubah, Grenouille des Marées Mortes** — boss 1, servante de Morne.
+- **Gloubah, le Roi Grenouille** — boss 1, roi de tous les squelettes des Catacombes (pourquoi ? là n'est pas la question), serviteur de Morne.
 - **Morne, la Liche du Silence** — antagoniste final.
 
 ## 5. Direction artistique
@@ -177,12 +177,13 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 ## 10. Quêtes
 
 ### 10.1 Quête 1 — « Le Petit Plumeau » (implémentée)
-1. **Taverne** : Gérald supplie le héros de retrouver Plumeau, son bébé ours-hibou enlevé par des squelettes. *[Accepter]*
-2. **Zarathos** ouvre un portail violet sur le cercle de runes.
-3. **Catacombes Suintantes** (procédurales, ~10 salles) : squelettes, capitaine, butin.
-4. **Salle du trône** : Gloubah garde Plumeau en cage. Combat de boss.
-5. Victoire : la cage s'ouvre, Plumeau suit le héros ; Zarathos ouvre un portail de retour.
-6. **Taverne** : rendre la quête → 300 XP, 100 po, Pendentif de plume (+1 CHA, +1 SAG). Plumeau reste dans la taverne. L'Inconnue révèle que Gloubah servait Morne.
+0. **Intro** : une nuit de Lune de Sang (encore un truc cliché de métalleux). Au sortir de la messe noire, le héros voit que les morts se sont ENCORE échappés du cimetière ; il fait mine de rien et file boire un thé glacé à la goyave à la Chèvre Fringante.
+1. **Taverne** : attablé devant son thé et un plateau de fromages, le héros voit arriver Gérald, le fromager du coin : son hibours Plumeau a été enlevé par des squelettes. Il promet 50 médiators et le portrait de son arrière-arrière-arrière-grand-mère. *[Accepter / Refuser]* — à chaque refus il revient (« Et maintenant, tu veux bien ? », « Et maintenant ? », « Et là ? », « Allééééé… », « Je te donnerai du fromage d'hibours ! ») ; le fromage, offert une fois, donne +20 % de PV max pendant 20 min.
+2. **Zarathos** ouvre un portail sur le cercle de runes.
+3. **Catacombes Suintantes** (faites main dans l'éditeur) : squelettes, rats, capitaines ; le **chef des squelettes** porte la clé de la salle du boss.
+4. **Salle du boss** : Gloubah, le Roi Grenouille, garde Plumeau en cage (dialogue : combat, reddition ou amitié).
+5. Victoire : la cage s'ouvre, Plumeau suit le héros ; le portail de Zarathos s'ouvre juste à côté du héros (c'est un mage, il fait des trucs de mage).
+6. **Taverne** : rendre la quête → 300 XP, 50 médiators, Portrait de l'aïeule (+1 SAG, +1 CHA). Plumeau reste dans la taverne. L'Inconnue révèle que Gloubah servait Morne.
 
 ### 10.2 Quêtes suivantes (à produire)
 | Quête | Donneur | Donjon | Boss | Mécanique nouvelle |

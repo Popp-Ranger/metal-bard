@@ -32,6 +32,8 @@ var npc_id := ""
 var display_name := ""
 var title_override := ""
 var dialogue_id := ""
+## Échelle du personnage par rapport à sa race (Gérald, petit homme : 0,8), pour placer les étiquettes.
+var size_k := 1.0
 var interact_radius := 2.3
 var seated := false
 ## Apparence façon création de personnage (RaceDB) ; vide = modèle dédié.
@@ -120,7 +122,7 @@ func _ready() -> void:
 func _top_height() -> float:
 	if skin != null:
 		return skin.height + 0.15
-	return model.height() * (0.72 if seated else 1.0) + 0.15 + float(look.get("hat", 0.0))
+	return model.height() * size_k * (0.72 if seated else 1.0) + 0.15 + float(look.get("hat", 0.0))
 
 
 func get_display_name() -> String:
@@ -233,6 +235,18 @@ func _dress() -> void:
 			Visuals.box(m._torso, Vector3(0.24, 0.28, 0.03), Vector3(0, 0.3, 0.12), denim, Vector3(5, 0, 0)) # bavette
 			for s: float in [-1.0, 1.0]:
 				Visuals.box(m._torso, Vector3(0.035, 0.32, 0.03), Vector3(0.085 * s, 0.42, 0.04), denim, Vector3(-30, 0, 0)) # bretelles
+			# Petit homme aux pieds nus (fort bien épilés) : plus de bottes, des orteils.
+			size_k = 0.8
+			m.scale *= size_k
+			var skin := Visuals.mat(Color(0.93, 0.74, 0.6), 0.7)
+			for ankle: Node3D in [m._ankle_l, m._ankle_r]:
+				var parts := ankle.get_children()
+				(parts[0] as MeshInstance3D).material_override = skin # pied
+				(parts[1] as Node3D).visible = false # semelle
+				var shaft := ankle.get_parent().get_child(2) as MeshInstance3D # tige de botte → bas du pantalon
+				shaft.material_override = denim
+				for k in 5:
+					Visuals.sphere(ankle, 0.017 - k * 0.0015, Vector3(-0.036 + k * 0.018, -0.04, 0.19), skin)
 		"zarathos":
 			# Mage : robe jusqu'aux pieds, chapeau pointu à large bord, bâton surmonté d'un orbe.
 			var robe := Visuals.mat(Color(0.2, 0.15, 0.4), 0.9)

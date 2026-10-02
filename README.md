@@ -3,7 +3,7 @@
 **Hack'n'slash isométrique dark fantasy sous Godot 4.7.**
 Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et une armée de squelettes qui chantent faux.
 
-![Taverne du Crâne Hurlant](docs/screenshots/01_taverne.png)
+![Taverne de la Chèvre Fringante](docs/screenshots/01_taverne.png)
 
 | Riffald et sa Flying V | Accordage de cordes (5 cibles) | Solo de la Foudre (sans pause, invincible) | Boss — Gloubah |
 |---|---|---|---|
@@ -15,7 +15,7 @@ Un barde metal, sa Flying V électrique, quatre sorts de foudre et de son… et 
 - **Personnages aux proportions réalistes** (jambes ≈ la moitié de la taille, tête ≈ 1/7,5), démarche réaliste (foulée et cadence selon la vitesse, genoux qui plient, pieds qui se déroulent, épaules en contre-rotation, respiration) et **mains à cinq doigts** : la main gauche change de case sur le manche, la main droite pince le médiator.
 - **Héros** : un barde que vous créez (6 races, homme ou femme ; par défaut Riffald, inspiré de Dave Mustaine et Ronnie James Dio), armé d'une réplique de **Gibson Flying V** portée bas comme un guitariste de metal, avec la posture voûtée et la démarche claudicante des **Réprouvés de World of Warcraft**.
 - **Intro** : la nuit de la **Lune de Sang**. Cinématique sur une lune sanglante dans la brume, puis un cimetière près d'une chapelle : tombes déterrées et vides, cadavres de toutes les races. Le héros lâche « Aaaaaah... une bonne vieille balade par ce temps est si agréable. Et si j'allais m'en jeter un ! » (« Et si nous allions nous en jeter un ! » en coop), puis ~20 s de marche sur une route pavée qui serpente en virages serrés entre champs et prairies, cadavres ensanglantés et chauves-souris, sous un orage sans pluie (éclairs hors de la route, flashs, tremblements d'écran). Les portes de la taverne se referment derrière lui.
-- **Taverne-hub** « Le Crâne Hurlant » sur 3 niveaux :
+- **Taverne-hub** « La Chèvre Fringante » sur 3 niveaux :
   - salle commune : clients générés aléatoirement qui reculent leur chaise, vont au comptoir et jurent (« Yeah ! », « Enfer et damnation ! », « Bordel ! », « Ça, c'est Metal ! ») ; jamais plus de 2 debout à la fois ;
   - étage avec les chambres : louez la chambre 2 à Brunhilde puis **couchez-vous sur le lit** (clic) : la vie remonte progressivement, de 1 PV à 100 % en 10 s ;
   - **sous-sol d'entraînement** : mannequins, cible amicale, **dB illimités**, et un **portail démoniaque rouge sang** dans une zone brumeuse, d'où sortent cinq tentacules.

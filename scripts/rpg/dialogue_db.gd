@@ -7,7 +7,7 @@ extends RefCounted
 ## gérée par GameState.run_dialogue_action (accept:, turn_in:, portal, buy_potion, rest...).
 
 const NPCS := {
-	"gerald": {"name": "Gérald Pissenlit", "title": "Fermier éploré", "color": Color(0.85, 0.75, 0.45)},
+	"gerald": {"name": "Gérald Pissenlit", "title": "Fromager du coin", "color": Color(0.85, 0.75, 0.45)},
 	"brunhilde": {"name": "Grokk Chope-de-Fer", "title": "Tavernier orc", "color": Color(0.95, 0.55, 0.35)},
 	"zarathos": {"name": "Zarathos le Grisonnant", "title": "Mage des portails", "color": Color(0.7, 0.6, 1.0)},
 	"inconnue": {"name": "L'Inconnue encapuchonnée", "title": "???", "color": Color(0.75, 0.3, 0.35)},
@@ -70,27 +70,49 @@ static func get_dialogue(id: String) -> Dictionary:
 	return {"lines": [["???", "..."]], "choices": []}
 
 
+## Narration (apartés du conteur), en italique dans la fenêtre de dialogue.
+const NARRATOR := "Narrateur"
+
+## Relances de Gérald quand on refuse sa quête : il revient sans cesse, de plus en plus insistant, jusqu'au
+## fromage d'hibours (dernière relance, qui tourne ensuite en boucle).
+const GERALD_PLEAS := [
+	"Et maintenant, tu veux bien ?",
+	"Et maintenant ?",
+	"Et là ?",
+	"Allééééééééééé...",
+	"Je te donnerai du fromage d'hibours !",
+]
+
+
 static func _gerald() -> Dictionary:
 	var g := npc_name("gerald")
 	match GameState.quest_state("plumeau"):
 		QuestDB.State.AVAILABLE:
+			var refusals := int(GameState.flags.get("gerald_refus", 0))
+			if refusals > 0:
+				return _gerald_plea(g, refusals)
 			return {
 				"lines": [
-					[g, "Par les Neuf Enfers... Vous êtes %s ? %s dont la guitare crache la foudre ?" % [GameState.g("le barde", "la barde"), GameState.g("Celui", "Celle")]],
-					[g, "C'est Plumeau, mon petit ours-hibou. Une bande de squelettes l'a enlevé cette nuit, en plein poulailler !"],
-					[g, "Ils claquaient des dents en rythme et chantaient faux. Je les ai vus filer vers les Catacombes Suintantes."],
-					[hero(), "Des squelettes qui chantent faux ? Ça, c'est une offense personnelle."],
-					[g, "Je n'ai que 100 médiators et le pendentif de sa mère... mais ramenez-le-moi, je vous en supplie !"],
+					[NARRATOR, "Un petit homme aux pieds nus (fort bien épilés) trottine jusqu'à votre table."],
+					[NARRATOR, "Ce n'est autre que Gérald Pissenlit, le fromager de la Comt... du coin. Les droits d'auteur ne sont pas dans notre budget."],
+					[g, "Par ma meule ! Vous êtes %s ? %s dont la guitare crache la foudre ?" % [GameState.g("le barde", "la barde"), GameState.g("Celui", "Celle")]],
+					[g, "C'est Plumeau, mon petit hibours adoré. Des squelettes l'ont enlevé cette nuit, en pleine traite !"],
+					[g, "Ils claquaient des dents en rythme et chantaient faux. Ils ont filé vers les Catacombes Suintantes."],
+					[g, "Vous seul pouvez le sauver !"],
+					[hero(), "Moi seul ?"],
+					[g, "Bon... vous et les 3471 autres héros à qui je l'ai demandé ce soir. Mais j'ai toute une ferme d'hibours à traire, je ne peux pas y aller moi-même !"],
+					[g, "Alors, vous m'aidez ? Je vous donnerai 50 médiators... et un objet incroyable, dans ma famille depuis très, très longtemps :"],
+					[g, "le portrait de mon arrière-arrière-arrière-grand-mère."],
 				],
 				"choices": [
 					["« Aucun os ne résiste à un bon riff. J'y vais. »", "accept:plumeau"],
-					["« Laisse-moi finir ma bière d'abord. »", "close"],
+					["« Non. Je reste ici avec mon thé glacé et mon brie. »", "refuse:plumeau"],
 				],
 			}
 		QuestDB.State.ACTIVE:
 			return {
 				"lines": [
-					[g, "Zarathos, le vieux mage près du cercle de runes, peut vous ouvrir un portail vers les catacombes."],
+					[g, "Zarathos, le vieux mage près du cercle de runes, vous ouvrira un portail vers les catacombes."],
 					[g, "Faites vite... Plumeau a peur du noir. Et des squelettes. Et des grenouilles."],
 				],
 				"choices": [["« J'y cours. »", "close"]],
@@ -100,7 +122,9 @@ static func _gerald() -> Dictionary:
 				"lines": [
 					[g, "PLUMEAU ! Mon tout petit ! Tu es sain et sauf !"],
 					["Plumeau", "Hou-grrrr ! Hou-hou !"],
-					[g, "Une grenouille géante ? Couronnée ?! Barde, vous êtes %s. Voici tout ce que je possède." % GameState.g("un héros", "une héroïne")],
+					[g, "Un roi grenouille ?! Qui commande à des squelettes ?! ...Non, ne m'expliquez pas. Vous êtes %s." % GameState.g("un héros", "une héroïne")],
+					[g, "Comme promis : 50 médiators. Et... (il vous tend un vieux cadre, les mains tremblantes)"],
+					[g, "le portrait de mon arrière-arrière-arrière-grand-mère. Elle veillera sur vous. Elle veille sur tout le monde. Tout le temps."],
 				],
 				"choices": [["Rendre Plumeau à Gérald", "turn_in:plumeau"]],
 			}
@@ -109,10 +133,39 @@ static func _gerald() -> Dictionary:
 				"lines": [
 					[g, "Plumeau ne vous quitte plus des yeux. Je crois qu'il veut apprendre la guitare."],
 					["Plumeau", "Hou-hou ! (il mime un headbang)"],
+					[g, "Revenez quand vous voulez : il y aura toujours du brie pour vous."],
 				],
 				"choices": [["« Rock on, petit. »", "close"]],
 			}
 	return {"lines": [[g, "Bonjour, étranger."]], "choices": []}
+
+
+## Gérald revient à la charge après un refus (`refusals` = nombre de refus, 5 au plus).
+static func _gerald_plea(g: String, refusals: int) -> Dictionary:
+	var k := clampi(refusals, 1, GERALD_PLEAS.size()) - 1
+	var accept := ["« Bon, d'accord. J'y vais. »", "accept:plumeau"]
+	if k < GERALD_PLEAS.size() - 1:
+		return {
+			"lines": [[g, str(GERALD_PLEAS[k])]],
+			"choices": [accept, ["« Non. »", "refuse:plumeau"]],
+		}
+	# Dernière relance : le fromage d'hibours, offert la première fois, puis la même proposition en boucle.
+	if not bool(GameState.flags.get("cheese_given", false)):
+		return {
+			"lines": [
+				[g, str(GERALD_PLEAS[k])],
+				[NARRATOR, "Il sort de sa poche une part de fromage d'hibours, tiède et légèrement poilue. Ça sent... la ferme."],
+				[g, "Tenez, goûtez. C'est offert, même si vous dites non. Je suis comme ça, moi."],
+			],
+			"choices": [
+				["« Pour du fromage d'hibours, j'y vais ! » (le manger)", "cheese+accept:plumeau"],
+				["« Toujours non. » (le manger quand même)", "cheese+refuse:plumeau"],
+			],
+		}
+	return {
+		"lines": [[g, str(GERALD_PLEAS[k])], [NARRATOR, "(Il n'en a plus, mais il y croit.)"]],
+		"choices": [accept, ["« Non. »", "refuse:plumeau"]],
+	}
 
 
 static func _zarathos() -> Dictionary:
@@ -127,8 +180,11 @@ static func _zarathos() -> Dictionary:
 		return {
 			"lines": [
 				[z, "Hmm ? Les Catacombes Suintantes ? Un endroit humide, mal éclairé, rempli de squelettes. Charmant."],
-				[z, "On dit qu'une grenouille gigantesque y règne. Gloubah, reine des Marées Mortes. Elle adore collectionner les bestioles."],
-				[z, "Je peux t'y envoyer. Et quand tu auras terminé, je sentirai ta foudre et je t'ouvrirai un chemin de retour."],
+				[z, "Elles ont un roi : Gloubah, le Roi Grenouille. Roi de tous les squelettes du donjon."],
+				[hero(), "Une grenouille qui règne sur des squelettes ? Pourquoi ?"],
+				[z, "Là n'est pas la question. Enfin si, c'est même toute la question. Mais évitons-la."],
+				[z, "Sa salle est scellée. Le chef des squelettes en garde la clé : trouve-le, prends-la, et va chercher ta bestiole."],
+				[z, "Quand tu l'auras libérée, je t'ouvrirai un portail de retour juste à côté de toi. Comment ? Je suis mage. Je fais des trucs de mage."],
 			],
 			"choices": [
 				["« Ouvre le portail, vieil homme. »", "portal"],
@@ -156,7 +212,7 @@ static func _brunhilde() -> Dictionary:
 	var b := npc_name("brunhilde")
 	return {
 		"lines": [
-			[b, "Bienvenue au Crâne Hurlant, barde. Ici on paie d'avance et on ne joue pas de ballades elfiques."],
+			[b, "Bienvenue à la Chèvre Fringante, barde. Ici on paie d'avance et on ne joue pas de ballades elfiques."],
 			[b, "Potion de soin à %d médiators, chambre à %d médiators la nuit. Tu as %d médiators." % [
 				ItemDB.potion_price(), ItemDB.rest_price(), GameState.gold]],
 		],
@@ -212,10 +268,13 @@ static func _intro_hero() -> Dictionary:
 	var several := Net.player_count() > 1
 	return {
 		"lines": [
-			[hero(), "Aaaaaah... une bonne vieille balade par ce temps est si agréable."],
-			[hero(), "Et si nous allions nous en jeter un !" if several else "Et si j'allais m'en jeter un !"],
+			[hero(), "Ah. Les morts se sont encore fait la malle."],
+			[hero(), "...On n'a rien vu." if several else "...J'ai rien vu."],
+			[hero(), "Bon. Une bière à 12°, comme les gros durs ?"],
+			[hero(), "Non... ce soir, ce sera un thé glacé à la goyave."],
+			[NARRATOR, "Direction la Chèvre Fringante, la taverne réputée pour le meilleur brie de tous les comtés."],
 		],
-		"choices": [["(Prendre la route du Crâne Hurlant)", "close"]],
+		"choices": [["(Faire genre de n'avoir rien vu et filer à la Chèvre Fringante)", "close"]],
 	}
 
 
@@ -338,6 +397,8 @@ static func _gloubah() -> Dictionary:
 	return {
 		"lines": [
 			[g, "CROOOÂÂÂ ! Qui ose patauger dans MON antre ?"],
+			[g, "Moi, Gloubah, Roi Grenouille ! Roi de tous les squelettes de ce donjon !"],
+			[NARRATOR, "Pourquoi une grenouille règne-t-elle sur des squelettes ? Là n'est pas la question. Enfin si. Mais on l'évite."],
 			[g, "Un%s barde ? Ici ? Avec un instrument aussi... pointu ?" % GameState.g("", "e")],
 		],
 		"choices": [
@@ -356,7 +417,7 @@ static func _gloubah_antre() -> Dictionary:
 			[g, "Mais toi, petit%s barde, que viens-tu faire dans ma mare ?" % GameState.g("", "e")],
 		],
 		"choices": [
-			["« Je viens libérer l'ours-hibou que tu as volé. »", "story:gloubah_fight"],
+			["« Je viens libérer le hibours que tu as volé. »", "story:gloubah_fight"],
 			["« Mais... n'est-il pas trop mignon pour qu'on lui fasse du mal ? »", "goto:gloubah_mignon"],
 		],
 	}

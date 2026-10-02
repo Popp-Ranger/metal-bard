@@ -116,14 +116,18 @@ func _show_line() -> void:
 	_voice_pitch = _pitch_for(speaker)
 	_last_blip = -1
 	var color := Color(1.0, 0.8, 0.45)
+	var narrator := speaker == DialogueDB.NARRATOR
 	if speaker == DialogueDB.hero():
 		color = Color(0.55, 0.85, 1.0)
+	elif narrator:
+		color = UiStyle.DIM
 	_speaker.add_theme_color_override("font_color", color)
 	# Celui qui parle est éclairé, l'autre un peu estompé.
 	var hero_speaks := speaker == DialogueDB.hero()
 	(_hero_face["frame"] as Control).modulate = Color.WHITE if hero_speaks else Color(0.6, 0.6, 0.6)
-	(_npc_face["frame"] as Control).modulate = Color(0.6, 0.6, 0.6) if hero_speaks else Color.WHITE
-	_text.text = str(line[1])
+	(_npc_face["frame"] as Control).modulate = Color(0.6, 0.6, 0.6) if hero_speaks or narrator else Color.WHITE
+	# Narration (apartés du conteur) : en italique.
+	_text.text = ("[i]%s[/i]" % str(line[1])) if narrator else str(line[1])
 	_text.visible_ratio = 0.0
 	_typing = true
 	var duration := clampf(_text.text.length() * 0.018, 0.2, 2.0)
@@ -235,6 +239,8 @@ func _process(_delta: float) -> void:
 			_aim(p) # les personnages bougent (animation, PNJ qui marche, tête qui se tourne)
 	if not _open or not _typing:
 		return
+	if _speaker.text == DialogueDB.NARRATOR:
+		return # le narrateur ne babille pas
 	var shown := int(_text.visible_ratio * _text.get_total_character_count())
 	var syllable := floori(shown / 3.0)
 	if syllable != _last_blip and shown < _text.get_total_character_count():

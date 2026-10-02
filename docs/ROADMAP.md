@@ -144,7 +144,7 @@
 - [x] Vérification du donjon et test direct (F6) ; les donjons suivants restent générés
 
 ## ✅ v0.1.23 — Éditeur de taverne
-- [x] Le Crâne Hurlant fait main dans l'éditeur : sols et murs en cases de 1 m (murs, fenêtres éclairées par la lune, murets, cloisons), mobilier et points du jeu à glisser-déposer
+- [x] La Chèvre Fringante fait main dans l'éditeur : sols et murs en cases de 1 m (murs, fenêtres éclairées par la lune, murets, cloisons), mobilier et points du jeu à glisser-déposer
 - [x] Tables (places des clients), comptoir, escaliers reliés à leur arrivée, lit loué, salle d'entraînement, PNJ ; vérification et test direct (F6)
 
 ## ✅ v0.1.24 — PNJ et squelettes en 3D
@@ -203,6 +203,12 @@
 ## ✅ v0.1.36 — Inventaire et échoppe de Grokk
 - [x] Inventaire sur la touche B : reliques portées, descriptions, total des bonus
 - [x] Grokk rachète les reliques (8 à 60 médiators selon la rareté) ; rachat possible des 10 dernières vendues
+
+## ✅ v0.1.37 — Nouvelle histoire : la Chèvre Fringante et Gérald le fromager
+- [x] Intro réécrite : Lune de Sang (cliché de métalleux), messe noire, les morts ENCORE échappés, thé glacé à la goyave
+- [x] La taverne devient la Chèvre Fringante ; le héros s'y attable devant son thé et un plateau de fromages
+- [x] Gérald, petit fromager aux pieds nus épilés, vient demander de l'aide ; refus possible, il revient à la charge jusqu'au fromage d'hibours (+20 % PV, 20 min)
+- [x] Récompense : 50 médiators et le portrait de l'arrière-arrière-arrière-grand-mère ; Gloubah devient le Roi Grenouille ; portail de retour à côté du héros
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau

@@ -9,10 +9,10 @@ const QUESTS := {
 	"plumeau": {
 		"title": "Le Petit Plumeau",
 		"giver": "gerald",
-		"summary": "Des squelettes ont enlevé Plumeau, le bébé ours-hibou de Gérald.",
-		"objective": "Traverser le portail de Zarathos et retrouver Plumeau dans les Catacombes Suintantes.",
+		"summary": "Des squelettes ont enlevé Plumeau, le bébé hibours adoré de Gérald le fromager.",
+		"objective": "Traverser le portail de Zarathos, prendre la clé au chef des squelettes et délivrer Plumeau de Gloubah, le Roi Grenouille.",
 		"objective_talk_mage": "Demander à Zarathos, le vieux mage, d'ouvrir un portail.",
-		"objective_done": "Retourner voir Gérald à la taverne.",
+		"objective_done": "Rendre Plumeau à Gérald, à la Chèvre Fringante.",
 		"requires": "",
 		"dungeon": {
 			"name": "Catacombes Suintantes",
@@ -22,7 +22,7 @@ const QUESTS := {
 			"enemy_level": 1,
 			"boss": "gloubah",
 		},
-		"reward": {"xp": 300, "gold": 100, "item": "pendentif_plume"},
+		"reward": {"xp": 300, "gold": 50, "item": "portrait_aieule"},
 	},
 }
 
