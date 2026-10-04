@@ -454,10 +454,11 @@ func _die() -> void:
 	_death_anim()
 
 
-## Butin tiré à la mort, gardé sur le corps : médiators, potion, équipement (ramassé en fouillant le corps).
+## Butin tiré à la mort : médiators ramassés automatiquement, potion et équipement gardés sur le corps.
 func _drop_loot() -> void:
 	if randf() < ItemDB.money_drop_chance():
-		loot.append({"kind": "gold", "value": randi_range(gold_range.x, gold_range.y)})
+		# Les médiators se ramassent tout seuls (ils filent vers le héros) ; le reste attend sur le corps.
+		Pickup.spawn(get_parent(), global_position, "gold", randi_range(gold_range.x, gold_range.y))
 	if randf() < ItemDB.potion_drop_chance():
 		loot.append({"kind": "potion"})
 	if randf() < Balance.DROP_ITEM_CHANCE:
@@ -525,7 +526,7 @@ func _make_lootable() -> void:
 
 func has_equipment_loot() -> bool:
 	for l in loot:
-		if str(l["kind"]) == "item":
+		if str(l["kind"]) in ["item", "quest"]:
 			return true
 	return false
 
@@ -538,6 +539,8 @@ func loot_prompt() -> String:
 				parts.append("%d médiators" % int(l["value"]))
 			"potion":
 				parts.append("potion de soin")
+			"quest":
+				parts.append(str(ItemDB.quest_item(str(l["item"])).get("nom", l["item"])))
 			_:
 				parts.append(str(ItemDB.get_item(str(l["item"])).get("name", l["item"])))
 	return "Fouiller le corps : %s" % ", ".join(parts)

@@ -486,16 +486,7 @@ func _refresh_quest(_id: String) -> void:
 		return
 	var q := QuestDB.get_quest(qid)
 	_quest_title.text = str(q.get("title", qid))
-	match GameState.quest_state(qid):
-		QuestDB.State.ACTIVE:
-			if GameState.flags.get("portal_open", false) or GameState.flags.get("in_dungeon", false):
-				_quest_text.text = str(q.get("objective", ""))
-			else:
-				_quest_text.text = str(q.get("objective_talk_mage", q.get("objective", "")))
-		QuestDB.State.OBJECTIVE_DONE:
-			_quest_text.text = str(q.get("objective_done", ""))
-		_:
-			_quest_text.text = ""
+	_quest_text.text = QuestDB.objective_text(qid)
 
 
 func _on_boss_health(boss_name: String, hp: int, max_hp: int) -> void:

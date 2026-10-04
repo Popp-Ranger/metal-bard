@@ -1,23 +1,28 @@
 class_name Pickup
 extends Node3D
-## Butin au sol (coffres) : médiators, potion ou équipement. Attiré par le héros quand il s'approche. Le butin
-## des ennemis, lui, reste sur leur corps (Enemy.loot).
+## Butin au sol : médiators, potion ou équipement (coffres). Attiré par le héros quand il s'approche ; les médiators
+## se ramassent tout seuls : après un petit saut, ils filent vers le héros où qu'il soit. Le reste du butin des
+## ennemis attend sur leur corps (Enemy.loot).
 
-var kind := "gold" # "gold", "potion", "item"
+var kind := "gold" # "gold", "potion", "item", "quest"
+## Ramassage automatique (médiators) : délai du petit saut avant de filer vers le héros.
+const AUTO_DELAY := 0.35
 var value := 0
 var item_id := ""
 var _hero: Node3D
 var _t := randf() * 10.0
 var _visual: Node3D
+var _age := 0.0
 
 
-static func spawn(parent: Node, pos: Vector3, loot_kind: String, loot_value: int = 0, loot_item: String = "") -> void:
+static func spawn(parent: Node, pos: Vector3, loot_kind: String, loot_value: int = 0, loot_item: String = "") -> Pickup:
 	var p := Pickup.new()
 	p.kind = loot_kind
 	p.value = loot_value
 	p.item_id = loot_item
 	p.position = Vector3(pos.x + randf_range(-0.6, 0.6), 0.0, pos.z + randf_range(-0.6, 0.6))
 	parent.add_child(p)
+	return p
 
 
 func _ready() -> void:
@@ -33,6 +38,15 @@ func _ready() -> void:
 		"potion":
 			Visuals.sphere(_visual, 0.16, Vector3(0, 0.35, 0), Visuals.glow_mat(Color(0.9, 0.1, 0.15), 1.5))
 			Visuals.cylinder(_visual, 0.05, 0.05, 0.15, Vector3(0, 0.55, 0), Visuals.mat(Color(0.5, 0.35, 0.2)))
+		"quest":
+			# Objet de quête (partition maudite) : parchemin roulé qui crépite d'éclairs bleutés.
+			Visuals.cylinder(_visual, 0.08, 0.08, 0.5, Vector3(0, 0.45, 0), Visuals.glow_mat(Color(0.95, 0.88, 0.7), 1.2), Vector3(0, 0, 90), 10)
+			var l := OmniLight3D.new()
+			l.light_color = Color(0.6, 0.7, 1.0)
+			l.omni_range = 3.0
+			l.light_energy = 2.0
+			l.position.y = 0.7
+			add_child(l)
 		_:
 			var c := ItemDB.color_of(item_id)
 			Visuals.box(_visual, Vector3(0.3, 0.3, 0.3), Vector3(0, 0.4, 0), Visuals.glow_mat(c, 2.5), Vector3(45, 0, 45))
@@ -54,6 +68,17 @@ func _process(delta: float) -> void:
 	var to := _hero.global_position - global_position
 	to.y = 0.0
 	var d := to.length()
+	if kind == "gold":
+		# Médiators : ramassés automatiquement, de plus en plus vite.
+		if _age < AUTO_DELAY:
+			_age += delta
+			return
+		_age += delta
+		if d < 0.5:
+			_collect()
+		else:
+			global_position += to.normalized() * minf(d, delta * (8.0 + 10.0 * _age))
+		return
 	if d < 0.7:
 		_collect()
 	elif d < 3.0:
@@ -77,6 +102,9 @@ static func grant(parent: Node, at: Vector3, loot_kind: String, loot_value: int 
 			GameState.add_potion()
 			Sfx.play("coin", -6.0, 0.2)
 			Events.notify("Potion de soin ramassée (%d)" % GameState.potions, Events.COLOR_GOOD)
+		"quest":
+			Sfx.play("levelup", -4.0)
+			GameState.add_quest_item(loot_item)
 		_:
 			Sfx.play("levelup", -8.0)
 			GameState.add_item(loot_item)

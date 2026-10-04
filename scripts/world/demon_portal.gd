@@ -1,14 +1,17 @@
 class_name DemonPortal
 extends Node3D
-## Portail démoniaque rouge sang (sous-sol de la taverne) : anneau de fer hérissé de pointes,
-## tourbillon écarlate, brume sombre au ras du sol et cinq tentacules qui en sortent en
-## ondulant. Il ne mène nulle part... pour l'instant.
+## Portail démoniaque rouge sang : anneau de fer hérissé de pointes, tourbillon écarlate, brume sombre au ras du
+## sol et cinq tentacules qui en sortent en ondulant. Celui du sous-sol de la taverne est le portail à XP : il plonge
+## dans les Cryptes de la Cathédrale, régénérées à chaque passage ; le même portail, au fond des Cryptes, ramène ici.
 
 const TENTACLES := 5
 const SEGMENTS := 9
 const SEG_LEN := 0.3
 
 var interact_radius := 3.0
+## Texte d'invite et action quand on le traverse (sinon il ne mène nulle part).
+var prompt := ""
+var on_enter: Callable
 var _tentacles: Array[Array] = [] # chaque tentacule = liste de pivots
 var _phases: Array[float] = []
 var _t := 0.0
@@ -156,10 +159,15 @@ func _process(delta: float) -> void:
 
 
 func get_prompt() -> String:
-	return "Observer le portail démoniaque"
+	return prompt if not prompt.is_empty() else "Observer le portail démoniaque"
 
 
 func interact(_by: Node3D) -> void:
+	if on_enter.is_valid():
+		Sfx.play("portal", -2.0)
+		Events.camera_shake.emit(0.2, 0.5)
+		on_enter.call()
+		return
 	Sfx.play("croak", -10.0, 0.0)
 	Events.camera_shake.emit(0.15, 0.4)
 	Events.notify("Une chaleur infernale s'échappe du portail. Les tentacules frémissent à votre approche... Il ne s'ouvrira pas aujourd'hui.", Color(1.0, 0.35, 0.3))

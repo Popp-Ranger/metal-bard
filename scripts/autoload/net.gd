@@ -418,7 +418,7 @@ func _register(profile: Dictionary) -> void:
 	_roster.rpc(players)
 	roster_changed.emit()
 	var scene := get_tree().current_scene.scene_file_path if get_tree().current_scene != null else Router.TAVERN
-	_goto.rpc_id(id, scene, GameState.dungeon_seed, GameState.active_quest)
+	_goto.rpc_id(id, scene, _seed_for(scene), GameState.active_quest)
 
 
 @rpc("authority", "reliable")
@@ -434,12 +434,20 @@ func on_scene_change(path: String) -> void:
 	if path == Router.MAIN_MENU or path == Router.CHARACTER_CREATION:
 		return
 	if is_host():
-		_goto.rpc(path, GameState.dungeon_seed, GameState.active_quest)
+		_goto.rpc(path, _seed_for(path), GameState.active_quest)
+
+
+## Graine du donjon de la scène : celle des Cryptes (tirée à chaque passage) ou celle du donjon de quête.
+func _seed_for(path: String) -> int:
+	return GameState.crypt_seed if path == Router.CRYPT else GameState.dungeon_seed
 
 
 @rpc("authority", "reliable")
 func _goto(path: String, seed_value: int, quest: String) -> void:
-	GameState.dungeon_seed = seed_value
+	if path == Router.CRYPT:
+		GameState.crypt_seed = seed_value
+	else:
+		GameState.dungeon_seed = seed_value
 	if path == Router.DUNGEON:
 		GameState.flags["in_dungeon"] = true
 		if not quest.is_empty() and GameState.active_quest.is_empty():

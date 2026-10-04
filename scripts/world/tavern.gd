@@ -29,6 +29,10 @@ var _plea_timer := 0.0
 var _gerald_busy := false
 const PLEA_DELAYS := [3.0, 2.0, 1.0]
 var _rune_circle := Vector3.ZERO
+## Portail démoniaque du sous-sol : le portail à XP vers les Cryptes de la Cathédrale.
+var demon_portal: DemonPortal
+var _inconnue: Npc
+var _inconnue_called := false
 var _blue_portal_pos := Vector3.ZERO
 var _training_zones: Array[TavernMarker] = []
 var _cut_stone: ShaderMaterial
@@ -63,6 +67,10 @@ func _ready() -> void:
 			var lost: int = GameState.flags.get("last_death_gold_lost", 0)
 			GameState.flags.erase("last_death_gold_lost")
 			Events.notify("Zarathos vous a ramené inconscient à la taverne... (-%d médiators)" % lost, Events.COLOR_BAD)
+	if GameState.flags.get("from_crypt", false) and demon_portal != null:
+		spawn = demon_portal.global_transform * Vector3(0.0, 0.0, 2.6) # sortie du portail démoniaque
+		spawn.y = 0.0
+	GameState.flags.erase("from_crypt")
 	spawn_hero(spawn)
 	if GameState.flags.get("intro_arrival", false):
 		GameState.flags.erase("intro_arrival")
@@ -70,6 +78,7 @@ func _ready() -> void:
 	if GameState.flags.get("portal_open", false) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE:
 		_open_portal()
 	Events.portal_opened.connect(_open_portal)
+	Events.story_action.connect(_on_story_action)
 	if not GameState.town_portal.is_empty():
 		_open_blue_portal()
 	Sfx.play_music("res://audio/music/tavern_theme.mp3", -8.0) # musique « metal-band-tavern »
@@ -79,6 +88,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_pleas(delta)
+	_update_inconnue_call(delta)
 	if hero != null:
 		if _cut_stone != null:
 			_cut_stone.set_shader_parameter("hero_pos", hero.global_position)
@@ -158,9 +168,11 @@ func _load_map() -> void:
 				f.transform = m.global_transform
 				add_child(f)
 			TavernMarker.Kind.PORTAIL_DEMONIAQUE:
-				var demon := DemonPortal.new()
-				demon.transform = m.global_transform
-				add_child(demon)
+				demon_portal = DemonPortal.new()
+				demon_portal.transform = m.global_transform
+				demon_portal.prompt = "Plonger dans les Cryptes de la Cathédrale (portail à XP)"
+				demon_portal.on_enter = enter_crypt
+				add_child(demon_portal)
 	_bar_taken.resize(_bar_spots.size())
 	_bar_taken.fill(false)
 
@@ -306,6 +318,8 @@ func _spawn_npcs() -> void:
 			"zarathos":
 				n.wander_radius = 2.5 # quelques pas près de son cercle de runes
 				n.walk_speed = 0.9
+			"inconnue":
+				_inconnue = n
 			"gerald":
 				_gerald = n
 				_gerald_home = m.global_position
@@ -374,6 +388,56 @@ func _open_portal() -> void:
 	_portal.on_enter = _on_enter_dungeon
 	add_child(_portal)
 	Events.camera_shake.emit(0.15, 0.5)
+
+
+## Portail à XP : de nouvelles Cryptes, tirées au hasard (même graine pour toute la coop).
+func enter_crypt() -> void:
+	GameState.crypt_seed = randi_range(1, 999999)
+	GameState.save_game()
+	Router.go_to(Router.CRYPT)
+
+
+# =====================================================================================
+# Chapitre 2 : l'Inconnue appelle le héros, raconte la légende de Back Jlack et l'envoie dans l'autre univers
+# =====================================================================================
+
+var _call_timer := 2.0
+
+
+## Après Plumeau : la silhouette mystérieuse appelle le héros (toutes les 25 s) tant qu'il n'est pas venu la voir.
+func _update_inconnue_call(delta: float) -> void:
+	if _inconnue == null or hero == null or GameState.quest_state("pick_destin") != QuestDB.State.AVAILABLE:
+		return
+	if DialogueBox.active or InventoryWindow.active:
+		return
+	_call_timer -= delta
+	if _call_timer > 0.0:
+		return
+	_call_timer = 25.0
+	_inconnue.say("Psst... Barde ! Viens par ici.", 4.0)
+	if not _inconnue_called:
+		_inconnue_called = true
+		Events.notify("La silhouette mystérieuse, au fond de la salle, vous appelle. Allez la voir...", DialogueDB.npc_color("inconnue"))
+
+
+func _on_story_action(action: String) -> void:
+	match action:
+		"legende":
+			# La légende de Back Jlack, puis l'autre univers : le pied des marches interminables.
+			await Events.dialogue_closed
+			var cine := LegendCinematic.play(self)
+			await cine.finished
+			go_to_temple("marches")
+		"temple":
+			go_to_temple("parvis" if GameState.flags.get("temple_trial_ok", false) else "marches")
+
+
+## Vers le Temple du Dragon : `spawn` = « marches » (en bas) ou « parvis » (en haut, devant la porte).
+func go_to_temple(spawn: String) -> void:
+	GameState.flags["temple_spawn"] = spawn
+	GameState.location = {"scene": Router.TEMPLE}
+	GameState.save_game()
+	Router.go_to(Router.TEMPLE)
 
 
 func _on_enter_dungeon() -> void:

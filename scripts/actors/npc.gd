@@ -16,6 +16,9 @@ const COSTUMES := {
 		"outfit": {"plain": true, "top": Color(0.45, 0.35, 0.2), "legs": Color(0.3, 0.35, 0.55), "coat": Color(0.3, 0.25, 0.18)}},
 	"zarathos": {"sex": "m", "race": "humain", "beard": 1, "hair": 2, "hair_color": 3, "hat": 0.45,
 		"outfit": {"plain": true, "top": Color(0.2, 0.15, 0.4), "legs": Color(0.2, 0.15, 0.4), "coat": Color(0.2, 0.15, 0.4)}},
+	# Back Jlack : longs cheveux châtains, barbe courte, t-shirt noir, jean, guitare acoustique dans le dos.
+	"backjlack": {"sex": "m", "race": "humain", "beard": 0, "hair": 2, "hair_color": 6,
+		"outfit": {"plain": true, "top": Color(0.05, 0.05, 0.06), "legs": Color(0.16, 0.2, 0.32)}},
 	"inconnue": {"sex": "f", "race": "humain", "hair": -1,
 		"outfit": {"plain": true, "top": Color(0.08, 0.06, 0.08), "legs": Color(0.08, 0.06, 0.08), "coat": Color(0.08, 0.06, 0.08)}},
 }
@@ -105,9 +108,11 @@ func _ready() -> void:
 		title = str(DialogueDB.NPCS.get(npc_id, {}).get("title", ""))
 	if not title.is_empty():
 		Visuals.label(_labels, title, Vector3(0, top + 0.05, 0), Color(0.7, 0.65, 0.6), 24)
-	# Donneur de quête : « ! » vert (quête disponible), « ? » vert (quête à rendre).
+	# Donneur de quête : « ! » vert (quête disponible) ; « ? » vert chez celui à qui on la rend (« turn_in_to »,
+	# sinon le donneur).
 	for qid: String in QuestDB.QUESTS:
-		if str(QuestDB.get_quest(qid).get("giver", "")) == npc_id:
+		var q := QuestDB.get_quest(qid)
+		if str(q.get("giver", "")) == npc_id or str(q.get("turn_in_to", "")) == npc_id:
 			_quest_ids.append(qid)
 	if not _quest_ids.is_empty():
 		_marker = Visuals.label(_labels, "!", Vector3(0, top + 0.75, 0), Color(0.3, 1.0, 0.35), 120)
@@ -134,13 +139,16 @@ func _refresh_marker() -> void:
 		return
 	_marker.visible = false
 	for qid in _quest_ids:
+		var q := QuestDB.get_quest(qid)
 		match GameState.quest_state(qid):
 			QuestDB.State.AVAILABLE:
-				_marker.text = "!"
-				_marker.visible = true
+				if str(q.get("giver", "")) == npc_id:
+					_marker.text = "!"
+					_marker.visible = true
 			QuestDB.State.OBJECTIVE_DONE:
-				_marker.text = "?"
-				_marker.visible = true
+				if str(q.get("turn_in_to", q.get("giver", ""))) == npc_id:
+					_marker.text = "?"
+					_marker.visible = true
 
 
 func get_prompt() -> String:
@@ -226,6 +234,19 @@ func _process(delta: float) -> void:
 func _dress() -> void:
 	var m := model
 	match npc_id:
+		"backjlack":
+			# Guitare acoustique dans le dos (caisse en bois clair, rosace, manche), sangle en travers du torse.
+			var spruce := Visuals.mat(Color(0.75, 0.55, 0.3), 0.5)
+			var dark_wood := Visuals.mat(Color(0.25, 0.13, 0.06), 0.5)
+			var guitar := Node3D.new()
+			guitar.position = Vector3(0.0, 0.3, -0.2)
+			guitar.rotation_degrees = Vector3(0, 0, 35)
+			m._torso.add_child(guitar)
+			Visuals.sphere(guitar, 0.22, Vector3(0, -0.12, 0), spruce, Vector3(1.0, 1.2, 0.35))
+			Visuals.sphere(guitar, 0.17, Vector3(0, 0.14, 0), spruce, Vector3(1.0, 1.1, 0.35))
+			Visuals.cylinder(guitar, 0.06, 0.06, 0.01, Vector3(0, 0.0, -0.08), dark_wood, Vector3(90, 0, 0), 14)
+			Visuals.box(guitar, Vector3(0.06, 0.5, 0.04), Vector3(0, 0.5, 0), dark_wood)
+			Visuals.box(m._torso, Vector3(0.05, 0.62, 0.02), Vector3(0, 0.36, 0.13), Visuals.mat(Color(0.35, 0.1, 0.08)), Vector3(0, 0, 38))
 		"gerald":
 			# Fermier : chapeau de paille, salopette en toile bleue.
 			var straw := Visuals.mat(Color(0.8, 0.7, 0.35))

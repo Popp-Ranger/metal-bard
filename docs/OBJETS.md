@@ -8,7 +8,7 @@ Tous les objets sont définis dans **[`data/items.json`](../data/items.json)**. 
 
 | Objet | Détail | Réglages dans le fichier |
 |---|---|---|
-| **Médiator** | La monnaie du royaume. | `chance_butin` (45 %), `perte_a_la_mort` (25 %), `depart` (30) |
+| **Médiator** | La monnaie du royaume. Ramassés automatiquement : ils jaillissent du corps des ennemis et filent vers le héros. | `chance_butin` (45 %), `perte_a_la_mort` (25 %), `depart` (30) |
 
 ### Consommables
 
@@ -22,6 +22,7 @@ Tous les objets sont définis dans **[`data/items.json`](../data/items.json)**. 
 | Objet | Rôle |
 |---|---|
 | **Clé rouillée de la cage** | Lâchée par Gloubah (ou offerte si elle devient amicale). Ouvre la cage de Plumeau. |
+| **Partition maudite du Riff Ultime** | Sur le corps de l'ange déchu (Temple du Dragon). Visible dans l'inventaire (B), section « Objets de quête » ; bouton « Jouer » : sans le Pick du Destin, la foudre frappe (30 % des PV, jamais mortel). Servira contre Mèhn-Strïm. |
 
 ### Équipement (section « reliques » du fichier)
 

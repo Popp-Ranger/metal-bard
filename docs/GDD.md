@@ -52,6 +52,8 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 |---|---|---|
 | **La Chèvre Fringante** | Hub, taverne | Bois sombre, cheminée, lanternes, clair de lune par les fenêtres |
 | **Catacombes Suintantes** | Donjon 1 (implémenté) | Pierre humide, mousse, flaques de bave verte, torches |
+| **Cryptes de la Cathédrale** | Portail à XP (sous-sol de la taverne, implémenté) | Sous-sol d'une cathédrale, basalte rougeoyant, ruisseaux de lave en fusion (ponts de pierre) ; régénérées à chaque passage |
+| **Temple du Dragon** | Chapitre 2, autre univers (implémenté) | Marches interminables sous l'orage, parvis, façade à tête de dragon ; dedans : vitraux, damier de marbre, nef à la fontaine de sang |
 | Le Beffroi Muet | Donjon 2 | Cloches arrachées, vent, corbeaux squelettes |
 | La Fosse aux Tambours | Donjon 3 | Forge souterraine, rythmes tribaux inversés |
 | L'Opéra Englouti | Donjon final | Salle de concert noyée, orgue d'os, Morne |
@@ -155,6 +157,9 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 | **Squelette** | 13 (+4/niv.) | 13 | +4, 1d6+2 | Erre au hasard ; détecte à **4 m** ; se déplace à **0,25 × la vitesse du héros** ; **1 attaque / 2,5 s** |
 | **Capitaine squelette** | 30 (+8/niv.) | 15 | +5, 1d10+3 | Casque à cornes, garde la salle voisine du boss, 150 XP |
 | **Gloubah** (boss) | 120 | 12 | +5, 2d6+3 (langue) | Voir ci-dessous |
+| **Diablotin** | 9 (+3/niv.) | 12 | +4, 1d6+1 (hachette) | Petit démon rouge cornu, ailes de chauve-souris : vole droit sur le héros (0,45 × sa vitesse), détecte à 6 m |
+| **Démon cornu** | 32 (+9/niv.) | 14 | +5, 2d6+2 (grande hache) | Colosse de 2,4 m aux cornes de bélier et sabots ; le **Gardien des Cryptes** (30 % plus grand) garde la sortie des Cryptes |
+| **L'Ange déchu** (boss) | 260 (+40/niv.) | 14 | +6, 2d8+2 (guitare) | Boss du Temple du Dragon : riff infernal (la foudre tombe sur trois cercles), phase 2 sous 50 % (trois diablotins), garde la partition maudite |
 | *Prévus* : squelette archer, banshee (hurlement qui coupe la régénération de dB), golem de silence (immunisé au son), chef d'orchestre liche | | | | |
 
 Machine à états des ennemis : **Errance → Poursuite (≤ 4 m) → Attaque (au contact) → Sonné (après un gros recul) → Mort**. Ils abandonnent la poursuite au-delà de 9 m et réagissent immédiatement s'ils sont touchés.
@@ -169,7 +174,7 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 
 ## 9. Butin et économie
 - **Le butin reste sur le corps** des ennemis vaincus : on le ramasse en **cliquant sur le corps** (ou [E] à côté). Tant qu'il reste quelque chose, le corps ne disparaît pas ; s'il porte un **équipement**, il « respire » en **jaune doré** (fondu d'une seconde). Coffres : butin au sol, attiré par le héros.
-- **Médiators** (45 % des squelettes), **potions** (12 %), **équipement** (8 %, sans doublon).
+- **Médiators** (45 % des squelettes) : ramassés **automatiquement** (ils jaillissent du corps et filent vers le héros), **potions** (12 %), **équipement** (8 %, sans doublon).
 - **Équipement, comme dans un MMO** : chaque objet a son emplacement (tête, cou, torse, poignets, ceinture, pieds, anneau, talisman, médiator, cordes, grimoire). Ramassé, il va dans le **sac** ; ses bonus de caractéristiques ne comptent qu'une fois **équipé** (fiche de personnage [C] ou inventaire [B]). 11 objets (Médiator en os, Perfecto clouté, Bottes de roadie, Chevalière tête de bouc, Couronne de Gloubah…), voir docs/OBJETS.md.
 - **Boutique** (Brunhilde) : potion 25 po, chambre 10 po (restaure PV et dB).
 - **Mort** : −25 % de l'or, réveil à la taverne, la quête reste en cours.
@@ -186,7 +191,19 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 5. Victoire : la cage s'ouvre, Plumeau suit le héros ; le portail de Zarathos s'ouvre juste à côté du héros (c'est un mage, il fait des trucs de mage).
 6. **Taverne** : rendre la quête → 300 XP, 50 médiators, Portrait de l'aïeule (+1 SAG, +1 CHA). Plumeau reste dans la taverne. L'Inconnue révèle que Gloubah servait Morne.
 
-### 10.2 Quêtes suivantes (à produire)
+### 10.2 Portail à XP — les Cryptes de la Cathédrale (implémenté)
+Le portail démoniaque du sous-sol de la taverne plonge dans les **Cryptes de la Cathédrale** : sous-sol d'une cathédrale traversé de ruisseaux de lave en fusion (1d4 + niveau de brûlure toutes les demi-secondes ; un ou deux ponts de pierre pour passer), peuplé de squelettes, diablotins, démons cornus et rats, **au niveau du héros**. Au fond, le **Gardien des Cryptes** et ses diablotins gardent le portail qui ramène au portail de la taverne. Les Cryptes **se régénèrent à chaque passage** (nouvelle graine) : on y retourne pour gagner de l'XP. Le portail bleu (T) y sert de sortie.
+
+### 10.3 Quête 2 — « La Légende de Back Jlack » (implémentée)
+1. **Taverne**, après Plumeau : la silhouette mystérieuse (l'Inconnue) appelle le héros (« Psst... Barde ! »). Elle raconte la légende d'un guitariste et chanteur, le sage **Back Jlack**, qui vainquit avec l'aide de Satan un mal bien plus grand : **Mèhn-Strïm**, un dragon qui voulait éradiquer le métal.
+2. **Cinématique** : sur fond noir, le visage du sage en gros plan, en contre-plongée, sur fond d'orage ; « Plutôt que de raconter cette légende... vous allez la vivre ! »
+3. **Autre univers** : au pied de marches interminables (un portail y ramène à la taverne de notre époque, pour se reposer). En haut, le parvis d'un temple à l'immense tête de dragon, et Back Jlack : le métal est menacé par Mèhn-Strïm, il faut le battre avec des riffs toujours plus hardcore ; ici, ce sont des démons corrompus... par d'autres démons.
+4. **L'épreuve** : mini-jeu de **40 notes à 120 BPM**, il faut **80 %** au moins. Échec : « reviens quand tu seras à la hauteur ». Réussite du premier coup : **+10 % de dégâts pendant 20 min**. La porte du temple s'ouvre dans un coup de tonnerre, des éclairs tombent du ciel ; Back Jlack demande de retrouver le **Pick du Destin** (un médiator, quoi) qui permettrait de jouer le riff ultime.
+5. **Temple du Dragon** (donjon généré, thème « temple ») : allée centrale de la nef, **fontaine immense** (trois fois la taille du héros) : un ange déchu à la guitare infernale d'où jaillit du **sang**. Passé la fontaine, **une dizaine de démons rouges ailés** fondent sur le héros, hachettes levées ; vaincus, un **éclair** frappe dans un coup de tonnerre. Puis des salles à vitraux, démons et squelettes.
+6. **Boss : l'ange déchu** et sa guitare. Il laisse la **partition maudite du Riff Ultime**, qui ne se joue qu'avec le Pick du Destin (sinon la foudre frappe : bouton « Jouer » dans l'inventaire). Elle servira plus tard contre Mèhn-Strïm.
+7. **Back Jlack**, sur le parvis : 1200 XP, 150 médiators. Le Pick du Destin reste à trouver...
+
+### 10.4 Quêtes suivantes (à produire)
 | Quête | Donneur | Donjon | Boss | Mécanique nouvelle |
 |---|---|---|---|---|
 | La Cloche Muette | Le prêtre du village | Beffroi Muet | Le Sonneur Décharné | Zones de silence où les sorts sont impossibles |

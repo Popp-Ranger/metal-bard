@@ -42,32 +42,46 @@ const DOOR_MAX_CELLS := 5 # au-delà, l'ouverture est trop large : pas de porte 
 var _cell_offset := Vector2i.ZERO
 var _map_markers: Array[Dictionary] = []
 var from_map := false
+## Thème : « catacombes » (Plumeau), « crypte » (Cryptes de la Cathédrale, portail à XP) ou « temple » (Temple du
+## Dragon). Il règle le sol, les murs, le décor, les ennemis, le boss et les sorties (voir DungeonThemes).
+var theme := "catacombes"
+## Donjon de quête persistant (GameState.dungeon_state) ou régénéré à chaque passage (cryptes).
+var persistent := true
+## Porte du boss scellée (clé du chef des squelettes) : catacombes seulement.
+var boss_key_door := true
 
 
 func _ready() -> void:
 	quest_id = GameState.active_quest if not GameState.active_quest.is_empty() else "plumeau"
-	var cfg: Dictionary = QuestDB.get_quest(quest_id).get("dungeon", {})
-	enemy_level = int(cfg.get("enemy_level", 1))
-	var seed_value := GameState.dungeon_seed if GameState.dungeon_seed != 0 else randi_range(1, 999999)
+	var cfg := _dungeon_config()
+	theme = str(cfg.get("theme", "catacombes"))
+	boss_key_door = bool(cfg.get("boss_key", theme == "catacombes"))
+	enemy_level = _enemy_level(cfg)
+	var seed_value := _saved_seed()
+	if seed_value == 0:
+		seed_value = randi_range(1, 999999)
 	# Donjon fait main (quête, ou scène testée avec F6 dans l'éditeur) ou généré.
 	var map_path := str(GameState.flags.get("test_map", cfg.get("map", "")))
-	if not map_path.is_empty() and ResourceLoader.exists(map_path):
+	if theme == "catacombes" and not map_path.is_empty() and ResourceLoader.exists(map_path):
 		_load_map(map_path)
 		seed_value = 1 # décor (os, sang...) toujours tiré de la même façon
 	else:
 		# La salle du boss est fermée à clé : on garde la première graine où toutes les autres
 		# salles restent accessibles sans la traverser.
 		seed_value = gen.generate_sealed(seed_value, int(cfg.get("rooms", 10)), DOOR_MAX_CELLS)
-	GameState.dungeon_seed = seed_value
+	_store_seed(seed_value)
 	_rng.seed = seed_value
 
-	# Donjon persistant tant qu'il n'est pas terminé (ennemis tués, portes, clés...).
-	var fresh := GameState.dungeon_state.is_empty()
-	if fresh:
-		GameState.dungeon_state = {"dead": [], "doors": [], "rooms": [], "chests": []}
+	if persistent:
+		# Donjon de quête, persistant tant qu'il n'est pas terminé (ennemis tués, portes, clés...).
+		if GameState.dungeon_state.is_empty():
+			GameState.dungeon_state = {"dead": [], "doors": [], "rooms": [], "chests": []}
+			GameState.reset_run()
+		_state = GameState.dungeon_state
+		GameState.flags["in_dungeon"] = true
+	else:
+		_state = {"dead": [], "doors": [], "rooms": [], "chests": []}
 		GameState.reset_run()
-	_state = GameState.dungeon_state
-	GameState.flags["in_dungeon"] = true
 	setup_level("dungeon", str(cfg.get("name", "Donjon")))
 	hud.show_kill_counter()
 	_build_floor()
@@ -79,11 +93,13 @@ func _ready() -> void:
 	_build_room_covers()
 	_assign_torches()
 	var start := cell_to_world(gen.center(gen.start_room))
-	_spawn_flee_portal(start + Vector3(-3.0, 0.0, -3.0))
+	if theme == "temple":
+		start = _nave_entrance()
+	_spawn_flee_portal(start + Vector3(-3.0, 0.0, -3.0) if theme != "temple" else start + _nave_side() * 4.2)
 	# Retour par le portail bleu : exactement là où on l'avait ouvert.
 	var via_portal: bool = GameState.flags.get("via_town_portal", false)
 	GameState.flags.erase("via_town_portal")
-	var tp: Array = GameState.town_portal.get("pos", [])
+	var tp: Array = GameState.town_portal.get("pos", []) if persistent else []
 	if via_portal and tp.size() == 2:
 		start = Vector3(float(tp[0]), 0.0, float(tp[1])) + Vector3(0.0, 0.0, 1.4)
 		GameState.town_portal = {} # le portail se referme derrière le héros
@@ -91,13 +107,42 @@ func _ready() -> void:
 		_spawn_town_portal(Vector3(float(tp[0]), 0.0, float(tp[1]))) # toujours ouvert depuis la dernière visite
 	spawn_hero(start)
 	_reveal_room_at(hero.global_position)
-	Events.boss_defeated.connect(_on_boss_defeated)
+	if theme == "catacombes":
+		Events.boss_defeated.connect(_on_boss_defeated)
 	Events.story_action.connect(_on_story_action)
 	Events.enemy_killed.connect(_on_enemy_killed)
 	Events.town_portal_requested.connect(open_town_portal)
+	Events.quest_item_added.connect(_on_quest_item_added)
 	Sfx.play_playlist("res://audio/music/donjons", -8.0) # musiques des donjons, au hasard
-	if GameState.quest_state(quest_id) == QuestDB.State.ACTIVE:
-		Events.notify("Trouvez Plumeau au fond des catacombes...", Events.COLOR_DEFAULT)
+	_arrival_notice()
+
+
+## Réglages du donjon (nom, thème, salles, niveau des ennemis...) : ceux de la quête en cours (QuestDB).
+func _dungeon_config() -> Dictionary:
+	return QuestDB.get_quest(quest_id).get("dungeon", {})
+
+
+func _enemy_level(cfg: Dictionary) -> int:
+	return int(cfg.get("enemy_level", 1))
+
+
+## Graine du donjon de quête en cours (0 = en tirer une nouvelle).
+func _saved_seed() -> int:
+	return GameState.dungeon_seed
+
+
+func _store_seed(seed_value: int) -> void:
+	GameState.dungeon_seed = seed_value
+
+
+func _arrival_notice() -> void:
+	if GameState.quest_state(quest_id) != QuestDB.State.ACTIVE:
+		return
+	match theme:
+		"catacombes":
+			Events.notify("Trouvez Plumeau au fond des catacombes...", Events.COLOR_DEFAULT)
+		"temple":
+			Events.notify("Le Temple du Dragon. Quelque part ici : le Pick du Destin... et quelque chose qui joue faux.", Events.COLOR_DEFAULT)
 
 
 func _process(delta: float) -> void:
@@ -105,6 +150,8 @@ func _process(delta: float) -> void:
 		_wall_material.set_shader_parameter("hero_pos", hero.global_position)
 	if hero != null:
 		_reveal_room_at(hero.global_position) # salle sans porte (côté ouvert) : on la découvre en entrant
+		_update_lava(delta)
+		_update_nave_ambush()
 	_torch_check -= delta
 	if _torch_check <= 0.0:
 		_torch_check = 0.4
@@ -149,6 +196,8 @@ func _room_at(p: Vector3) -> int:
 
 ## Utilisé par les ennemis pour choisir des points d'errance valides.
 func is_walkable(p: Vector3) -> bool:
+	if in_lava(p):
+		return false
 	var margin := 0.5
 	for offset: Vector3 in [Vector3(margin, 0, margin), Vector3(-margin, 0, margin),
 			Vector3(margin, 0, -margin), Vector3(-margin, 0, -margin)]:
@@ -182,10 +231,7 @@ func _build_floor() -> void:
 			var basis := Basis(Vector3.UP, _rng.randf_range(-0.03, 0.03))
 			mm.set_instance_transform(i * 4 + k, Transform3D(basis, p))
 			var v := _rng.randf_range(0.8, 1.05)
-			var col := Color(0.16 * v, 0.155 * v, 0.16 * v)
-			if _rng.randf() < 0.1:
-				col = col.lerp(Color(0.1, 0.17, 0.09), 0.6) # mousse
-			mm.set_instance_color(i * 4 + k, col)
+			mm.set_instance_color(i * 4 + k, _floor_color(cells[i], k, v))
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	var mat := StandardMaterial3D.new()
@@ -196,6 +242,24 @@ func _build_floor() -> void:
 	# Joints sombres entre les dalles.
 	var under := Vector3(gen.width * CELL, 0.1, gen.height * CELL)
 	_under = Visuals.box(self, under, _grid_origin() + Vector3(under.x * 0.5, -0.2, under.z * 0.5), Visuals.mat(Color(0.02, 0.02, 0.02)))
+
+
+## Couleur d'une dalle (1 m) : pierre moussue (catacombes), basalte fendu de braises (cryptes), damier de marbre
+## noir et blanc (temple).
+func _floor_color(cell: Vector2i, k: int, v: float) -> Color:
+	match theme:
+		"crypte":
+			var c := Color(0.13 * v, 0.1 * v, 0.1 * v)
+			if _rng.randf() < 0.08:
+				c = c.lerp(Color(0.45, 0.1, 0.03), 0.45) # dalle fendue, rougeoyante
+			return c
+		"temple":
+			var white := (k % 2 + (k >> 1)) % 2 == 0 # damier de 1 m (les cases de 2 m en ont quatre)
+			return Color(0.5 * v, 0.47 * v, 0.44 * v) if white else Color(0.08 * v, 0.06 * v, 0.07 * v)
+	var col := Color(0.16 * v, 0.155 * v, 0.16 * v)
+	if _rng.randf() < 0.1:
+		col = col.lerp(Color(0.1, 0.17, 0.09), 0.6) # mousse
+	return col
 
 
 func _build_walls() -> void:
@@ -225,7 +289,7 @@ func _build_walls() -> void:
 		body.add_child(col)
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	_wall_material = Visuals.stone_material(true)
+	_wall_material = Visuals.stone_material(true, DungeonThemes.wall_color(theme))
 	mmi.material_override = _wall_material
 	add_child(mmi)
 
@@ -235,6 +299,13 @@ func _decorate() -> void:
 		_decorate_from_map()
 		return
 	_place_torches()
+	match theme:
+		"crypte":
+			_decorate_crypt()
+			return
+		"temple":
+			_decorate_temple()
+			return
 	for i in gen.rooms.size():
 		if i == gen.boss_room or i == gen.start_room:
 			continue
@@ -322,6 +393,9 @@ func _place_torches() -> void:
 func _spawn_enemies() -> void:
 	if from_map:
 		_spawn_from_map()
+		return
+	if theme != "catacombes":
+		_spawn_demon_rooms()
 		return
 	# Salle voisine du boss : le chef des squelettes y monte la garde, avec la clé du boss.
 	var captain_room := -1
@@ -516,6 +590,13 @@ func _on_enemy_killed(e: Node3D) -> void:
 
 
 func _spawn_boss_room() -> void:
+	match theme:
+		"crypte":
+			_spawn_crypt_exit()
+			return
+		"temple":
+			_spawn_angel_room()
+			return
 	var r := gen.rooms[gen.boss_room]
 	var c := cell_to_world(gen.center(gen.boss_room))
 	_build_pentagram(c)
@@ -714,22 +795,23 @@ func _surrender() -> void:
 func _spawn_flee_portal(pos: Vector3) -> void:
 	var portal := Portal.new()
 	portal.position = pos
-	portal.prompt = "Fuir vers la taverne (la quête reste en cours)"
+	portal.prompt = {"temple": "Ressortir sur le parvis du temple", "crypte": "Fuir vers la Chèvre Fringante (les cryptes se régénéreront)"}.get(theme, "Fuir vers la taverne (la quête reste en cours)")
 	portal.on_enter = _end_dungeon.bind("Retraite stratégique", false)
 	add_child(portal)
 
 
 ## Fin du passage au donjon : récapitulatif (victimes, dégâts) puis retour à la taverne.
 func _end_dungeon(title: String, victory: bool) -> void:
-	GameState.flags["in_dungeon"] = true
-	GameState.location = {"scene": Router.TAVERN}
+	var dest := _exit_scene()
+	GameState.location = {"scene": dest}
 	if victory:
-		# Donjon terminé : le prochain sera un nouveau donjon.
-		GameState.dungeon_state = {}
-		GameState.dungeon_seed = 0
-		GameState.town_portal = {}
+		if persistent:
+			# Donjon de quête terminé : le prochain sera un nouveau donjon.
+			GameState.dungeon_state = {}
+			GameState.dungeon_seed = 0
+			GameState.town_portal = {}
 		GameState.save_game()
-	hud.show_recap(title, func() -> void: Router.go_to(Router.TAVERN))
+	hud.show_recap(title, func() -> void: Router.go_to(dest))
 
 
 ## Pentagramme tracé à la bave verte luminescente sous Gloubah, cerclé de bave, avec des
@@ -827,8 +909,8 @@ func _build_door(room: int, o: Dictionary) -> void:
 	var node := Node3D.new()
 	node.transform = Transform3D(Basis(x_axis, Vector3.UP, inward), center)
 	add_child(node)
-	var locked := room == gen.boss_room
-	var variant := "boss" if locked else _door_variant(o)
+	var locked := room == gen.boss_room and boss_key_door
+	var variant := "boss" if room == gen.boss_room else _door_variant(o)
 	var model := (load(DOOR_MODELS[variant]) as PackedScene).instantiate() as Node3D
 	model.rotation.y = PI # face décorée côté couloir (-Z local), battants qui s'ouvrent vers la salle
 	node.add_child(model)
@@ -840,7 +922,7 @@ func _build_door(room: int, o: Dictionary) -> void:
 		elif c.name.contains("cadre") and c is MeshInstance3D:
 			frame_size = (c as MeshInstance3D).get_aabb().size
 	_door_walls(node, width, frame_size)
-	if not locked:
+	if room != gen.boss_room:
 		_door_torches(node, width, frame_size)
 	var idx := doors.size()
 	if variant == "ouverture":
@@ -1085,6 +1167,16 @@ func open_town_portal() -> void:
 		Events.notify("Impossible d'ouvrir un portail en plein combat !", Events.COLOR_BAD)
 		Sfx.play("dud", -8.0)
 		return
+	if not persistent:
+		# Cryptes : le portail bleu ramène à la taverne, et les cryptes se régénéreront.
+		var exit := Portal.new()
+		exit.blue = true
+		var spot := hero.global_position + hero.facing * 1.8
+		exit.position = Vector3(spot.x, 0.0, spot.z) if is_walkable(spot) else hero.global_position
+		exit.prompt = "Portail bleu : retour à la taverne (les cryptes se régénéreront)"
+		exit.on_enter = _end_dungeon.bind("Retour par le portail bleu", false)
+		add_child(exit)
+		return
 	var p := hero.global_position + hero.facing * 1.8
 	if not is_walkable(p):
 		p = hero.global_position
@@ -1111,3 +1203,355 @@ func _take_town_portal() -> void:
 	GameState.flags["from_town_portal"] = true
 	GameState.location = {"scene": Router.TAVERN}
 	GameState.save_game()
+
+
+## Scène où l'on revient en quittant le donjon : la taverne (au cercle de runes), ou le parvis du Temple du Dragon.
+func _exit_scene() -> String:
+	if theme == "temple":
+		GameState.flags["temple_spawn"] = "parvis"
+		return Router.TEMPLE
+	GameState.flags["in_dungeon"] = true
+	return Router.TAVERN
+
+
+# =====================================================================================
+# Thèmes « crypte » et « temple » : lave, démons, nef de l'ange déchu
+# =====================================================================================
+
+## Ruisseaux de lave (zones au sol, plan XZ) : on s'y brûle.
+var _lava_zones: Array[Rect2] = []
+var _burn_timer := 0.0
+var angel: FallenAngel
+var guardian: DemonBrute
+var _ambush: Array[Enemy] = []
+var _ambush_state := 0 # 0 = pas encore, 1 = en cours, 2 = terminée
+
+
+func in_lava(p: Vector3) -> bool:
+	for z in _lava_zones:
+		if z.has_point(Vector2(p.x, p.z)):
+			return true
+	return false
+
+
+## Cryptes : os, piliers brisés, tonneaux, et des ruisseaux de lave en fusion qui traversent les salles d'un mur à
+## l'autre (un ou deux ponts de pierre pour passer).
+func _decorate_crypt() -> void:
+	for i in gen.rooms.size():
+		if i == gen.boss_room or i == gen.start_room:
+			continue
+		if _rng.randf() < 0.75:
+			_lava_room(i)
+		for k in _rng.randi_range(3, 6):
+			var p := cell_to_world(gen.random_cell_in_room(i, 2)) + Vector3(_rng.randf_range(-0.6, 0.6), 0, _rng.randf_range(-0.6, 0.6))
+			if not in_lava(p):
+				_decor([0, 0, 2, 3][_rng.randi() % 4], p)
+
+
+func _lava_room(i: int) -> void:
+	var r := gen.rooms[i]
+	var horizontal := r.size.x >= r.size.y # le ruisseau suit le grand côté de la salle
+	# Rangée intérieure qui ne débouche pas devant une porte des deux murs qu'elle touche.
+	var blocked := {}
+	for o in gen.room_openings(i):
+		var out: Vector2i = o["out"]
+		if (horizontal and out.x != 0) or (not horizontal and out.y != 0):
+			var c: Vector2i = o["cell"]
+			var first := c.y if horizontal else c.x
+			for k in range(first - 1, first + int(o["length"]) + 1):
+				blocked[k] = true
+	var lo := (r.position.y if horizontal else r.position.x) + 2
+	var hi := (r.end.y if horizontal else r.end.x) - 3
+	var rows: Array[int] = []
+	for k in range(lo, hi + 1):
+		if not blocked.has(k):
+			rows.append(k)
+	if rows.is_empty():
+		return
+	var row: int = rows[_rng.randi() % rows.size()]
+	var dir := Vector3(1, 0, 0) if horizontal else Vector3(0, 0, 1)
+	var a := cell_to_world(Vector2i(r.position.x, row) if horizontal else Vector2i(row, r.position.y)) - dir * (CELL * 0.5)
+	var b := cell_to_world(Vector2i(r.end.x - 1, row) if horizontal else Vector2i(row, r.end.y - 1)) + dir * (CELL * 0.5)
+	var length := (b - a).length()
+	var count := 1 if length < 18.0 else 2
+	var stone := Visuals.mat(Color(0.16, 0.13, 0.12), 0.9)
+	var t := 0.0
+	for k in count:
+		var bc := length * (k + 1) / (count + 1) + _rng.randf_range(-1.5, 1.5)
+		if bc - 1.1 - t > 0.3:
+			_lava_zones.append(DungeonThemes.lava_stream(self, a + dir * t, a + dir * (bc - 1.1)))
+		DungeonThemes.bridge(self, a + dir * bc, dir.cross(Vector3.UP), stone)
+		t = bc + 1.1
+	if length - t > 0.3:
+		_lava_zones.append(DungeonThemes.lava_stream(self, a + dir * t, b))
+
+
+## Le héros marche dans la lave : 1d4 + niveau de brûlure toutes les demi-secondes (pas pendant une glissade).
+func _update_lava(delta: float) -> void:
+	_burn_timer -= delta
+	if _lava_zones.is_empty() or _burn_timer > 0.0 or hero.dead or hero.dashing or hero.leaping:
+		return
+	var p := Vector2(hero.global_position.x, hero.global_position.z)
+	for z in _lava_zones:
+		if z.grow(-0.15).has_point(p):
+			_burn_timer = 0.5
+			hero.take_hit(Dice.roll(1, 4, enemy_level), hero.global_position)
+			DamageNumber.spawn(self, hero.global_position + Vector3(0, 2.6, 0), "Lave !", Color(1.0, 0.5, 0.1))
+			return
+
+
+## Temple : vitraux, colonnes, candélabres et restes d'os ; la nef (salle de départ) a sa fontaine et ses bancs.
+func _decorate_temple() -> void:
+	_place_stained_glass()
+	_build_nave()
+	var stone := Visuals.mat(Color(0.38, 0.36, 0.34), 0.85)
+	for i in gen.rooms.size():
+		if i == gen.start_room or i == gen.boss_room:
+			continue
+		var r := gen.rooms[i]
+		var c := cell_to_world(gen.center(i))
+		var half := Vector3((r.size.x * 0.5 - 2.0) * CELL, 0, (r.size.y * 0.5 - 2.0) * CELL)
+		for sx: float in [-1.0, 1.0]:
+			for sz: float in [-1.0, 1.0]:
+				DungeonThemes.column(self, c + Vector3(half.x * sx, 0, half.z * sz), stone)
+		for k in _rng.randi_range(1, 3):
+			DungeonThemes.candelabra(self, cell_to_world(gen.random_cell_in_room(i, 2)) + Vector3(0.5, 0, 0.5))
+		for k in _rng.randi_range(1, 3):
+			_decor(0, cell_to_world(gen.random_cell_in_room(i, 2)))
+
+
+## Vitraux sur les murs du fond (visibles depuis la caméra), espacés de 7 m, loin des torches.
+func _place_stained_glass() -> void:
+	var placed: Array[Vector3] = []
+	var dirs: Array[Vector2i] = [Vector2i(0, -1), Vector2i(-1, 0)]
+	for y in gen.height:
+		for x in gen.width:
+			if not gen.is_floor(x, y) or _room_at(cell_to_world(Vector2i(x, y))) < 0:
+				continue
+			for d in dirs:
+				if not gen.is_wall(x + d.x, y + d.y):
+					continue
+				var p := cell_to_world(Vector2i(x, y)) + Vector3(d.x, 0, d.y) * (CELL * 0.5 - 0.05)
+				var ok := true
+				for q in placed:
+					ok = ok and q.distance_to(p) >= 7.0
+				for t in _torches:
+					ok = ok and t.position.distance_to(p) >= 1.6
+				if ok:
+					placed.append(p)
+					DungeonThemes.stained_glass(self, p, -Vector3(d.x, 0, d.y), _rng)
+
+
+## Axe de la nef (salle de départ du temple) : de l'entrée (côté caméra) vers le fond, le long du grand côté.
+func _nave_axis() -> Vector3:
+	var r := gen.rooms[gen.start_room]
+	return Vector3(-1, 0, 0) if r.size.x >= r.size.y else Vector3(0, 0, -1)
+
+
+func _nave_side() -> Vector3:
+	return Vector3(0, 0, 1) if absf(_nave_axis().x) > 0.5 else Vector3(1, 0, 0)
+
+
+func _nave_half_length() -> float:
+	var r := gen.rooms[gen.start_room]
+	return maxi(r.size.x, r.size.y) * CELL * 0.5
+
+
+func _nave_entrance() -> Vector3:
+	return cell_to_world(gen.center(gen.start_room)) - _nave_axis() * (_nave_half_length() - 2.5)
+
+
+## Nef : allée centrale (tapis rouge) avec, au milieu, la fontaine de sang de l'ange déchu ; bancs de part et d'autre
+## entre l'entrée et la fontaine, candélabres le long de l'allée.
+func _build_nave() -> void:
+	var c := cell_to_world(gen.center(gen.start_room))
+	var axis := _nave_axis()
+	var side := _nave_side()
+	var half := _nave_half_length()
+	DungeonThemes.blood_fountain(self, c, -axis)
+	var carpet := Visuals.box(self, Vector3(1.6, 0.02, half * 2.0 - 1.0), c + Vector3(0, 0.012, 0), Visuals.mat(Color(0.4, 0.03, 0.04), 0.95))
+	carpet.rotation.y = atan2(axis.x, axis.z)
+	carpet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var d := 4.0
+	while d < half - 3.0:
+		for s: float in [-1.0, 1.0]:
+			DungeonThemes.pew(self, c - axis * d + side * s * 2.1, atan2(axis.x, axis.z))
+		d += 1.5
+	for k in 3:
+		for s: float in [-1.0, 1.0]:
+			DungeonThemes.candelabra(self, c + axis * (3.5 + k * 3.0) + side * s * 2.2)
+
+
+## « Une fois passé la fontaine » : une dizaine de diablotins fondent sur le héros depuis le fond de la nef. Quand le
+## dernier tombe, un éclair frappe la fontaine dans un coup de tonnerre.
+func _update_nave_ambush() -> void:
+	if theme != "temple" or _ambush_state == 2:
+		return
+	if _ambush_state == 0:
+		if bool(_state.get("ambush_done", false)):
+			_ambush_state = 2
+		elif (hero.global_position - cell_to_world(gen.center(gen.start_room))).dot(_nave_axis()) > -1.0:
+			_start_nave_ambush()
+		return
+	for e in _ambush:
+		if is_instance_valid(e) and e.is_alive():
+			return
+	_ambush_state = 2
+	_state["ambush_done"] = true
+	_thunderclap(cell_to_world(gen.center(gen.start_room)) + Vector3(0, 6.5, 0))
+	Events.notify("Un éclair déchire la voûte et frappe la fontaine dans un coup de tonnerre !", Color(0.75, 0.8, 1.0))
+
+
+func _start_nave_ambush() -> void:
+	_ambush_state = 1
+	var far := cell_to_world(gen.center(gen.start_room)) + _nave_axis() * (_nave_half_length() - 2.0)
+	var n := _coop_count(10)
+	Sfx.play("croak", -2.0, 0.5)
+	Events.camera_shake.emit(0.15, 0.6)
+	Events.notify("Des ailes claquent sous la voûte... Une nuée de démons fond sur vous, hachettes levées !", Events.COLOR_BAD)
+	for k in n:
+		var imp := DemonImp.new()
+		imp.level = enemy_level
+		imp.position = far + _nave_side() * (-4.5 + 9.0 * k / maxf(1.0, n - 1.0)) + _nave_axis() * _rng.randf_range(-1.0, 0.5)
+		imp.rotation.y = atan2(-_nave_axis().x, -_nave_axis().z)
+		imp.walkable_check = is_walkable
+		add_child(imp)
+		imp.call_deferred("_aggro")
+		_ambush.append(imp)
+
+
+## Éclair tombé du ciel sur `pos`, avec coup de tonnerre et flash.
+func _thunderclap(pos: Vector3) -> void:
+	Sfx.play("solo_thunder", 0.0)
+	Events.screen_flash.emit(Color(0.85, 0.9, 1.0, 0.7), 0.35)
+	Events.camera_shake.emit(0.35, 0.5)
+	ArcBolt.spawn(self, pos + Vector3(0.6, 14.0, -0.6), pos, 0.35, 0.6, Color(0.8, 0.85, 1.0))
+
+
+## Salles des thèmes « crypte » et « temple » : squelettes, diablotins, démons cornus (et rats dans les cryptes).
+## Les salles cul-de-sac cachent une embuscade (deux démons cornus et une nuée de diablotins) autour d'un coffre.
+func _spawn_demon_rooms() -> void:
+	for i in gen.rooms.size():
+		if i == gen.boss_room or i == gen.start_room:
+			continue
+		if gen.ambush_rooms.has(i):
+			for k in _coop_count(10):
+				var p := cell_to_world(gen.random_cell_in_room(i, 1))
+				if k < 2:
+					_spawn_brute(p, i)
+				else:
+					_spawn_imp(p, i)
+			_spawn_chest(cell_to_world(gen.center(i)), gen.ambush_rooms.find(i))
+			continue
+		for k in _coop_count(_rng.randi_range(3, 5)):
+			var p := cell_to_world(gen.random_cell_in_room(i, 2))
+			var roll := _rng.randf()
+			if roll < 0.4:
+				_spawn_skeleton(p, roll < 0.06, i)
+			elif roll < 0.75:
+				_spawn_imp(p, i)
+			elif roll < 0.88 and theme == "crypte":
+				_spawn_rat(p, i)
+			else:
+				_spawn_brute(p, i)
+
+
+func _spawn_imp(pos: Vector3, room: int = -1) -> DemonImp:
+	var e := DemonImp.new()
+	e.level = enemy_level
+	e.position = pos
+	e.rotation.y = _rng.randf() * TAU
+	e.walkable_check = is_walkable
+	return _place_enemy(e, room) as DemonImp
+
+
+func _spawn_brute(pos: Vector3, room: int = -1, is_guardian: bool = false) -> DemonBrute:
+	var e := DemonBrute.new()
+	e.guardian = is_guardian
+	e.level = enemy_level
+	e.position = pos
+	e.rotation.y = _rng.randf() * TAU
+	e.walkable_check = is_walkable
+	return _place_enemy(e, room) as DemonBrute
+
+
+func _spawn_imp_minion(pos: Vector3) -> void:
+	var e := _spawn_imp(pos if is_walkable(pos) else cell_to_world(gen.center(gen.boss_room)))
+	e.call_deferred("_aggro")
+
+
+## Cryptes : au fond, le Gardien des Cryptes (démon cornu géant) et ses diablotins gardent le portail de sortie, qui
+## ramène au portail démoniaque de la taverne.
+func _spawn_crypt_exit() -> void:
+	var c := cell_to_world(gen.center(gen.boss_room))
+	for k in 4:
+		var a := TAU * k / 4.0 + PI * 0.25
+		var p := c + Vector3(cos(a), 0, sin(a)) * 6.2
+		Visuals.cylinder(self, 0.35, 0.2, 0.9, p + Vector3(0, 0.45, 0), Visuals.mat(Color(0.15, 0.13, 0.12), 0.5, 0.6), Vector3.ZERO, 8)
+		Visuals.sphere(self, 0.25, p + Vector3(0, 1.0, 0), Visuals.glow_mat(Color(1.0, 0.4, 0.1), 5.0), Vector3(1, 0.6, 1))
+		Visuals.flicker_light(self, p + Vector3(0, 1.6, 0), Color(1.0, 0.45, 0.15), 2.0, 8.0)
+		Visuals.solid_cylinder(self, 0.35, 2.0, p + Vector3(0, 1.0, 0))
+	var exit := DemonPortal.new()
+	exit.position = c + Vector3(0, 0, -3.0)
+	exit.prompt = "Sortie des Cryptes : retour au portail de la Chèvre Fringante"
+	exit.on_enter = _end_dungeon.bind("Cryptes traversées !", true)
+	add_child(exit)
+	guardian = _spawn_brute(c + Vector3(0, 0, 1.5), gen.boss_room, true)
+	for k in _coop_count(3):
+		_spawn_imp(c + Vector3(-3.0 + 3.0 * k, 0, 3.0), gen.boss_room)
+
+
+## Temple : la salle de l'ange déchu (colonnes, cercle de candélabres) ; il garde la partition maudite.
+func _spawn_angel_room() -> void:
+	var r := gen.rooms[gen.boss_room]
+	var c := cell_to_world(gen.center(gen.boss_room))
+	var stone := Visuals.mat(Color(0.38, 0.36, 0.34), 0.85)
+	var half := Vector3((r.size.x * 0.5 - 2.0) * CELL, 0, (r.size.y * 0.5 - 2.0) * CELL)
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			DungeonThemes.column(self, c + Vector3(half.x * sx, 0, half.z * sz), stone)
+	for k in 6:
+		var a := TAU * k / 6.0
+		DungeonThemes.candelabra(self, c + Vector3(cos(a), 0, sin(a)) * 6.5)
+	Events.boss_defeated.connect(_on_angel_defeated)
+	if bool(_state.get("boss_dead", false)):
+		if not GameState.quest_items.has("partition_maudite"):
+			Pickup.spawn(self, c, "quest", 0, "partition_maudite")
+		elif GameState.quest_state(quest_id) == QuestDB.State.OBJECTIVE_DONE:
+			_spawn_temple_exit(c + Vector3(2.0, 0, 2.0))
+		return
+	angel = FallenAngel.new()
+	angel.level = enemy_level
+	angel.position = c
+	angel.rotation.y = PI * 0.25
+	angel.walkable_check = is_walkable
+	angel.spawn_minion = _spawn_imp_minion
+	add_child(angel)
+	_room_enemies[gen.boss_room] = [angel]
+
+
+func _on_angel_defeated(boss_id: String) -> void:
+	if boss_id != "ange_dechu":
+		return
+	_state["boss_dead"] = true
+	if hero != null:
+		hero.model.victory()
+	Events.notify("L'ange déchu s'effondre. Sur son corps, une partition crépite d'éclairs...", Events.COLOR_GOLD)
+
+
+## La partition maudite est ramassée : objectif accompli, un portail ramène sur le parvis, auprès de Back Jlack.
+func _on_quest_item_added(id: String) -> void:
+	if theme != "temple" or id != "partition_maudite":
+		return
+	GameState.complete_objective(quest_id)
+	var p := hero.global_position + hero.facing * 1.8 if hero != null else cell_to_world(gen.center(gen.boss_room))
+	_spawn_temple_exit(p if is_walkable(p) else cell_to_world(gen.center(gen.boss_room)))
+	Events.notify("Un portail s'ouvre : Back Jlack vous attend sur le parvis du temple.", Events.COLOR_MAGIC)
+
+
+func _spawn_temple_exit(p: Vector3) -> void:
+	var portal := Portal.new()
+	portal.position = Vector3(p.x, 0.0, p.z)
+	portal.prompt = "Rejoindre Back Jlack sur le parvis du temple"
+	portal.on_enter = _end_dungeon.bind("Le Temple du Dragon est purifié !", true)
+	add_child(portal)

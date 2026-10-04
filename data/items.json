@@ -29,6 +29,10 @@
 		"cle_cage": {
 			"nom": "Clé rouillée de la cage",
 			"desc": "Portée par Gloubah. Ouvre la cage de Plumeau."
+		},
+		"partition_maudite": {
+			"nom": "Partition maudite du Riff Ultime",
+			"desc": "Arrachée à l'ange déchu. Ne se joue qu'avec le Pick du Destin : sans lui, la foudre frappe celui qui ose. Elle servira contre Mèhn-Strïm."
 		}
 	},
 	"reliques": {

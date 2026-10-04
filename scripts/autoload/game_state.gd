@@ -21,6 +21,14 @@ var buyback: Array[String] = []
 var cheese_time := 0.0
 const CHEESE_HP_BONUS := 0.2
 const CHEESE_DURATION := 1200.0
+## Bénédiction de Back Jlack (épreuve du temple réussie du premier coup) : +10 % de dégâts pendant 20 min.
+var damage_buff_time := 0.0
+const DAMAGE_BUFF := 0.1
+const DAMAGE_BUFF_DURATION := 1200.0
+## Objets de quête (partition maudite...), à part de l'équipement : voir ItemDB.quest_item.
+var quest_items: Array[String] = []
+## Cryptes de la Cathédrale (portail à XP) : graine du passage en cours, régénérées à chaque entrée.
+var crypt_seed := 0
 const BUYBACK_MAX := 10
 var quests := {} # quest_id -> QuestDB.State
 var flags := {}
@@ -53,6 +61,11 @@ func _ready() -> void:
 
 ## Le fromage d'hibours s'épuise (le temps du jeu, pas celui des menus en pause).
 func _process(delta: float) -> void:
+	if damage_buff_time > 0.0 and not get_tree().paused:
+		damage_buff_time -= delta
+		if damage_buff_time <= 0.0:
+			damage_buff_time = 0.0
+			Events.notify("La bénédiction de Back Jlack s'est dissipée (dégâts normaux).", Events.COLOR_DEFAULT)
 	if cheese_time > 0.0 and not get_tree().paused:
 		cheese_time -= delta
 		if cheese_time <= 0.0:
@@ -79,6 +92,9 @@ func new_game() -> void:
 	equipment = {}
 	buyback.clear()
 	cheese_time = 0.0
+	damage_buff_time = 0.0
+	quest_items.clear()
+	crypt_seed = 0
 	flags = {}
 	quests = {}
 	for id: String in QuestDB.QUESTS:
@@ -350,7 +366,21 @@ func g(masculine: String, feminine: String) -> String:
 
 ## Multiplicateur des dégâts de sorts (Démon : Sang infernal).
 func spell_power() -> float:
-	return 1.1 if race() == "demon" else 1.0
+	return (1.1 if race() == "demon" else 1.0) * damage_bonus()
+
+
+## Bonus de dégâts temporaire (sorts et coups de guitare) : bénédiction de Back Jlack.
+func damage_bonus() -> float:
+	return 1.0 + DAMAGE_BUFF if damage_buff_time > 0.0 else 1.0
+
+
+func add_quest_item(id: String) -> void:
+	if id.is_empty() or quest_items.has(id):
+		return
+	quest_items.append(id)
+	Events.notify("Objet de quête : %s" % ItemDB.quest_item(id).get("nom", id), Events.COLOR_GOLD)
+	Events.stats_changed.emit()
+	Events.quest_item_added.emit(id)
 
 
 ## Chance qu'un sort touche sa cible (80 % sans amélioration ; les sorts joués en mini-jeu touchent toujours).
@@ -599,6 +629,8 @@ func _snapshot() -> Dictionary:
 		"dungeon_state": dungeon_state,
 		"town_portal": town_portal,
 		"cheese_time": cheese_time,
+		"damage_buff_time": damage_buff_time,
+		"quest_items": quest_items,
 		"location": location,
 	}
 
@@ -642,6 +674,10 @@ static func location_label(scene: String) -> String:
 			return "Route de la Chèvre Fringante"
 		Router.DUNGEON:
 			return "Catacombes Suintantes"
+		Router.CRYPT:
+			return "Cryptes de la Cathédrale"
+		Router.TEMPLE:
+			return "Temple du Dragon (autre univers)"
 	return "La Chèvre Fringante"
 
 
@@ -682,6 +718,10 @@ func apply_save(data: Dictionary) -> void:
 	for id: Variant in data.get("buyback", []):
 		buyback.append(str(id))
 	cheese_time = float(data.get("cheese_time", 0.0))
+	damage_buff_time = float(data.get("damage_buff_time", 0.0))
+	quest_items.clear()
+	for id: Variant in data.get("quest_items", []):
+		quest_items.append(str(id))
 	var saved_quests: Dictionary = data.get("quests", {})
 	for id: String in saved_quests:
 		quests[id] = int(saved_quests[id])

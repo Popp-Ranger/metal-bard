@@ -16,6 +16,8 @@ func _ready() -> void:
 	await _test_characters()
 	await _test_skeleton_body()
 	await _test_loot_and_gear()
+	await _test_crypt()
+	await _test_chapter_two()
 	await _test_level_editor()
 	await _test_quest_flow()
 	await _test_new_features()
@@ -1506,4 +1508,198 @@ func _test_loot_and_gear() -> void:
 	# Coup de guitare : 20 % plus rapide.
 	_check(is_equal_approx(Balance.MELEE_COOLDOWN, 0.54) and is_equal_approx(float(HeroAnimator.ONE_SHOTS["smash"]), 0.5)
 		and Balance.MELEE_DICE == 6, "coup de guitare : 1d6, 20 % plus rapide (0,54 s)")
+	GameState.new_game()
+
+
+func _test_crypt() -> void:
+	print("[Médiators automatiques et Cryptes de la Cathédrale]")
+	GameState.new_game()
+	# Les médiators filent tout seuls vers le héros, même loin.
+	for c in get_children():
+		if c is Pickup:
+			c.free() # médiators lâchés par les ennemis des tests précédents
+	var fake_hero := Node3D.new()
+	fake_hero.add_to_group("hero")
+	add_child(fake_hero)
+	fake_hero.global_position = Vector3(12, 0, 0)
+	var gold0 := GameState.gold
+	var heroes := get_tree().get_nodes_in_group("hero").size()
+	var coin := Pickup.spawn(self, Vector3.ZERO, "gold", 9)
+	coin._hero = fake_hero # (d'autres tests ont pu laisser un héros dans le groupe)
+	await get_tree().create_timer(2.0).timeout
+	var coin_state := "ramassé" if not is_instance_valid(coin) else "en %s, âge %.2f, pause %s, héros %s" % [coin.global_position, coin._age, get_tree().paused, coin._hero]
+	_check(GameState.gold == gold0 + 9 and not is_instance_valid(coin), "médiators ramassés automatiquement (ils filent vers le héros, à 12 m ; %d héros ; %s ; or %d → %d)" % [heroes, coin_state, gold0, GameState.gold])
+	fake_hero.queue_free()
+	await _frames(1)
+	# Les Cryptes : générées au hasard, lave, démons au niveau du héros, gardien et portail de sortie.
+	GameState.stats.level = 4
+	GameState.crypt_seed = 4242
+	var crypt: Node = load("res://scenes/crypt.tscn").instantiate()
+	add_child(crypt)
+	await _frames(20)
+	var lava: Array = crypt.get("_lava_zones")
+	var imps := 0
+	var brutes := 0
+	var levels_ok := true
+	for c in crypt.get_children():
+		if c is DemonImp:
+			imps += 1
+		if c is DemonBrute:
+			brutes += 1
+		if c is Enemy:
+			levels_ok = levels_ok and (c as Enemy).level == 4
+	var exit_portal: DemonPortal = null
+	for c in crypt.get_children():
+		if c is DemonPortal:
+			exit_portal = c
+	var guardian: DemonBrute = crypt.get("guardian")
+	_check(str(crypt.get("theme")) == "crypte" and not bool(crypt.get("persistent")) and lava.size() >= 2 and imps >= 5 and brutes >= 2
+		and levels_ok, "Cryptes : ruisseaux de lave (%d), diablotins (%d), démons cornus (%d), ennemis au niveau du héros" % [lava.size(), imps, brutes])
+	_check(guardian != null and guardian.guardian and guardian.is_boss and exit_portal != null and exit_portal.on_enter.is_valid()
+		and exit_portal.get_prompt().contains("Chèvre Fringante"), "au fond : le Gardien des Cryptes et le portail qui ramène à la taverne")
+	# La lave brûle.
+	var hero := crypt.get("hero") as Hero
+	var zone: Rect2 = lava[0]
+	GameState.hp = GameState.max_hp()
+	var hp0 := GameState.hp
+	hero.global_position = Vector3(zone.get_center().x, 0, zone.get_center().y)
+	await get_tree().create_timer(0.7).timeout
+	_check(GameState.hp < hp0, "marcher dans la lave brûle (%d → %d PV)" % [hp0, GameState.hp])
+	GameState.hp = GameState.max_hp()
+	# On revient toujours au portail démoniaque de la taverne ; les Cryptes seront tirées à nouveau.
+	var dest := str(crypt.call("_exit_scene"))
+	_check(dest == Router.TAVERN and bool(GameState.flags.get("from_crypt", false)) and GameState.crypt_seed == 0,
+		"sortie des Cryptes : retour au portail de la taverne, nouvelles Cryptes au prochain passage")
+	GameState.flags.erase("from_crypt")
+	crypt.queue_free()
+	await _frames(3)
+	GameState.new_game()
+
+
+func _test_chapter_two() -> void:
+	print("[Chapitre 2 : la légende de Back Jlack]")
+	GameState.new_game()
+	GameState.set_quest_state("plumeau", QuestDB.State.OBJECTIVE_DONE)
+	GameState.turn_in_quest("plumeau")
+	_check(GameState.quest_state("pick_destin") == QuestDB.State.AVAILABLE, "après Plumeau : la quête de l'Inconnue se débloque")
+	var d := DialogueDB.get_dialogue("inconnue")
+	var actions: Array[String] = []
+	for ch: Array in d["choices"]:
+		actions.append(str(ch[1]))
+	_check(actions.has("accept:pick_destin+story:legende"), "l'Inconnue propose d'écouter la légende")
+	# Cinématique : visage de Back Jlack en contre-plongée, orage, puis départ vers l'autre univers.
+	var cine := LegendCinematic.play(self)
+	await _frames(3)
+	var face_ok := cine._model != null and cine._cam.global_position.y < LegendCinematic.FACE.y
+	_check(get_tree().paused and face_ok and cine._text.text == str(DialogueDB.LEGEND_LINES[0]) and DialogueDB.LEGEND_LINES[2].contains("Mèhn-Strïm"),
+		"cinématique : Back Jlack en gros plan en contre-plongée, sur fond d'orage")
+	var ended := [false]
+	cine.finished.connect(func() -> void: ended[0] = true)
+	for k in DialogueDB.LEGEND_LINES.size():
+		cine._next_line()
+	await get_tree().create_timer(1.0).timeout
+	_check(ended[0] and str(DialogueDB.LEGEND_LINES[-1]).contains("vivre"), "fin de la légende : « ...tu vas la vivre ! »")
+	get_tree().paused = false
+	cine.queue_free()
+	GameState.accept_quest("pick_destin")
+	_check(QuestDB.objective_text("pick_destin").contains("épreuve"), "objectif : l'épreuve de Back Jlack")
+	# L'autre univers : marches interminables, parvis, Back Jlack, porte scellée.
+	GameState.flags["temple_spawn"] = "marches"
+	var temple: Node = load("res://scenes/temple.tscn").instantiate()
+	add_child(temple)
+	await _frames(10)
+	var bj: Npc = temple.get("backjlack")
+	var door: Interactable = temple.get("door_interact")
+	var climb := false
+	for c in temple.get_children():
+		if c is Interactable and (c as Interactable).prompt.begins_with("Gravir les marches"):
+			climb = true
+	_check(bj != null and bj.npc_id == "backjlack" and door.prompt.contains("scellée") and climb,
+		"Temple du Dragon : marches interminables, Back Jlack, porte scellée")
+	var hero := temple.get("hero") as Hero
+	# L'épreuve : 40 notes à 120 BPM sur les 4 cordes.
+	temple.call("_on_story_action", "epreuve")
+	Events.dialogue_closed.emit()
+	await _frames(2)
+	var solo := (temple as Level).hud.solo
+	var spaced := solo._notes.size() == 40
+	for i in range(1, solo._notes.size()):
+		spaced = spaced and absf(float(solo._notes[i]["time"]) - float(solo._notes[i - 1]["time"]) - 0.5) < 0.001
+	_check(solo._active and solo.mode == "epreuve" and solo._lanes == 4 and spaced and hero.planted,
+		"épreuve de Back Jlack : 40 notes à 120 BPM, touches 1 2 3 4")
+	solo._active = false
+	solo.visible = false
+	temple.call("_on_trial_finished", "epreuve", 31, 40)
+	await _frames(2)
+	_check(not bool(GameState.flags.get("temple_trial_ok", false)) and GameState.damage_buff_time <= 0.0 and door.prompt.contains("scellée"),
+		"épreuve ratée (31/40, 77 %) : Back Jlack renvoie le héros s'entraîner")
+	(temple as Level).hud.dialogue.close()
+	GameState.flags["temple_attempts"] = 1 # comme si la réussite venait du premier coup
+	temple.call("_on_trial_finished", "epreuve", 33, 40)
+	await get_tree().create_timer(3.5).timeout
+	var buff := GameState.spell_power()
+	_check(bool(GameState.flags.get("temple_trial_ok", false)) and GameState.damage_buff_time > 1000.0 and is_equal_approx(buff, 1.1)
+		and door.prompt.begins_with("Entrer"), "épreuve réussie du premier coup : porte ouverte dans le tonnerre, +10 % de dégâts pendant 20 min")
+	(temple as Level).hud.dialogue.close()
+	_check(QuestDB.objective_text("pick_destin").contains("Temple du Dragon"), "objectif : explorer le temple")
+	temple.queue_free()
+	await _frames(3)
+	# Le temple : nef et fontaine de sang, embuscade de diablotins, ange déchu, partition maudite.
+	GameState.active_quest = "pick_destin"
+	GameState.dungeon_seed = 777
+	GameState.dungeon_state = {}
+	var dg: Node = load("res://scenes/dungeon.tscn").instantiate()
+	add_child(dg)
+	await _frames(20)
+	hero = dg.get("hero") as Hero
+	var glass := 0
+	for c in dg.get_children():
+		if c is Node3D and (c as Node3D).get_child_count() > 15 and c.get_children().any(func(n: Node) -> bool: return n is OmniLight3D):
+			glass += 1
+	_check(str(dg.get("theme")) == "temple" and dg.get("angel") != null and glass >= 1,
+		"Temple du Dragon : nef à la fontaine de sang, vitraux, l'ange déchu au fond")
+	var gen: DungeonGenerator = dg.get("gen")
+	var center: Vector3 = dg.call("cell_to_world", gen.center(gen.start_room))
+	var axis: Vector3 = dg.call("_nave_axis")
+	hero.global_position = center + axis * 1.0 + dg.call("_nave_side") * 3.2
+	await _frames(3)
+	var ambush: Array = dg.get("_ambush")
+	_check(ambush.size() == 10, "passé la fontaine : une dizaine de démons ailés fondent sur le héros (%d)" % ambush.size())
+	for e: Enemy in ambush:
+		GameState.hp = GameState.max_hp()
+		e.take_damage(99999, e.global_position + Vector3(0.1, 0, 0), 0.0)
+	await _frames(5)
+	_check(int(dg.get("_ambush_state")) == 2 and bool((dg.get("_state") as Dictionary).get("ambush_done", false)),
+		"démons vaincus : un éclair frappe la fontaine dans un coup de tonnerre")
+	var angel: FallenAngel = dg.get("angel")
+	dg.call("_reveal_room", gen.boss_room)
+	angel.take_damage(99999, angel.global_position + Vector3(0.1, 0, 0), 0.0)
+	await _frames(5)
+	var has_partition := false
+	for l: Dictionary in angel.loot:
+		has_partition = has_partition or str(l.get("item", "")) == "partition_maudite"
+	_check(has_partition and angel._loot_spot != null, "l'ange déchu vaincu : la partition maudite sur son corps")
+	angel._loot_spot.interact(null)
+	await _frames(3)
+	var exit_ok := false
+	for c in dg.get_children():
+		if c is Portal and (c as Portal).prompt.contains("Back Jlack"):
+			exit_ok = true
+	_check(GameState.quest_items.has("partition_maudite") and GameState.quest_state("pick_destin") == QuestDB.State.OBJECTIVE_DONE and exit_ok,
+		"partition ramassée : objectif accompli, portail vers le parvis de Back Jlack")
+	_check(str(dg.call("_exit_scene")) == Router.TEMPLE, "on ressort du temple sur le parvis, dans l'autre univers")
+	# Jouer la partition sans le Pick du Destin : la foudre frappe (sans tuer).
+	GameState.hp = 5
+	var inv := InventoryWindow.new()
+	add_child(inv)
+	inv._play_partition()
+	await _frames(2)
+	_check(GameState.hp >= 1 and GameState.hp < 5, "jouer la partition sans le Pick du Destin : la foudre frappe")
+	inv.queue_free()
+	GameState.hp = GameState.max_hp()
+	DialogueDB.get_dialogue("backjlack")
+	GameState.run_dialogue_action("turn_in:pick_destin")
+	_check(GameState.quest_state("pick_destin") == QuestDB.State.TURNED_IN, "Back Jlack reprend la partition en main : quête terminée")
+	dg.queue_free()
+	await _frames(3)
 	GameState.new_game()

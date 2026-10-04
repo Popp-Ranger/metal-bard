@@ -421,7 +421,7 @@ func melee() -> void:
 		hit_any = true
 		var crit := Dice.d20() == 20
 		var dmg := Dice.roll(2 if crit else 1, Balance.MELEE_DICE, GameState.mod("FOR") + (2 if GameState.race() == "orc" else 0))
-		e.take_damage(maxi(1, dmg), global_position, Balance.MELEE_KNOCKBACK, crit, "phys")
+		e.take_damage(maxi(1, roundi(dmg * GameState.damage_bonus())), global_position, Balance.MELEE_KNOCKBACK, crit, "phys")
 	Sfx.play("thud" if hit_any else "swoosh", -4.0 if hit_any else -10.0)
 
 

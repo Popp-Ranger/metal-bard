@@ -223,6 +223,14 @@
 - [x] Gérald revient à la charge au bout de 3 s, puis 2 s, puis 1 s
 - [x] Hella, nouvelle héroïne jouable (modèle retravaillé par Ulysse) ; Zarathos prend le modèle Mage V2
 
+## ✅ v0.1.40 — Le portail à XP et la Légende de Back Jlack
+- [x] Médiators ramassés automatiquement (ils filent vers le héros)
+- [x] Portail à XP (portail démoniaque du sous-sol) : les Cryptes de la Cathédrale, ruisseaux de lave, démons au niveau du héros, Gardien et portail de retour ; régénérées à chaque passage
+- [x] Nouveaux ennemis : diablotin ailé à hachette, démon cornu (et le Gardien des Cryptes), l'ange déchu (boss)
+- [x] Chapitre 2 : l'Inconnue appelle le héros et raconte la légende de Back Jlack (cinématique d'orage, visage en contre-plongée)
+- [x] L'autre univers : marches interminables, temple à tête de dragon, épreuve de 40 notes à 120 BPM (80 %), bénédiction +10 % de dégâts du premier coup, porte ouverte dans le tonnerre
+- [x] Temple du Dragon : vitraux, nef à la fontaine de sang de l'ange déchu, embuscade de démons ailés puis éclair, ange déchu et partition maudite (qui foudroie sans le Pick du Destin)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

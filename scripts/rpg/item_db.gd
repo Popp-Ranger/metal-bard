@@ -193,3 +193,11 @@ static func sell_price(id: String) -> int:
 	var fallback := {"commun": 8, "peu commun": 15, "rare": 30, "épique": 60}
 	var rarity := str(get_item(id).get("rarity", "commun"))
 	return int(prices.get(rarity, fallback.get(rarity, 8)))
+
+
+# --- Objets de quête -----------------------------------------------------------------------
+
+## Objet de quête (section « quete » de data/items.json) : {nom, desc}.
+static func quest_item(id: String) -> Dictionary:
+	var q: Dictionary = (data().get("quete", {}) as Dictionary).get(id, {})
+	return q

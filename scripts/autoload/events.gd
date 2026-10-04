@@ -45,6 +45,8 @@ signal run_stats_changed
 # --- Effets d'écran --------------------------------------------------------
 signal screen_flash(color: Color, duration: float)
 signal camera_shake(strength: float, duration: float)
+## Objet de quête obtenu (partition maudite...).
+signal quest_item_added(id: String)
 
 @warning_ignore_restore("unused_signal")
 

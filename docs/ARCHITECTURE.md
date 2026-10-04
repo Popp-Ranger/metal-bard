@@ -65,7 +65,10 @@ metal-bard/
 
 `Level` (base) installe l'environnement, la caméra `IsoCamera`, le post-traitement `PostFx` et le `Hud`, puis fait apparaître le héros.
 - **`tavern.gd`** : construit la salle (murs, fenêtres, plancher, comptoir, tables, chaises, lanternes, cheminée, escalier, tableau des quêtes, cercle de runes) et place les PNJ.
-- **`dungeon.gd`** : appelle `DungeonGenerator`, construit sol et murs en `MultiMesh` (quelques draw calls pour des milliers de blocs), une seule `StaticBody3D` pour les collisions, décore, peuple et gère la fin de quête.
+- **`dungeon.gd`** : appelle `DungeonGenerator`, construit sol et murs en `MultiMesh` (quelques draw calls pour des milliers de blocs), une seule `StaticBody3D` pour les collisions, décore, peuple et gère la fin de quête. Son **thème** (`cfg["theme"]` : « catacombes », « crypte », « temple ») règle le sol, les murs, le décor (`DungeonThemes` : lave, vitraux, bancs, fontaine de sang), les ennemis, la salle du fond et les sorties.
+- **`crypt.gd`** (hérite de `dungeon.gd`) : les Cryptes de la Cathédrale, portail à XP, régénérées à chaque passage (`GameState.crypt_seed`, partagée en coop), ennemis au niveau du héros.
+- **`temple.gd`** : le Temple du Dragon (chapitre 2) : esplanade et marches, parvis, façade à tête de dragon, orage, Back Jlack et son épreuve (mini-jeu « epreuve »).
+- **`LegendCinematic`** (`scripts/ui`) : la cinématique de la légende (visage de Back Jlack dans un `SubViewport`, orage).
 
 ## Ajouter du contenu
 

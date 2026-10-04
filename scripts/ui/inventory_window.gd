@@ -107,6 +107,11 @@ func _refresh() -> void:
 			if total.has(ab):
 				hint.add_child(UiStyle.label("%s +%d" % [ab, int(total[ab])], 17, Color(0.6, 0.95, 0.6)))
 		hint.add_child(UiStyle.label("Grokk, à la Chèvre Fringante, rachète l'équipement du sac contre quelques médiators.", 14, UiStyle.DIM))
+		if not GameState.quest_items.is_empty():
+			hint.add_child(HSeparator.new())
+			hint.add_child(UiStyle.label("Objets de quête", 17, Color(1.0, 0.8, 0.45)))
+			for id in GameState.quest_items:
+				hint.add_child(_quest_row(id))
 
 	_content.add_child(HSeparator.new())
 	var close_btn := Button.new()
@@ -153,6 +158,43 @@ func _row(id: String, button_text: String, action: Callable, enabled: bool) -> C
 		b.pressed.connect(action)
 		row.add_child(b)
 	return row
+
+
+## Objet de quête : nom, description ; la partition maudite peut être jouée (à vos risques et périls).
+func _quest_row(id: String) -> Control:
+	var q := ItemDB.quest_item(id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var text := VBoxContainer.new()
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(text)
+	text.add_child(UiStyle.label(str(q.get("nom", id)), 16, Color(1.0, 0.85, 0.4)))
+	var desc := UiStyle.label(str(q.get("desc", "")), 13, UiStyle.DIM)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size = Vector2(220, 0)
+	text.add_child(desc)
+	if id == "partition_maudite":
+		var b := Button.new()
+		b.text = "Jouer"
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(_play_partition)
+		row.add_child(b)
+	return row
+
+
+## Jouer la partition maudite sans le Pick du Destin : la foudre frappe celui qui ose (30 % des PV, jamais mortel).
+func _play_partition() -> void:
+	close()
+	var hero := get_tree().get_first_node_in_group("hero") as Hero
+	if hero == null:
+		return
+	var top := hero.global_position + Vector3(0.6, 18.0, -0.6)
+	ArcBolt.spawn(hero.get_parent(), top, hero.global_position + Vector3(0, 1.0, 0), 0.45, 0.5, Color(0.8, 0.85, 1.0))
+	Sfx.play("solo_thunder", 0.0)
+	Events.screen_flash.emit(Color(0.85, 0.9, 1.0, 0.6), 0.35)
+	Events.camera_shake.emit(0.4, 0.5)
+	hero.take_hit(clampi(roundi(GameState.max_hp() * 0.3), 1, maxi(1, GameState.hp - 1)), hero.global_position)
+	Events.notify("Sans le Pick du Destin, la partition vous foudroie ! Back Jlack vous avait prévenu...", Events.COLOR_BAD)
 
 
 func _equip(id: String) -> void:

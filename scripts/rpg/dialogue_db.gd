@@ -14,6 +14,7 @@ const NPCS := {
 	"borin": {"name": "Borin Barbe-de-Bière", "title": "Client (très) détendu", "color": Color(0.9, 0.7, 0.4)},
 	"sylvaine": {"name": "Sylvaine Luth-d'Argent", "title": "Barde rivale", "color": Color(0.6, 0.9, 0.85)},
 	"katrkar": {"name": "Katrkar", "title": "Aventurier brisé", "color": Color(0.95, 0.65, 0.45)},
+	"backjlack": {"name": "Back Jlack", "title": "Le Sage du Rock", "color": Color(1.0, 0.62, 0.25)},
 	"client": {"name": "Client", "title": "", "color": Color(0.8, 0.78, 0.72)},
 	"tableau": {"name": "Tableau des quêtes", "title": "", "color": Color(0.8, 0.75, 0.6)},
 }
@@ -65,6 +66,12 @@ static func get_dialogue(id: String) -> Dictionary:
 			return _intro_hero()
 		"inconnue_oubli":
 			return _inconnue_oubli()
+		"backjlack":
+			return _backjlack()
+		"backjlack_reussite":
+			return _backjlack_reussite()
+		"backjlack_echec":
+			return _backjlack_echec()
 	if id.begins_with("client|"):
 		return _client(id.substr(7))
 	return {"lines": [["???", "..."]], "choices": []}
@@ -240,26 +247,137 @@ static func _brunhilde_rumeurs() -> Dictionary:
 
 static func _inconnue() -> Dictionary:
 	var i := npc_name("inconnue")
-	if GameState.quest_state("plumeau") == QuestDB.State.TURNED_IN:
-		return {
-			"lines": [
-				[i, "Tu as vaincu Gloubah. Elle n'était qu'une servante. Sa couronne portait le sceau de Morne."],
-				[i, "Quand le Silence viendra, barde, joue plus fort que lui. Nous nous reverrons."],
-			],
-			"choices": [
-				["« Efface mes talents, je veux réécrire ma partition. »", "goto:inconnue_oubli"],
-				["(Elle disparaît dans l'ombre...)", "close"],
-			],
-		}
+	var forget := ["« Efface mes talents, je veux réécrire ma partition. »", "goto:inconnue_oubli"]
+	match GameState.quest_state("pick_destin"):
+		QuestDB.State.AVAILABLE:
+			# Chapitre 2 : de retour à la taverne après Plumeau, elle appelle le héros.
+			return {
+				"lines": [
+					[i, "Te voilà enfin, barde. Je t'appelais... Tu n'entendais donc pas ?"],
+					[i, "Gloubah n'était qu'un pion. Ce qui vient est bien plus grand qu'une grenouille couronnée."],
+					[i, "Approche. Il est temps que tu entendes la légende du sage... la légende de Back Jlack."],
+				],
+				"choices": [
+					["« Je t'écoute. »", "accept:pick_destin+story:legende"],
+					["« Plus tard. J'ai un brie qui m'attend. »", "close"],
+					forget,
+				],
+			}
+		QuestDB.State.ACTIVE, QuestDB.State.OBJECTIVE_DONE:
+			return {
+				"lines": [[i, "Back Jlack t'attend, en haut des marches interminables. Veux-tu que je t'y renvoie ?"]],
+				"choices": [
+					["« Renvoie-moi au temple. »", "story:temple"],
+					forget,
+					["« Pas maintenant. »", "close"],
+				],
+			}
+		QuestDB.State.TURNED_IN:
+			return {
+				"lines": [
+					[i, "Tu as la partition. Il te manque le pick. La légende n'est pas finie, barde..."],
+					[i, "Quand le Silence viendra, joue plus fort que lui."],
+				],
+				"choices": [
+					["« Renvoie-moi voir Back Jlack. »", "story:temple"],
+					forget,
+					["(Elle disparaît dans l'ombre...)", "close"],
+				],
+			}
 	return {
 		"lines": [
 			[i, "...Ton luth. Il est accordé en ré bémol, n'est-ce pas ? L'accordage des anciens rois-bardes."],
 			[i, "Les squelettes ne volent pas au hasard. Quelqu'un leur donne des ordres. Quelqu'un qui déteste la musique."],
 		],
 		"choices": [
-			["« Efface mes talents, je veux réécrire ma partition. »", "goto:inconnue_oubli"],
+			forget,
 			["« Qui es-tu ? »", "close"],
 		],
+	}
+
+
+## Cinématique de la légende (chapitre 2) : l'Inconnue raconte, sur le visage de Back Jlack en gros plan.
+const LEGEND_LINES := [
+	"Cette légende passe de barde en barde depuis des siècles...",
+	"Il se raconte qu'un métalleux, guitariste et chanteur, le plus sage d'entre les sages, combattit avec l'aide de Satan un mal bien plus grand que tout ce que tu as affronté...",
+	"...le fameux Mèhn-Strïm. Un dragon qui souhaitait éradiquer le métal.",
+	"Ce sage, c'était Back Jlack.",
+	"Mais plutôt que de te raconter cette légende...",
+	"...tu vas la vivre !",
+]
+
+
+## Back Jlack, en haut des marches interminables, devant le Temple du Dragon.
+static func _backjlack() -> Dictionary:
+	var b := npc_name("backjlack")
+	var trial := ["« Envoie la sauce. » (épreuve : 40 notes à 120 BPM)", "flag:temple_met+story:epreuve"]
+	match GameState.quest_state("pick_destin"):
+		QuestDB.State.OBJECTIVE_DONE:
+			return {
+				"lines": [
+					[b, "Montre-moi ça... PAR LES CORDES DE SATAN ! La partition du Riff Ultime !"],
+					[b, "Écoute-moi bien : elle ne se joue qu'avec le Pick du Destin. Sans lui, la foudre frappe celui qui ose. Crois-moi, j'ai essayé. Deux fois."],
+					[b, "Le pick n'était pas dans ce temple... Mais avec cette partition, Mèhn-Strïm a du souci à se faire. Garde-la précieusement."],
+					[b, "Repose tes doigts, %s. La suite de la légende s'écrira bientôt." % GameState.g("petit", "petite")],
+				],
+				"choices": [["« Rock on. » (terminer la quête)", "turn_in:pick_destin"]],
+			}
+		QuestDB.State.TURNED_IN:
+			return {
+				"lines": [[b, "La légende continue, barde. Garde ta partition au chaud... et loin de tout orage."]],
+				"choices": [["« Rock on. »", "close"]],
+			}
+	if bool(GameState.flags.get("temple_trial_ok", false)):
+		return {
+			"lines": [
+				[b, "Le temple t'est ouvert. Trouve le Pick du Destin, s'il est là-dedans... et méfie-toi de ce qui y joue faux."],
+				[b, "Si tes mollets de coq crient grâce, le portail en bas des marches te ramène à la taverne de ton époque."],
+			],
+			"choices": [["« J'y vais. »", "close"]],
+		}
+	if bool(GameState.flags.get("temple_met", false)):
+		return {
+			"lines": [[b, "Alors ? Tes doigts sont prêts ? 40 notes, 120 BPM, 80 % au moins. Le métal n'attend pas."]],
+			"choices": [trial, ["« Pas encore. »", "close"]],
+		}
+	return {
+		"lines": [
+			[b, "Ah ! Te voilà, %s %s. Je t'attendais. Enfin... j'attendais quelqu'un. Et c'est toi." % [GameState.g("petit", "petite"), hero()]],
+			[b, "Je suis Back Jlack. Oui, CE Back Jlack. Pas d'autographes."],
+			[b, "Écoute-moi bien : le métal est menacé. Mèhn-Strïm, le dragon, veut l'éradiquer de tous les univers."],
+			[b, "La seule solution ? Le battre. Avec des riffs. Des riffs toujours plus hardcore."],
+			[b, "Mais avant de te laisser entrer dans ce temple, je dois savoir si tu es à la hauteur."],
+			[b, "Parce qu'ici, il ne s'agit pas de battre une grenouille ou des squelettes. Non. Ici, ce sont des démons corrompus... par d'autres démons."],
+			[b, "...Oui. C'est un truc démoniaque."],
+			[b, "Joue-moi un solo digne des plus grands : 40 notes, 120 BPM, avec un score d'au moins 80 %."],
+		],
+		"choices": [trial, ["« Laisse-moi m'échauffer les doigts. »", "flag:temple_met"]],
+	}
+
+
+## Épreuve réussie : la porte du temple s'est ouverte dans le tonnerre.
+static func _backjlack_reussite() -> Dictionary:
+	var b := npc_name("backjlack")
+	var lines: Array = [[b, "PAR LES CORNES DU DIABLE ! Ça, c'était un solo !"]]
+	if bool(GameState.flags.get("temple_first_try", false)):
+		lines.append([b, "Et du premier coup ! Tiens, prends ma bénédiction : +10 % de dégâts pendant 20 minutes."])
+	lines.append_array([
+		[b, "Le temple t'a entendu. Maintenant, aide-moi à retrouver le Pick du Destin."],
+		[b, "Un médiator, quoi. Mais pas n'importe lequel : celui qui permet de jouer le riff ultime... le seul qui puisse vaincre le dragon."],
+		[b, "Et si tes mollets de coq en ressentent le besoin, tu peux toujours retourner à la taverne de ton époque pour te reposer. Le portail est en bas des marches."],
+		[b, "Tes doigts auront besoin de nouvelles cornes, dures comme le cuir d'un taureau des enfers, pour jouer des riffs infernaux."],
+	])
+	return {"lines": lines, "choices": [["« Que le riff soit avec nous. »", "close"]]}
+
+
+static func _backjlack_echec() -> Dictionary:
+	var b := npc_name("backjlack")
+	return {
+		"lines": [
+			[b, "Hmm. Non. Non non non. Ça, c'était un solo de kazoo."],
+			[b, "Reviens me voir quand tu seras à la hauteur."],
+		],
+		"choices": [["« Je reviendrai. »", "close"]],
 	}
 
 

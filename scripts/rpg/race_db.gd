@@ -53,8 +53,8 @@ const TUSKS := ["Petites défenses", "Grandes défenses", "Défenses brisées"]
 const BEARDS := ["Barbe courte", "Longue barbe tressée", "Bouc", "Rasé de près"]
 const HAIRSTYLES := ["Tresses", "Queue de cheval", "Longs lâchés", "Glam-metal"]
 const HAIR_COLORS := [Color(0.42, 0.11, 0.05), Color(0.05, 0.04, 0.04), Color(0.9, 0.82, 0.55),
-	Color(0.85, 0.85, 0.88), Color(0.4, 0.15, 0.55), Color(0.95, 0.42, 0.08)]
-const HAIR_COLOR_NAMES := ["Roux sombre", "Noir corbeau", "Blond platine", "Blanc d'argent", "Violet", "Roux flamboyant"]
+	Color(0.85, 0.85, 0.88), Color(0.4, 0.15, 0.55), Color(0.95, 0.42, 0.08), Color(0.24, 0.14, 0.07)]
+const HAIR_COLOR_NAMES := ["Roux sombre", "Noir corbeau", "Blond platine", "Blanc d'argent", "Violet", "Roux flamboyant", "Châtain"]
 
 const DEFAULT_APPEARANCE := {
 	"sex": "m", "race": "humain", "horns": 0, "tusks": 0, "beard": 0, "hair": 2, "hair_color": 0,

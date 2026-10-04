@@ -6,6 +6,10 @@ const CHARACTER_CREATION := "res://scenes/character_creation.tscn"
 const INTRO := "res://scenes/intro.tscn"
 const TAVERN := "res://scenes/tavern.tscn"
 const DUNGEON := "res://scenes/dungeon.tscn"
+## Cryptes de la Cathédrale (portail à XP du sous-sol de la taverne), régénérées à chaque passage.
+const CRYPT := "res://scenes/crypt.tscn"
+## Temple du Dragon : l'autre univers de Back Jlack (marches interminables, parvis, épreuve).
+const TEMPLE := "res://scenes/temple.tscn"
 
 var _fade: ColorRect
 var _busy := false
