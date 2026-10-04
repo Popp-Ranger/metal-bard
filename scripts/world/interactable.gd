@@ -6,6 +6,9 @@ extends Node3D
 var prompt := "Interagir"
 var interact_radius := 2.0
 var on_interact: Callable
+## Zone cliquable (voir Hero._interactable_under_cursor) : hauteur et demi-largeur en mètres.
+var click_height := 1.7
+var click_radius := 0.5
 
 
 static func create(parent: Node, pos: Vector3, text: String, action: Callable, radius: float = 2.0) -> Interactable:

@@ -61,7 +61,7 @@ func _process(delta: float) -> void:
 		_drain -= d
 		hp = maxi(roundi(max_hp * 0.2), hp - d)
 	_label.text = "%d / %d PV" % [hp, max_hp]
-	_bar_fill.scale.x = clampf(float(hp) / max_hp, 0.01, 1.0)
+	Visuals.set_bar_fill(_bar_fill, float(hp) / max_hp, 0.96)
 
 
 ## Appelé par les sorts de soin de groupe.

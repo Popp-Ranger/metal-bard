@@ -210,6 +210,19 @@
 - [x] Gérald, petit fromager aux pieds nus épilés, vient demander de l'aide ; refus possible, il revient à la charge jusqu'au fromage d'hibours (+20 % PV, 20 min)
 - [x] Récompense : 50 médiators et le portrait de l'arrière-arrière-arrière-grand-mère ; Gloubah devient le Roi Grenouille ; portail de retour à côté du héros
 
+## ✅ v0.1.38 — Version de test autonome
+- [x] Riff électrique 70 % moins fort ; export Windows en un seul MetalBard.exe (pck intégré, modèles d'export officiels), sans Godot
+
+## ✅ v0.1.39 — Équipement, butin sur les corps, mini-jeu du Riff
+- [x] Équipement comme dans un MMO : 11 emplacements dans la fiche de personnage, sac, bonus seulement une fois équipé ; 3 nouveaux objets (Perfecto clouté, Bottes de roadie, Chevalière tête de bouc)
+- [x] Butin sur les corps : on clique sur l'ennemi vaincu pour le fouiller ; le corps reste tant qu'il y a du butin et « respire » en doré s'il porte un équipement
+- [x] Riff électrique en mini-jeu : une note à 160 BPM, jusqu'à 8 notes qui sautent d'ennemi en ennemi ; une fausse note triple la recharge
+- [x] Sorts à 80 % de chances de toucher (mini-jeux : 100 %) ; coup de guitare : touche toujours, 1d6, 20 % plus rapide ; Accordage de cordes : 10 s de recharge
+- [x] Torches rouges tant qu'on n'est pas passé à moins de 15 m, une torche de chaque côté des portes (sauf le boss)
+- [x] Barres de vie qui se vident de la droite vers la gauche
+- [x] Gérald revient à la charge au bout de 3 s, puis 2 s, puis 1 s
+- [x] Hella, nouvelle héroïne jouable (modèle retravaillé par Ulysse) ; Zarathos prend le modèle Mage V2
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -13,7 +13,7 @@ const MODELS := {
 	"squelette": "res://assets/models/pnj/squelette.glb",
 }
 ## Hauteur des modèles (m, chapeau compris) : étiquettes, barres de vie.
-const HEIGHTS := {"mage": 2.2, "tavernier": 2.05, "squelette": 1.75}
+const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75}
 ## Agrandissement en jeu (le tavernier orc domine son comptoir) : hauteur et foulée suivent.
 const SCALES := {"tavernier": 1.25}
 

@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0otk08lxsags"
-path="res://.godot/imported/mage_Image_0.jpg-98f92d584f1f718257f652b43739c25a.ctex"
+uid="uid://d2wr4l8w5gpcq"
+path="res://.godot/imported/hella_Image_0.jpg-88a78b5331a9a91fa8ebd3336b269fea.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "7bd16ef1536f0485fede35e9b31e0446"
+"md5": "9a004160a1feb1816d9043fbd18e46c2"
 }
 
 [deps]
 
-source_file="res://assets/models/pnj/mage_Image_0.jpg"
-dest_files=["res://.godot/imported/mage_Image_0.jpg-98f92d584f1f718257f652b43739c25a.ctex"]
+source_file="res://assets/models/hella/hella_Image_0.jpg"
+dest_files=["res://.godot/imported/hella_Image_0.jpg-88a78b5331a9a91fa8ebd3336b269fea.ctex"]
 
 [params]
 

@@ -1,8 +1,9 @@
 class_name InventoryWindow
 extends PanelContainer
-## Inventaire (touche [B]) : reliques portées (leurs bonus s'appliquent tant qu'on les garde), potions et
-## médiators. Chez Grokk (« Vendre ou racheter des reliques »), il s'ouvre en boutique : chaque relique se
-## vend quelques médiators selon sa rareté, et les 10 dernières vendues peuvent être rachetées au même prix.
+## Inventaire (touche [B]) : le sac (objets ramassés, à équiper), l'équipement porté (seul à donner ses bonus),
+## potions et médiators. Chez Grokk (« Vendre ou racheter de l'équipement »), il s'ouvre en boutique : chaque
+## objet du sac se vend quelques médiators selon sa rareté (on ne vend pas ce qu'on porte), et les 10 derniers
+## vendus peuvent être rachetés au même prix.
 ## Le jeu ne se met pas en pause ; le héros reste immobile tant que la fenêtre est ouverte (InventoryWindow.active).
 
 static var active := false
@@ -69,28 +70,34 @@ func _refresh() -> void:
 	columns.add_theme_constant_override("separation", 24)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(columns)
-	var mine := _column(columns, "Reliques portées (%d)" % GameState.inventory.size())
+	var mine := _column(columns, "Sac (%d)" % GameState.inventory.size())
 	if GameState.inventory.is_empty():
-		mine.add_child(UiStyle.label("(aucune relique)", 15, UiStyle.DIM))
+		mine.add_child(UiStyle.label("(vide : fouillez les corps des ennemis)", 15, UiStyle.DIM))
 	for id in GameState.inventory:
-		var action := Callable()
-		var label := ""
 		if shop:
-			label = "Vendre (%d)" % ItemDB.sell_price(id)
-			action = _sell.bind(id)
-		mine.add_child(_row(id, label, action, true))
+			mine.add_child(_row(id, "Vendre (%d)" % ItemDB.sell_price(id), _sell.bind(id), true))
+		else:
+			mine.add_child(_row(id, "Équiper", _equip.bind(id), true))
 	if shop:
 		var back := _column(columns, "Rachat — %d dernières vendues" % GameState.BUYBACK_MAX)
 		if GameState.buyback.is_empty():
 			back.add_child(UiStyle.label("(rien à racheter)", 15, UiStyle.DIM))
 		for id in GameState.buyback:
 			var price := ItemDB.sell_price(id)
-			var ok := GameState.gold >= price and not GameState.inventory.has(id)
+			var ok := GameState.gold >= price and not GameState.owns(id)
 			back.add_child(_row(id, "Racheter (%d)" % price, _buy.bind(id), ok))
 	else:
-		var hint := _column(columns, "Bonus des reliques")
+		var worn := _column(columns, "Équipement porté")
+		if GameState.equipment.is_empty():
+			worn.add_child(UiStyle.label("(rien : équipez un objet du sac)", 15, UiStyle.DIM))
+		for slot: String in ItemDB.SLOTS:
+			if GameState.equipment.has(slot):
+				worn.add_child(_row(str(GameState.equipment[slot]), "Retirer", _unequip.bind(slot), true))
+		var hint := worn
+		hint.add_child(HSeparator.new())
+		hint.add_child(UiStyle.label("Bonus de l'équipement", 17, Color(1.0, 0.8, 0.45)))
 		var total := {}
-		for id in GameState.inventory:
+		for id: String in GameState.equipment.values():
 			var bonus: Dictionary = ItemDB.active_bonus(id)
 			for ab: String in bonus:
 				total[ab] = int(total.get(ab, 0)) + int(bonus[ab])
@@ -99,7 +106,7 @@ func _refresh() -> void:
 		for ab: String in ["FOR", "DEX", "CON", "INT", "SAG", "CHA"]:
 			if total.has(ab):
 				hint.add_child(UiStyle.label("%s +%d" % [ab, int(total[ab])], 17, Color(0.6, 0.95, 0.6)))
-		hint.add_child(UiStyle.label("Grokk, à la Chèvre Fringante, rachète les reliques contre quelques médiators.", 14, UiStyle.DIM))
+		hint.add_child(UiStyle.label("Grokk, à la Chèvre Fringante, rachète l'équipement du sac contre quelques médiators.", 14, UiStyle.DIM))
 
 	_content.add_child(HSeparator.new())
 	var close_btn := Button.new()
@@ -125,7 +132,7 @@ func _column(parent: Control, title: String) -> VBoxContainer:
 	return list
 
 
-## Une relique : nom (couleur de rareté), bonus et description, avec un bouton facultatif.
+## Un objet : nom (couleur de rareté), emplacement, bonus et description, avec un bouton facultatif.
 func _row(id: String, button_text: String, action: Callable, enabled: bool) -> Control:
 	var item := ItemDB.get_item(id)
 	var row := HBoxContainer.new()
@@ -133,7 +140,7 @@ func _row(id: String, button_text: String, action: Callable, enabled: bool) -> C
 	var text := VBoxContainer.new()
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(text)
-	text.add_child(UiStyle.label("%s (%s)" % [item.get("name", id), ItemDB.bonus_text(id)], 16, ItemDB.color_of(id)))
+	text.add_child(UiStyle.label("%s — %s (%s)" % [item.get("name", id), ItemDB.slot_name(ItemDB.slot_of(id)), ItemDB.bonus_text(id)], 16, ItemDB.color_of(id)))
 	var desc := UiStyle.label(str(item.get("desc", "")), 13, UiStyle.DIM)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(220, 0)
@@ -146,6 +153,16 @@ func _row(id: String, button_text: String, action: Callable, enabled: bool) -> C
 		b.pressed.connect(action)
 		row.add_child(b)
 	return row
+
+
+func _equip(id: String) -> void:
+	if GameState.equip(id):
+		Sfx.play("coin", -8.0, 0.3)
+
+
+func _unequip(slot: String) -> void:
+	if GameState.unequip(slot):
+		Sfx.play("swoosh", -12.0)
 
 
 func _sell(id: String) -> void:

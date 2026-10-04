@@ -52,7 +52,7 @@ const TALENTS := {
 	"solo_endiable": {"name": "Solo endiablé", "active": true, "cost": 30.0, "cooldown": 25.0,
 		"desc": "Mini-jeu du solo : tant que les notes sont réussies (jusqu'à 12), les ennemis à 12 m se figent et headbanguent. Une fausse note brise la transe (recharge ×2,5). Vous pouvez vous déplacer."},
 	"tempo_hypnotique": {"name": "Tempo hypnotique", "active": false,
-		"desc": "Le Riff électrique ralentit sa cible de 40 % pendant 2 s."},
+		"desc": "Chaque note du Riff électrique ralentit l'ennemi touché de 40 % pendant 2 s."},
 	"growl": {"name": "Growl de l'Abîme", "active": true, "cost": 20.0, "cooldown": 16.0,
 		"desc": "Hurlement guttural : les ennemis à 6 m fuient, terrifiés, pendant 3,5 s (les boss sont seulement sonnés)."},
 	"maitre_tempo": {"name": "Maître du tempo", "active": false,
@@ -63,7 +63,7 @@ const TALENTS := {
 	"enceinte": {"name": "Enceinte de façade", "active": true, "cost": 25.0, "cooldown": 14.0,
 		"desc": "Pose une enceinte au curseur (8 m) qui pulse 6 fois : 1d8 + CHA dans un rayon de 4 m."},
 	"overdrive": {"name": "Overdrive", "active": false,
-		"desc": "Riff électrique : combo jusqu'à 5 paliers et ×4 au maximum."},
+		"desc": "Riff électrique : jusqu'à 10 notes au lieu de 8, et +25 % de dégâts par note."},
 	"pyrotechnie": {"name": "Pyrotechnie", "active": true, "cost": 40.0, "cooldown": 20.0,
 		"desc": "Six colonnes de feu jaillissent autour de vous après 0,8 s : 4d6 chacune."},
 }

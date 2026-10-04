@@ -29,6 +29,7 @@ CHARACTERS = {
     "riffald": ("Riffald_rig", "Riffald", os.path.join(ROOT, "assets", "models", "riffald", "riffald.glb"), None),
     "persof1": ("PersoF1_rig", "PersoF1", os.path.join(ROOT, "assets", "models", "persof1", "persof1.glb"), None),
     "demon": ("Demon_rig", "Demon", os.path.join(ROOT, "assets", "models", "demon", "demon.glb"), None),
+    "hella": ("Hella_rig", "Hella", os.path.join(ROOT, "assets", "models", "hella", "hella.glb"), None),
     "mage": ("Mage_rig", "Mage", os.path.join(PNJ_GLB, "mage.glb"), {"idle": "idle_pnj", "walk": "walk", "run": "run"}),
     "tavernier": ("Tavernier_rig", "Tavernier", os.path.join(PNJ_GLB, "tavernier.glb"), {"idle": "idle_orc", "walk": "walk", "run": "run"}),
     "squelette": ("Squelette_rig", "Squelette", os.path.join(PNJ_GLB, "squelette.glb"),

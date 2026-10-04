@@ -1,7 +1,8 @@
 class_name ItemDB
 extends RefCounted
 ## Objets du jeu, lus dans data/items.json (fichier modifiable à la main, voir
-## docs/OBJETS.md) : reliques (bonus aux caractéristiques), consommables (potion, chambre),
+## docs/OBJETS.md) : équipement (section « reliques » : bonus aux caractéristiques, appliqués seulement quand
+## l'objet est équipé dans son emplacement, comme dans un MMO), consommables (potion, chambre),
 ## monnaie (médiators) et objets de quête. Si le fichier est absent ou abîmé, les valeurs
 ## par défaut ci-dessous sont utilisées.
 
@@ -14,24 +15,37 @@ const RARITY_COLORS := {
 	"épique": Color(0.8, 0.45, 1.0),
 }
 
+## Emplacements d'équipement, dans l'ordre de la fiche de personnage (clé "emplacement" de chaque objet).
+const SLOTS := {
+	"tete": "Tête", "cou": "Cou", "torse": "Torse", "poignets": "Poignets", "ceinture": "Ceinture", "pieds": "Pieds",
+	"anneau": "Anneau", "talisman": "Talisman", "mediator": "Médiator", "cordes": "Cordes", "grimoire": "Grimoire",
+}
+const DEFAULT_SLOT := "talisman"
+
 ## Valeurs de secours (identiques au fichier livré).
 const DEFAULT_RELICS := {
 	"mediator_os": {"nom": "Médiator en os", "desc": "Taillé dans la phalange d'un squelette trop bavard.",
-		"bonus": {"DEX": 1}, "rarete": "commun", "butin": true},
+		"bonus": {"DEX": 1}, "rarete": "commun", "butin": true, "emplacement": "mediator"},
 	"ceinture_cloutee": {"nom": "Ceinture cloutée", "desc": "Trente-deux clous, trente-deux raisons de ne pas mourir.",
-		"bonus": {"CON": 1}, "rarete": "commun", "butin": true},
+		"bonus": {"CON": 1}, "rarete": "commun", "butin": true, "emplacement": "ceinture"},
 	"bracelet_force": {"nom": "Bracelet à pointes", "desc": "Pour frapper plus fort et accessoirement faire peur.",
-		"bonus": {"FOR": 1}, "rarete": "commun", "butin": true},
+		"bonus": {"FOR": 1}, "rarete": "commun", "butin": true, "emplacement": "poignets"},
 	"cordes_dragon": {"nom": "Cordes en boyau de dragon", "desc": "Elles vibrent toutes seules quand un mort-vivant approche.",
-		"bonus": {"CHA": 1}, "rarete": "peu commun", "butin": true},
+		"bonus": {"CHA": 1}, "rarete": "peu commun", "butin": true, "emplacement": "cordes"},
 	"grimoire_tablatures": {"nom": "Grimoire de tablatures", "desc": "Des accords interdits notés à l'encre de seiche.",
-		"bonus": {"INT": 1, "SAG": 1}, "rarete": "peu commun", "butin": true},
+		"bonus": {"INT": 1, "SAG": 1}, "rarete": "peu commun", "butin": true, "emplacement": "grimoire"},
 	"pendentif_plume": {"nom": "Pendentif de plume de hibours", "desc": "Offert par Gérald. Porte bonheur, et un peu d'odeur de grange.",
-		"bonus": {"CHA": 1, "SAG": 1}, "rarete": "rare", "butin": false},
+		"bonus": {"CHA": 1, "SAG": 1}, "rarete": "rare", "butin": false, "emplacement": "cou"},
 	"couronne_gloubah": {"nom": "Couronne de nénuphar de Gloubah", "desc": "Encore humide. Toujours humide. Pour l'éternité, humide.",
-		"bonus": {"CON": 2, "CHA": 1}, "rarete": "épique", "butin": false},
+		"bonus": {"CON": 2, "CHA": 1}, "rarete": "épique", "butin": false, "emplacement": "tete"},
 	"portrait_aieule": {"nom": "Portrait de l'arrière-arrière-arrière-grand-mère de Gérald", "desc": "Une dame moustachue qui fixe l'âme de quiconque la regarde.",
-		"bonus": {"SAG": 1, "CHA": 1}, "rarete": "rare", "butin": false},
+		"bonus": {"SAG": 1, "CHA": 1}, "rarete": "rare", "butin": false, "emplacement": "talisman"},
+	"perfecto_cloute": {"nom": "Perfecto clouté", "desc": "Cuir noir, clous d'acier et une odeur tenace de bière renversée.",
+		"bonus": {"CON": 1}, "rarete": "commun", "butin": true, "emplacement": "torse"},
+	"bottes_roadie": {"nom": "Bottes de roadie", "desc": "Coquées pour survivre aux pieds de micro et aux pogos.",
+		"bonus": {"DEX": 1}, "rarete": "commun", "butin": true, "emplacement": "pieds"},
+	"chevaliere_bouc": {"nom": "Chevalière tête de bouc", "desc": "Argent terni. Le bouc vous fait un clin d'œil quand vous jouez faux.",
+		"bonus": {"CHA": 1, "INT": 1}, "rarete": "peu commun", "butin": true, "emplacement": "anneau"},
 }
 
 static var _data := {}
@@ -63,7 +77,7 @@ static func relics() -> Dictionary:
 	return r
 
 
-## Relique au format utilisé par le jeu : name, desc, bonus, rarity.
+## Objet au format utilisé par le jeu : name, desc, bonus, rarity, slot (emplacement d'équipement).
 static func get_item(id: String) -> Dictionary:
 	var raw: Dictionary = relics().get(id, {})
 	if raw.is_empty():
@@ -74,10 +88,21 @@ static func get_item(id: String) -> Dictionary:
 		"bonus": raw.get("bonus", {}),
 		"rarity": str(raw.get("rarete", "commun")),
 		"enabled": bool(raw.get("actif", true)),
+		"slot": slot_of(id),
 	}
 
 
-## Reliques qui peuvent tomber sur les ennemis et dans les coffres.
+## Emplacement d'équipement d'un objet (talisman si le fichier n'en donne pas, ou un emplacement inconnu).
+static func slot_of(id: String) -> String:
+	var slot := str((relics().get(id, {}) as Dictionary).get("emplacement", DEFAULT_SLOT))
+	return slot if SLOTS.has(slot) else DEFAULT_SLOT
+
+
+static func slot_name(slot: String) -> String:
+	return str(SLOTS.get(slot, slot))
+
+
+## Équipements qui peuvent tomber sur les ennemis et dans les coffres.
 static func common_drops() -> Array[String]:
 	var out: Array[String] = []
 	for id: String in relics():

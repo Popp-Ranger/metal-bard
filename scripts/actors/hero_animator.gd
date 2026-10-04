@@ -16,7 +16,7 @@ const RUN_SPEED := 2.9
 const XFADE := 0.15
 const LOOPS := ["idle", "idle_tired", "walk", "run", "headbang", "fall", "sleep"]
 ## États joués une fois puis retour au déplacement : durée à l'écran (s), 0 = durée du clip.
-const ONE_SHOTS := {"smash": 0.6, "slash": 0.6, "area": 1.0, "cast": 1.1, "slide": 0.67, "land": 0.55, "victory": 3.2}
+const ONE_SHOTS := {"smash": 0.5, "slash": 0.5, "area": 1.0, "cast": 1.1, "slide": 0.67, "land": 0.55, "victory": 3.2}
 ## Poids par état : [main du manche sur la guitare, main qui gratte, guitare empoignée].
 const HANDS := {
 	"loco": [1.0, 1.0, 0.0], "solo": [1.0, 1.0, 0.0], "slide": [1.0, 1.0, 0.0],

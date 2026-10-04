@@ -148,8 +148,17 @@ const PRESETS := {
 		"height": 1.95,
 		"rig": {"guitar_scale": 1.2, "play_pick": Vector3(-0.12, 0.93, 0.21), "back_pos": Vector3(0.0, 1.2, -0.27)},
 	},
+	"hella": {
+		"name": "Hella",
+		"title": "Hella, la furie du larsen",
+		"desc": "Humaine, crinière rousse flamboyante et tresses, haut déchiré et ventre nu, épaulières et brassards à pointes, genouillères d'acier, cape bordeaux en lambeaux. Armée de la même Flying V.",
+		"appearance": {"sex": "f", "race": "humain", "horns": 0, "tusks": 0, "beard": 0, "hair": 3, "hair_color": 5, "preset": "hella"},
+		"model": "res://assets/models/hella/hella.glb",
+		"height": 1.75,
+		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.11, 0.86, 0.16), "back_pos": Vector3(0.0, 1.1, -0.22)},
+	},
 }
-const PRESET_ORDER := ["riffald", "persof1", "demon"]
+const PRESET_ORDER := ["riffald", "persof1", "demon", "hella"]
 
 
 ## Modèle 3D d'un héros prédéfini ("" si personnage personnalisé ou sans modèle).

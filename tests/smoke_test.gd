@@ -15,6 +15,7 @@ func _ready() -> void:
 	_test_story()
 	await _test_characters()
 	await _test_skeleton_body()
+	await _test_loot_and_gear()
 	await _test_level_editor()
 	await _test_quest_flow()
 	await _test_new_features()
@@ -126,17 +127,38 @@ func _test_quest_flow() -> void:
 		elif normal_door < 0 and not bool(door_list[i]["doorway"]) and int(door_list[i]["room"]) != dg.get("gen").start_room:
 			normal_door = i
 	var normal_room := int(door_list[normal_door]["room"])
-	# Torches : rouge orangé tant que leur salle a des ennemis en vie, flamme normale une fois nettoyée.
-	var alarm: Dictionary = dg.get("_alarm_torches")
-	var alarm_room: int = alarm.keys()[0] if not alarm.is_empty() else -1
-	var torch_mat: StandardMaterial3D = ((alarm[alarm_room] as Array)[0] as Node3D).get_meta("torch")[0] if alarm_room >= 0 else null
+	# Torches : rouge orangé tant que le héros n'est pas passé à moins de 15 m, flamme normale ensuite (pour de bon).
+	var torch_list: Array = dg.get("_torches")
+	var hero_t := get_tree().get_first_node_in_group("hero") as Node3D
+	var far_i := -1
+	for i in torch_list.size():
+		if _flat((torch_list[i] as Node3D).global_position, hero_t.global_position) > 22.0:
+			far_i = i
+			break
+	var far_t: Node3D = torch_list[far_i] if far_i >= 0 else null
+	var torch_mat: StandardMaterial3D = far_t.get_meta("torch")[0] if far_t != null else null
 	var was_red := torch_mat != null and torch_mat.emission.is_equal_approx(DungeonDecor.TORCH_ALARM[0])
-	for e: Variant in (dg.get("_room_enemies") as Dictionary).get(alarm_room, []):
-		if is_instance_valid(e):
-			(e as Enemy).take_damage(99999, (e as Enemy).global_position + Vector3(0.1, 0, 0), 0.0, false, "phys")
-	await get_tree().create_timer(0.6).timeout
-	_check(was_red and not alarm.has(alarm_room) and alarm.size() >= 3,
-		"torches rouge orangé dans les salles occupées, flamme normale une fois la salle nettoyée")
+	var start_pos := hero_t.global_position
+	far_t.visible = true # sa salle est peut-être encore fermée
+	hero_t.global_position = far_t.global_position + far_t.global_basis.z * 3.0
+	await get_tree().create_timer(1.8).timeout
+	var seen: Array = (dg.get("_state") as Dictionary).get("torches", [])
+	_check(was_red and seen.has(far_i) and torch_mat.emission.is_equal_approx(DungeonDecor.TORCH_CALM[0]),
+		"torches rouge orangé tant qu'on n'est pas passé à moins de 15 m, flamme normale ensuite")
+	hero_t.global_position = start_pos
+	# Une torche de chaque côté des portes, sauf celle du boss.
+	var flanked := 0
+	var boss_flank := 0
+	for d: Dictionary in door_list:
+		var near := 0
+		for t: Node3D in torch_list:
+			if t.position.distance_to((d["node"] as Node3D).position) < 1.8:
+				near += 1
+		if bool(d["locked"]):
+			boss_flank += near
+		elif near >= 2:
+			flanked += 1
+	_check(flanked >= 2 and boss_flank == 0, "une torche de chaque côté des portes (%d portes), aucune à la porte du boss" % flanked)
 	dg.call("_on_door", normal_door)
 	await _frames(2)
 	_check(bool(door_list[normal_door]["open"]) and not covers.has(normal_room), "ouvrir une porte éclaire la salle")
@@ -191,25 +213,41 @@ func _test_quest_flow() -> void:
 			targets.append(e)
 	hero.aim_point = targets[0].global_position
 	GameState.mana = GameState.max_mana()
+	for e in targets:
+		e.hp = 9999 # cibles d'entraînement : elles doivent survivre à tous les sorts du test
 	var hp_before := 0
 	for e in targets:
 		hp_before += e.hp
-	hero.cast_tuning()
-	await _frames(2)
-	var hp_after := 0
-	for e in targets:
-		hp_after += maxi(e.hp, 0)
+	# Les sorts touchent 8 fois sur 10 : on relance l'Accordage si les 3 cibles l'ont esquivé.
+	var hp_after := hp_before
+	for attempt in 5:
+		hero.cooldowns["tuning"] = 0.0
+		GameState.mana = GameState.max_mana()
+		hero.cast_tuning()
+		await _frames(2)
+		hp_after = 0
+		for e in targets:
+			hp_after += maxi(e.hp, 0)
+		if hp_after < hp_before:
+			break
 	_check(hp_after < hp_before, "l'Accordage de cordes inflige des dégâts en chaîne")
-	hero.cooldowns["wave"] = 0.0
-	for e in targets:
-		e.hp = 9999
-		e.global_position = hero.global_position + Vector3(1.5, 0, 0)
-	hero.cast_wave()
-	await _frames(2)
+	_check(is_equal_approx(Balance.TUNING_COOLDOWN, 10.0) and absf(float(hero.cooldowns["tuning"]) - 10.0 * GameState.cooldown_multiplier()) < 0.1,
+		"Accordage de cordes : recharge de 10 s")
 	var banging := 0
-	for e in targets:
-		if is_instance_valid(e) and e.is_in_trance():
-			banging += 1
+	for attempt in 5:
+		hero.cooldowns["wave"] = 0.0
+		GameState.mana = GameState.max_mana()
+		for e in targets:
+			e.hp = 9999
+			e.global_position = hero.global_position + Vector3(1.5, 0, 0)
+		hero.cast_wave()
+		await _frames(2)
+		banging = 0
+		for e in targets:
+			if is_instance_valid(e) and e.is_in_trance():
+				banging += 1
+		if banging > 0:
+			break
 	await get_tree().create_timer(Balance.WAVE_HEADBANG + 0.3).timeout
 	var still := 0
 	for e in targets:
@@ -217,30 +255,72 @@ func _test_quest_flow() -> void:
 			still += 1
 	_check(banging > 0 and still == 0, "Onde de choc : les ennemis touchés headbanguent %.2f s (%d)" % [Balance.WAVE_HEADBANG, banging])
 	_check(GameState.mana < GameState.max_mana(), "les sorts consomment des décibels")
-	# Riff électrique : combo rythmique ×1 → ×3 (4 paliers), remis à ×1 à contretemps.
-	_check(is_equal_approx(Hero.riff_multiplier(1), 1.0) and is_equal_approx(Hero.riff_multiplier(4), 3.0)
-		and is_equal_approx(Hero.riff_multiplier(9), 3.0), "multiplicateur du Riff : ×1 → ×3 en 4 paliers")
+	# Chance de toucher des sorts : 80 % (sauf mini-jeux : 100 %).
+	var spell_hits := 0
+	var sure_hits := 0
+	var hp_probe := targets[0]
+	for k in 300:
+		hp_probe.hp = 9999
+		if hero.hit_enemy(hp_probe, 1, 0.0, "sound"):
+			spell_hits += 1
+		if hero.hit_enemy(hp_probe, 1, 0.0, "sound", Vector3.INF, true):
+			sure_hits += 1
+	_check(is_equal_approx(GameState.spell_hit_chance(), 0.8) and spell_hits > 210 and spell_hits < 270 and sure_hits == 300,
+		"sorts : 80 %% de chances de toucher (%d / 300), mini-jeux toujours (%d / 300)" % [spell_hits, sure_hits])
+	# Riff électrique : mini-jeu, la même note à 160 BPM ; l'éclair saute d'un ennemi au suivant.
+	var solo_game := (dungeon as Level).hud.solo
+	for i in targets.size():
+		targets[i].hp = 9999
+		targets[i].global_position = hero.global_position + Vector3(2.0 + i * 1.5, 0, 0)
+		targets[i].exit_trance()
+	hero.aim_point = targets[0].global_position
 	GameState.mana = GameState.max_mana()
-	var dummy: Enemy = null
-	for e in hero.enemies():
-		if not e.is_boss:
-			dummy = e
-			break
-	dummy.hp = 9999 # mannequin d'entraînement
-	dummy.global_position = hero.global_position + Vector3(3, 0, 0)
-	hero.aim_point = dummy.global_position
-	for beat in 5:
-		GameState.hp = GameState.max_hp() # les squelettes réveillés ne doivent pas tuer le héros pendant le test
-		hero.cooldowns["riff"] = 0.0
-		hero.cast_riff()
-		await get_tree().create_timer(Balance.RIFF_BEAT).timeout
-	_check(hero.riff_stack == Balance.RIFF_MAX_STACKS, "5 riffs en rythme → combo au maximum")
-	await get_tree().create_timer(Balance.RIFF_BEAT * 2.5).timeout
-	GameState.hp = GameState.max_hp()
+	GameState.hp = GameState.max_hp() # les squelettes réveillés ne doivent pas tuer le héros pendant le test
 	hero.cooldowns["riff"] = 0.0
 	hero.cast_riff()
-	_check(hero.riff_stack == 1, "riff à contretemps → combo remis à ×1")
-	_check(absf(float(hero.cooldowns["riff"]) - 3.0) < 0.05, "Riff électrique : recharge de 3 s")
+	await _frames(1)
+	var riff_beat := 60.0 / Balance.RIFF_BPM
+	var regular := solo_game._notes.size() == Balance.RIFF_NOTES - 1
+	for i in solo_game._notes.size():
+		regular = regular and absf(float(solo_game._notes[i]["time"]) - riff_beat * (i + 1)) < 0.001 and int(solo_game._notes[i]["lane"]) == 0
+	_check(hero.casting_riff and solo_game._active and solo_game.mode == "riff" and solo_game._lanes == 1 and regular,
+		"Riff électrique : mini-jeu d'une seule note, 8 notes à 160 BPM (la 1re part avec le sort)")
+	for i in solo_game._notes.size():
+		var wait := float(solo_game._notes[i]["time"]) - solo_game._t
+		if wait > 0.0:
+			await get_tree().create_timer(wait).timeout
+		GameState.hp = GameState.max_hp()
+		solo_game._press(0)
+	await _frames(2)
+	var chained := {}
+	for e: Enemy in hero._riff_chain:
+		chained[e] = true
+	_check(not hero.casting_riff and not solo_game._active and hero._riff_chain.size() == Balance.RIFF_NOTES and chained.size() >= 3,
+		"riff parfait : 8 notes, l'éclair se propage aux ennemis suivants (%d touchés ; chaîne %d, notes %d / %d, t %.3f, en cours %s)" % [chained.size(), hero._riff_chain.size(), solo_game._hits, solo_game._notes.size(), solo_game._t, hero.casting_riff])
+	_check(absf(float(hero.cooldowns["riff"]) - Balance.RIFF_COOLDOWN * GameState.cooldown_multiplier()) < 0.05, "Riff électrique : recharge de 3 s")
+	hero.cooldowns["riff"] = 0.0
+	GameState.mana = GameState.max_mana()
+	hero.cast_riff()
+	await _frames(1)
+	solo_game._press(0) # à contretemps : la 2e note n'arrive qu'au bout de 0,375 s
+	await _frames(1)
+	_check(not hero.casting_riff and absf(float(hero.cooldowns["riff"]) - 3.0 * Balance.RIFF_COOLDOWN * GameState.cooldown_multiplier()) < 0.05,
+		"riff : une fausse note l'arrête et triple la recharge")
+	# Coup de guitare : il touche à chaque fois (même contre une CA de 99), 1d6 + FOR.
+	var victim := targets[0]
+	victim.armor_class = 99
+	var landed := 0
+	for k in 4:
+		victim.hp = 9999
+		victim.global_position = hero.global_position + hero.facing * 1.2
+		GameState.hp = GameState.max_hp()
+		hero.cooldowns["attack"] = 0.0
+		hero.melee()
+		await get_tree().create_timer(Balance.MELEE_HIT_DELAY + 0.1).timeout
+		var dealt := 9999 - victim.hp
+		if dealt >= 1 and dealt <= 2 * Balance.MELEE_DICE + GameState.mod("FOR") + 2:
+			landed += 1
+	_check(landed == 4, "coup de guitare : touche à tous les coups (CA 99), 1d6 + FOR (%d / 4)" % landed)
 	_check(Sfx._streams.has("riff") and (Sfx._streams["riff"] as AudioStream).resource_path.ends_with("riff_electrique.wav"),
 		"Riff électrique : son riff electrique.wav")
 	_check(Sfx._thunders.size() == 2 and Sfx._streams.has("thunder_0") and Sfx._streams.has("thunder_1"),
@@ -501,8 +581,8 @@ func _test_boss_fight_and_surrender() -> void:
 func _test_new_features() -> void:
 	print("[Taverne, intro, sauvegardes, coop, objets]")
 	GameState.new_game()
-	_check(ItemDB.common_drops().size() == 5 and ItemDB.potion_price() == 25 and ItemDB.get_item("couronne_gloubah").get("name", "") != "",
-		"objets lus dans data/items.json (5 reliques de butin)")
+	_check(ItemDB.common_drops().size() == 8 and ItemDB.potion_price() == 25 and ItemDB.get_item("couronne_gloubah").get("name", "") != "",
+		"objets lus dans data/items.json (8 équipements de butin)")
 	var tavern: Node = load("res://scenes/tavern.tscn").instantiate()
 	add_child(tavern)
 	await _frames(20)
@@ -790,27 +870,60 @@ func _test_story() -> void:
 
 ## Inventaire (touche B) : vente des reliques à Grokk et rachat des 10 dernières.
 func _test_inventory() -> void:
-	print("[Inventaire]")
+	print("[Inventaire et équipement]")
 	GameState.new_game()
 	var relics: Array = ItemDB.relics().keys()
+	var cha_base := GameState.ability("CHA")
 	for id: String in relics:
-		GameState.inventory.append(id)
-	var cha_before := GameState.ability("CHA")
+		GameState.add_item(id)
+	_check(GameState.inventory.size() == relics.size() and GameState.equipment.is_empty() and GameState.ability("CHA") == cha_base,
+		"le butin va dans le sac : ses bonus ne comptent pas tant qu'il n'est pas équipé")
+	var slots_ok := true
+	for id: String in relics:
+		slots_ok = slots_ok and ItemDB.SLOTS.has(ItemDB.slot_of(id))
+	_check(slots_ok and ItemDB.SLOTS.size() == 11 and ItemDB.slot_of("couronne_gloubah") == "tete" and ItemDB.slot_of("bottes_roadie") == "pieds",
+		"équipement : 11 emplacements (tête, cou, torse... cordes, grimoire), chaque objet a le sien")
+	_check(GameState.equip("cordes_dragon") and GameState.equipment.get("cordes", "") == "cordes_dragon"
+		and not GameState.inventory.has("cordes_dragon") and GameState.ability("CHA") == cha_base + 1,
+		"équiper les cordes en boyau de dragon : +1 CHA")
+	_check(GameState.unequip("cordes") and GameState.inventory.has("cordes_dragon") and GameState.ability("CHA") == cha_base,
+		"retirer un équipement : il retourne dans le sac et ses bonus disparaissent")
+	GameState.equip("cordes_dragon")
+	GameState.inventory.append("cordes_dragon_bis") # même emplacement : l'ancien objet retourne dans le sac
+	ItemDB.relics()["cordes_dragon_bis"] = {"nom": "Cordes de test", "bonus": {"CHA": 2}, "rarete": "commun", "emplacement": "cordes"}
+	_check(GameState.equip("cordes_dragon_bis") and GameState.inventory.has("cordes_dragon") and GameState.ability("CHA") == cha_base + 2,
+		"équiper sur un emplacement occupé : l'objet précédent retourne dans le sac")
+	GameState.unequip("cordes")
+	GameState.inventory.erase("cordes_dragon_bis")
+	ItemDB.relics().erase("cordes_dragon_bis")
 	var gold0 := GameState.gold
-	var first: String = relics[0]
+	var first := "mediator_os"
 	var price := ItemDB.sell_price(first)
 	_check(GameState.sell_item(first) and not GameState.inventory.has(first) and GameState.gold == gold0 + price
-		and GameState.buyback[0] == first and price > 0, "vendre une relique à Grokk : +%d médiators, dans l'historique de rachat" % price)
+		and GameState.buyback[0] == first and price > 0, "vendre un objet du sac à Grokk : +%d médiators, dans l'historique de rachat" % price)
 	_check(GameState.buy_back(first) and GameState.inventory.has(first) and GameState.gold == gold0 and GameState.buyback.is_empty(),
-		"racheter une relique au prix de vente")
+		"racheter un objet au prix de vente")
+	GameState.equip(first)
+	_check(not GameState.sell_item(first) and GameState.is_equipped(first), "on ne vend pas un objet porté")
+	GameState.unequip("mediator")
 	for i in 12:
 		GameState.buyback.push_front("x%d" % i)
 	GameState.sell_item(first)
-	_check(GameState.buyback.size() == GameState.BUYBACK_MAX and GameState.buyback[0] == first, "historique de rachat limité aux 10 dernières")
-	_check(GameState.ability("CHA") <= cha_before and InputMap.has_action("inventory")
-		and InputMap.action_get_events("inventory").size() > 0, "inventaire sur la touche B ; une relique vendue perd ses bonus")
+	_check(GameState.buyback.size() == GameState.BUYBACK_MAX and GameState.buyback[0] == first, "historique de rachat limité aux 10 derniers")
+	_check(InputMap.has_action("inventory") and InputMap.action_get_events("inventory").size() > 0, "inventaire sur la touche B")
+	GameState.equip("couronne_gloubah")
 	var snap: Dictionary = GameState._snapshot()
-	_check((snap["buyback"] as Array).has(first), "l'historique de rachat est sauvegardé")
+	_check((snap["buyback"] as Array).has(first) and (snap["equipment"] as Dictionary).get("tete", "") == "couronne_gloubah",
+		"l'historique de rachat et l'équipement porté sont sauvegardés")
+	GameState.apply_save(JSON.parse_string(JSON.stringify(snap)))
+	_check(GameState.equipment.get("tete", "") == "couronne_gloubah" and not GameState.inventory.has("couronne_gloubah"),
+		"équipement rechargé avec la partie")
+	# Ancienne sauvegarde (sans équipement) : les reliques qu'on avait sont équipées d'office.
+	snap.erase("equipment")
+	snap["inventory"] = ["bracelet_force", "pendentif_plume"]
+	GameState.apply_save(JSON.parse_string(JSON.stringify(snap)))
+	_check(GameState.equipment.get("poignets", "") == "bracelet_force" and GameState.equipment.get("cou", "") == "pendentif_plume"
+		and GameState.inventory.is_empty(), "sauvegarde d'avant l'équipement : reliques équipées automatiquement")
 	GameState.new_game()
 
 
@@ -985,6 +1098,23 @@ func _test_characters() -> void:
 		and demon._skin != null and demon._skin.skeleton.get_bone_count() == 17 and demon._anim != null
 		and demon._anim.lengths.size() >= 16 and is_equal_approx(demon.height(), 1.95),
 		"Belzeluth : démon prédéfini, son modèle, les 17 os et les animations de Riffald, 1,95 m")
+	# Hella, héroïne prédéfinie (modèle retravaillé par Ulysse).
+	var hella_i := RaceDB.PRESET_ORDER.find("hella")
+	creation._set_hero_mode(hella_i)
+	creation._refresh()
+	await _frames(3)
+	var hella: HeroModel = creation._model
+	_check(hella_i >= 0 and creation._name_edit.text == "Hella" and str(creation.appearance["sex"]) == "f"
+		and hella._skin != null and hella._skin.skeleton.get_bone_count() == 17 and hella._anim != null
+		and hella._anim.lengths.size() >= 16 and is_equal_approx(hella.height(), 1.75),
+		"Hella : héroïne prédéfinie, son modèle, les 17 os et les %d animations de Riffald, 1,75 m" % (hella._anim.lengths.size() if hella._anim else 0))
+	var sk_h := hella._skin.skeleton
+	await sk_h.skeleton_updated
+	var gt_h := hella._anim._skel_to_model().affine_inverse() * hella._guitar.transform.orthonormalized()
+	var hands_h := hella._anim.hand_targets(gt_h)
+	var err_h := maxf((sk_h.get_bone_global_pose(sk_h.find_bone("hand.L")).origin - hands_h["L"]).length(),
+		(sk_h.get_bone_global_pose(sk_h.find_bone("hand.R")).origin - hands_h["R"]).length())
+	_check(err_h < 0.03, "Hella : mains sur la guitare (écart %.3f m)" % err_h)
 	creation._set_hero_mode(RaceDB.PRESET_ORDER.size())
 	creation._refresh()
 	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")
@@ -1320,3 +1450,60 @@ func _test_remote_spell_fx() -> void:
 	GameState.dungeon_state = {}
 	GameState.dungeon_seed = 0
 	await _frames(3)
+
+
+func _test_loot_and_gear() -> void:
+	print("[Butin sur les corps, barres de vie, Gérald, Zarathos]")
+	GameState.new_game()
+	var skel := Skeleton.new()
+	add_child(skel)
+	skel.set_physics_process(false)
+	await _frames(1)
+	# Barre de vie : elle se vide de la droite vers la gauche (le bord gauche ne bouge pas).
+	skel.take_damage(skel.max_hp / 2, skel.global_position + Vector3(0.1, 0, 0), 0.0)
+	var q := skel._hp_fill.mesh as QuadMesh
+	_check(absf(q.center_offset.x - q.size.x * 0.5 + 0.43) < 0.001 and q.size.x < 0.75,
+		"barre de vie des ennemis : elle se vide de la droite vers la gauche")
+	# Butin : il reste sur le corps, qui ne disparaît pas tant qu'on ne l'a pas fouillé.
+	skel.loot.append({"kind": "gold", "value": 7})
+	skel.loot.append({"kind": "item", "item": "bottes_roadie"})
+	var gold0 := GameState.gold
+	skel.take_damage(9999, skel.global_position + Vector3(0.1, 0, 0), 0.0)
+	await _frames(3)
+	var spot := skel._loot_spot
+	_check(spot != null and spot.is_in_group("interactable") and spot.get_prompt().contains("Bottes de roadie")
+		and spot.click_height < 1.0, "corps à fouiller (clic ou E) : « %s »" % (spot.get_prompt() if spot else ""))
+	var glow := [] as Array[float]
+	for k in 4:
+		await get_tree().create_timer(0.5).timeout
+		glow.append(skel._glow_light.light_energy)
+	var mat: StandardMaterial3D = skel._flash_mats[0]
+	_check(skel._glow_tween != null and skel._glow_tween.is_running() and glow.max() - glow.min() > 0.8
+		and mat.emission.is_equal_approx(Enemy.LOOT_GLOW) and is_equal_approx(Enemy.LOOT_GLOW_FADE, 1.0),
+		"équipement à ramasser : le corps « respire » en doré (fondu d'une seconde)")
+	await get_tree().create_timer(2.0).timeout
+	_check(is_instance_valid(skel) and skel.model.scale.y > 0.5, "le corps reste au sol tant que le butin est là")
+	spot.interact(null)
+	_check(GameState.gold >= gold0 + 7 and GameState.inventory.has("bottes_roadie") and skel.loot.is_empty(),
+		"fouiller le corps : médiators et équipement ramassés")
+	await get_tree().create_timer(0.9).timeout
+	_check(not is_instance_valid(skel), "une fois fouillé, le corps disparaît")
+	# Gérald revient à la charge 3 s après un refus, puis 2 s, puis 1 s.
+	var tavern_script: GDScript = load("res://scripts/world/tavern.gd")
+	var delays: Array[float] = []
+	for refus in [1, 2, 3, 5]:
+		GameState.flags["gerald_refus"] = refus
+		delays.append(float(tavern_script.call("plea_delay")))
+	GameState.flags.erase("gerald_refus")
+	_check(delays == ([3.0, 2.0, 1.0, 1.0] as Array[float]), "Gérald revient au bout de 3 s, puis 2 s, puis 1 s")
+	# Zarathos : nouveau modèle (Mage V2), animé.
+	var mage := CharacterSkin.create("mage")
+	add_child(mage)
+	await _frames(2)
+	_check(mage != null and mage.skeleton.get_bone_count() == 17 and mage.lengths.has("idle") and mage.lengths.has("walk")
+		and is_equal_approx(mage.height, 1.85), "Zarathos : modèle Mage V2 (17 os, repos et marche), 1,85 m")
+	mage.queue_free()
+	# Coup de guitare : 20 % plus rapide.
+	_check(is_equal_approx(Balance.MELEE_COOLDOWN, 0.54) and is_equal_approx(float(HeroAnimator.ONE_SHOTS["smash"]), 0.5)
+		and Balance.MELEE_DICE == 6, "coup de guitare : 1d6, 20 % plus rapide (0,54 s)")
+	GameState.new_game()

@@ -143,7 +143,4 @@ func _flash() -> void:
 func _death_anim() -> void:
 	Sfx.play("bones", -6.0)
 	skin.die()
-	var tw := create_tween()
-	tw.tween_interval(2.5)
-	tw.tween_property(model, "scale", Vector3(model.scale.x, 0.05, model.scale.z), 0.6)
-	tw.tween_callback(queue_free)
+	_corpse(2.5)

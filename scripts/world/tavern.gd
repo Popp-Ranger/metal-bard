@@ -24,10 +24,10 @@ var _gerald: Npc
 var _gerald_home := Vector3.ZERO
 ## Chaise et table du héros (thé glacé à la goyave et plateau de fromages) : {pos, yaw}, gardée libre.
 var _hero_seat := {}
-## Gérald revient demander de l'aide après chaque refus (toutes les PLEA_DELAY secondes).
+## Gérald revient demander de l'aide après chaque refus : 3 s après le premier, 2 s après le deuxième, puis 1 s.
 var _plea_timer := 0.0
 var _gerald_busy := false
-const PLEA_DELAY := 12.0
+const PLEA_DELAYS := [3.0, 2.0, 1.0]
 var _rune_circle := Vector3.ZERO
 var _blue_portal_pos := Vector3.ZERO
 var _training_zones: Array[TavernMarker] = []
@@ -517,7 +517,7 @@ func _gerald_comes() -> void:
 	_gerald_busy = false
 
 
-## Quête refusée : Gérald revient à la charge toutes les PLEA_DELAY secondes, tant que le héros est dans la
+## Quête refusée : Gérald revient à la charge de plus en plus vite (PLEA_DELAYS), tant que le héros est dans la
 ## salle commune (pas à l'étage, au sous-sol, au lit ni en pleine conversation).
 func _update_pleas(delta: float) -> void:
 	if _gerald == null or hero == null or _gerald_busy or DialogueBox.active or InventoryWindow.active:
@@ -527,9 +527,15 @@ func _update_pleas(delta: float) -> void:
 	if hero.resting or hero.global_position.distance_to(_gerald_home) > 25.0:
 		return
 	_plea_timer += delta
-	if _plea_timer >= PLEA_DELAY:
+	if _plea_timer >= plea_delay():
 		_plea_timer = 0.0
 		_gerald_comes()
+
+
+## Délai avant le retour de Gérald : 3 s après le premier refus, 2 s après le deuxième, 1 s ensuite.
+static func plea_delay() -> float:
+	var refusals := int(GameState.flags.get("gerald_refus", 0))
+	return float(PLEA_DELAYS[clampi(refusals, 1, PLEA_DELAYS.size()) - 1])
 
 
 # =====================================================================================

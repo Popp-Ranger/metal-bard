@@ -38,7 +38,7 @@ Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte ave
                          └─ mort : réveil à la taverne, -25 % d'or, quête conservée
 ```
 
-**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes en chaîne → Riff électrique en rythme sur le plus coriace → finir à la guitare → ramasser le butin.
+**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes en chaîne → Riff électrique (mini-jeu à 160 BPM) qui saute d'ennemi en ennemi → finir à la guitare → fouiller les corps.
 **Méso-boucle (15 min)** : un donjon complet, montée en tension vers le boss.
 **Macro-boucle (heures)** : niveaux, reliques, nouvelles quêtes, arc narratif contre Morne.
 
@@ -85,7 +85,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 | Viser | Souris | Stick droit |
 | Coup de guitare | Espace / clic gauche (maintenir = enchaîner) | X |
 | Accordage de cordes | Clic droit | RB |
-| Riff électrique (en rythme) | 1 | A |
+| Riff électrique (mini-jeu, 160 BPM) | 1 | A |
 | Onde de choc | 2 | B |
 | Solo de la Foudre | 3 | Y |
 | Mini-jeu du solo | 1 2 3 4 | Croix directionnelle |
@@ -127,16 +127,16 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 ## 8. Combat
 
 ### 8.1 Résolution
-- **Attaque au corps-à-corps** : d20 + maîtrise + mod FOR contre la CA de la cible. 1 naturel = échec, 20 naturel = critique (dés doublés, chiffre doré).
-- **Sorts** : touchent automatiquement ; certains autorisent un **jet de sauvegarde** de la cible (d20 + bonus ≥ DD) pour diviser les dégâts par deux.
+- **Coup de guitare** : touche **toujours** (pas de jet d'attaque) ; 1 chance sur 20 de critique (dés doublés, chiffre doré).
+- **Sorts** : **80 % de chances de toucher** leur cible sans amélioration (« Raté » sinon, chaque cible tirée à part). Les sorts joués en **mini-jeu** (Riff électrique, Solo de la Foudre, solos des talents) touchent toujours. Certains autorisent un **jet de sauvegarde** de la cible (d20 + bonus ≥ DD) pour diviser les dégâts par deux.
 - **Ennemis** : même jet d'attaque contre la CA du héros ; « Esquive » s'affiche en cas d'échec. Chaque coup est précédé d'un **élan visible de 0,45 s** : reculer permet d'esquiver.
 
 ### 8.2 Arsenal du barde
 | Capacité | Touche | Coût | Recharge | Effet |
 |---|---|---|---|---|
-| **Coup de guitare** | Espace | — | 0,65 s | La Flying V empoignée par le manche, levée au-dessus de l'épaule puis abattue. 1d8 + FOR, cône frontal de 1,9 m, recul. |
-| **Accordage de cordes** | Clic droit | 12 dB | 1,2 s | Arc électrique qui rebondit sur **jusqu'à 5 ennemis** (portée 11 m, rebond 6 m). 2d6 + CHA, −12 % par rebond. Son de décharge électrique à volume moyen (−8 dB). |
-| **Riff électrique** | 1 | 6 dB | 0,3 s | Éclair sur **une seule cible** (la plus proche du curseur, 12 m). 1d10 + CHA. **Combo rythmique** : chaque appui au tempo (toutes les 0,7 s ± 0,16 s) augmente le multiplicateur en 4 paliers : ×1 → ×1,67 → ×2,33 → **×3 (maximum)**. Tant que le joueur reste en rythme, le riff continue à ×3 ; un contretemps remet le combo à ×1. Chaque palier joue une note plus aiguë ; un métronome dans le HUD se remplit et passe au vert dans la fenêtre d'appui. |
+| **Coup de guitare** | Clic gauche | — | 0,54 s | La Flying V empoignée par le manche, levée au-dessus de l'épaule puis abattue (20 % plus rapide depuis la v0.1.39). **1d6 + FOR**, touche toujours, cône frontal de 1,9 m, recul. |
+| **Accordage de cordes** | Clic droit | 12 dB | **10 s** | Arc électrique qui rebondit sur **jusqu'à 5 ennemis** (portée 11 m, rebond 6 m). 2d6 + CHA, −12 % par rebond. Son de décharge électrique à volume moyen (−8 dB). |
+| **Riff électrique** | 1 | 6 dB | 3 s | **Mini-jeu** : une seule note (la touche 1), très rapide, **160 BPM**. La 1re part avec le sort sur l'ennemi visé (12 m) ; chaque note suivante réussie rejoue le son du riff et **l'éclair saute sur l'ennemi suivant** (8 m), jusqu'à **8 notes** (s'il ne reste personne, il refrappe le même). 1d10 + CHA par note, touche toujours. **Une seule fausse note** (ou un appui à contretemps) arrête le riff et **triple la recharge** (9 s). |
 | **Onde de choc** | 2 | 20 dB | 4 s | Onde sonore qui touche **tous les ennemis dans un rayon de 5 m**. 2d8 + CHA (sauvegarde : moitié), fort recul qui étourdit. |
 | **Solo de la Foudre** | 3 | 45 dB | 18 s | Lance le **mini-jeu** ; en cas de réussite, **pluie d'éclairs sur tout l'écran** : 4d10 + CHA sur chaque ennemi visible. |
 | **Potion de soin** | R | 1 potion | 1 s | Rend 40 % des PV max. |
@@ -165,11 +165,12 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 - **Bond écrasant** (toutes les 9-12 s, si le héros est loin) : cercle rouge au sol puis impact de zone (2d8+2).
 - **Coup de langue** au contact (1 / 2,5 s).
 - **Phase 2 (< 50 % PV)** : yeux rouges, rage, vagues toutes les ~4 s en **anneau complet avec une brèche de 70°** (il faut trouver la brèche), invocation de 2 squelettes.
-- Butin : Couronne de nénuphar (relique épique), potion, 60-90 po, 450 XP.
+- Butin (sur son corps) : Couronne de nénuphar (équipement épique, tête), potion, 450 XP.
 
 ## 9. Butin et économie
-- **Or** (45 % des squelettes), **potions** (12 %), **reliques** (8 %, sans doublon).
-- **Reliques** : bonus permanents de caractéristiques (commun → épique). 7 reliques dans la v0.1 (Médiator en os, Cordes en boyau de dragon, Pendentif de plume, Couronne de Gloubah…).
+- **Le butin reste sur le corps** des ennemis vaincus : on le ramasse en **cliquant sur le corps** (ou [E] à côté). Tant qu'il reste quelque chose, le corps ne disparaît pas ; s'il porte un **équipement**, il « respire » en **jaune doré** (fondu d'une seconde). Coffres : butin au sol, attiré par le héros.
+- **Médiators** (45 % des squelettes), **potions** (12 %), **équipement** (8 %, sans doublon).
+- **Équipement, comme dans un MMO** : chaque objet a son emplacement (tête, cou, torse, poignets, ceinture, pieds, anneau, talisman, médiator, cordes, grimoire). Ramassé, il va dans le **sac** ; ses bonus de caractéristiques ne comptent qu'une fois **équipé** (fiche de personnage [C] ou inventaire [B]). 11 objets (Médiator en os, Perfecto clouté, Bottes de roadie, Chevalière tête de bouc, Couronne de Gloubah…), voir docs/OBJETS.md.
 - **Boutique** (Brunhilde) : potion 25 po, chambre 10 po (restaure PV et dB).
 - **Mort** : −25 % de l'or, réveil à la taverne, la quête reste en cours.
 - **Prévu** : équipement complet (luths, médiators, amplis enchantés = emplacements d'arme / anneau / amulette), affixes aléatoires façon Diablo, forgeron-luthier pour améliorer les luths.
@@ -203,7 +204,7 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 4. La salle du boss n'est reliée qu'à **une seule** salle : cul-de-sac final.
 5. **Salle de départ = la plus éloignée du boss** en distance de parcours (BFS).
 6. Peuplement : 2-4 squelettes par salle, un capitaine dans la salle la plus proche du boss, décor aléatoire (piles d'os, flaques de bave, piliers, tonneaux).
-7. **Torches** réparties sur tout le donjon (salles et couloirs) avec **au moins 11 m entre deux torches** : elles éclairent des zones précises et laissent des passages dans la pénombre. Les murs du fond (visibles depuis la caméra) sont servis en priorité.
+7. **Torches** réparties sur tout le donjon (salles et couloirs) avec **au moins 11 m entre deux torches** : elles éclairent des zones précises et laissent des passages dans la pénombre. Les murs du fond (visibles depuis la caméra) sont servis en priorité. **Une torche de chaque côté de chaque porte** (sauf celle du boss). Les torches brûlent **rouge orangé tant que le héros n'est pas passé à moins de 15 m** d'elles, puis normalement pour de bon (sauvegardé) : on sait d'un coup d'œil où l'on est déjà venu.
 8. Graine stockée dans la sauvegarde (`dungeon_seed`) : un même portail donne le même donjon.
 
 **Prévu** : salles « préfabriquées » (autel, bibliothèque, arène à pièges), coffres et pièges, salles secrètes, étages multiples, biomes par donjon, difficulté dynamique.
@@ -267,12 +268,12 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 | | Stage Diving | Actif 25 dB / 10 s | Saut (8 m, s'arrête aux murs), impact 4 m : 2d6 + CHA + recul |
 | | Pogo | Passif | Les ennemis fortement repoussés sont assommés 1,5 s |
 | **Transe** (contrôle) | **Solo endiablé** | Actif 30 dB / 25 s | Mini-jeu : les ennemis à 12 m se figent en headbang tant que les notes sont réussies (12 max) ; 1re fausse note = fin. Le héros peut se déplacer (60 % de vitesse). En transe, les ennemis ne bougent plus du tout, même frappés. |
-| | Tempo hypnotique | Passif | Le Riff électrique ralentit sa cible de 40 % pendant 2 s |
+| | Tempo hypnotique | Passif | Chaque note du Riff électrique ralentit l'ennemi touché de 40 % pendant 2 s |
 | | Growl de l'Abîme | Actif 20 dB / 16 s | Les ennemis à 6 m fuient 3,5 s (boss : sonnés) |
 | | Maître du tempo | Passif | Solo endiablé : 16 notes, chaque note réussie inflige 1d6 + CHA aux ennemis en transe |
 | **Thrash** (destruction) | Distorsion | Passif | Accordage de cordes : 6 cibles, +15 % |
 | | Enceinte de façade | Actif 25 dB / 14 s | Enceinte posée au curseur : 6 pulsations de 1d8 + CHA (4 m) |
-| | Overdrive | Passif | Riff électrique : 5 paliers, ×4 max |
+| | Overdrive | Passif | Riff électrique : 10 notes au lieu de 8, +25 % de dégâts par note |
 | | Pyrotechnie | Actif 40 dB / 20 s | 6 colonnes de feu autour du héros après 0,8 s : 4d6 chacune |
 
 **Rôles en coop (à venir)** : Ballade = soigneur, Mur du Son = tank, Mosh Pit = contrôle de zone, Transe = contrôle de foule (idéal pour que les alliés frappent pendant que les ennemis headbanguent), Thrash = dégâts.

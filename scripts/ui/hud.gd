@@ -51,9 +51,6 @@ const LOW_HP_PERIOD := 0.75
 var _slots := {} # id -> {"overlay": ColorRect, "panel": Panel, "remaining": float, "duration": float, "extra": Label}
 var _pause_menu: PanelContainer
 var _death_screen: Control
-var _riff_beat_bar: ColorRect
-var _riff_combo_label: Label
-var _riff_time := -100.0
 var _talent_slot_of := {} # id de talent -> clé d'emplacement ("tslot_0"...)
 var talent_tree: TalentTree
 var _kills_label: Label
@@ -117,7 +114,6 @@ func _connect_events() -> void:
 	Events.toast.connect(_on_toast)
 	Events.interaction_prompt.connect(func(t: String) -> void: _prompt.text = t)
 	Events.cooldown_started.connect(_on_cooldown)
-	Events.riff_combo.connect(_on_riff_combo)
 	Events.talents_changed.connect(_refresh_talent_slots)
 	Events.shield_changed.connect(func(_s: int) -> void: _on_hp(GameState.hp, GameState.max_hp()))
 	Events.quest_updated.connect(_refresh_quest)
@@ -223,19 +219,6 @@ func _build_skills() -> void:
 		_slots[s["id"]] = {"overlay": overlay, "panel": panel, "remaining": 0.0, "duration": 1.0, "extra": extra, "cost": cost, "name": name_label}
 	_on_potions(GameState.potions)
 	_refresh_talent_slots()
-	# Métronome du Riff électrique : la barre se remplit jusqu'au prochain temps,
-	# elle devient verte dans la fenêtre où il faut appuyer.
-	var riff_panel: Panel = _slots["riff"]["panel"]
-	_riff_beat_bar = ColorRect.new()
-	_riff_beat_bar.position = Vector2(0, 78)
-	_riff_beat_bar.size = Vector2(0, 6)
-	_riff_beat_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	riff_panel.add_child(_riff_beat_bar)
-	_riff_combo_label = UiStyle.label("", 20, Color(1.0, 0.85, 0.35))
-	_riff_combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_riff_combo_label.position = Vector2(-10, -30)
-	_riff_combo_label.size = Vector2(104, 26)
-	riff_panel.add_child(_riff_combo_label)
 	var help := UiStyle.label("ZQSD / clic : se déplacer  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : inventaire  •  %s : talents  •  %s : portail  •  Échap : pause" % [
 		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("inventory"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
@@ -380,7 +363,6 @@ func _build_death_screen() -> void:
 
 func _process(delta: float) -> void:
 	_update_low_hp(delta)
-	_update_riff_meter()
 	for id: String in _slots:
 		var slot: Dictionary = _slots[id]
 		var remaining := maxf(0.0, float(slot["remaining"]) - delta)
@@ -459,24 +441,6 @@ func _on_xp(xp: int, next_xp: int, level: int) -> void:
 	_xp_bar.value = xp - prev
 	var pts := GameState.stats.unspent_points
 	_level_label.text = "Niv. %d%s" % [level, "  (+%d pts)" % pts if pts > 0 else ""]
-
-
-func _on_riff_combo(stack: int, multiplier: float) -> void:
-	_riff_time = Time.get_ticks_msec() / 1000.0
-	_riff_combo_label.text = "×%.1f" % multiplier if stack > 1 else ""
-	_riff_combo_label.scale = Vector2.ONE * (1.0 + 0.1 * stack)
-
-
-func _update_riff_meter() -> void:
-	var elapsed := Time.get_ticks_msec() / 1000.0 - _riff_time
-	var window_end := Balance.RIFF_BEAT + Balance.RIFF_BEAT_TOLERANCE
-	if elapsed > window_end:
-		_riff_beat_bar.size.x = 0.0
-		_riff_combo_label.text = "" # rythme perdu : le combo retombe
-		return
-	_riff_beat_bar.size.x = 84.0 * clampf(elapsed / window_end, 0.0, 1.0)
-	var in_window := absf(elapsed - Balance.RIFF_BEAT) <= Balance.RIFF_BEAT_TOLERANCE
-	_riff_beat_bar.color = Color(0.3, 1.0, 0.4) if in_window else Color(0.7, 0.7, 0.75, 0.8)
 
 
 func _on_potions(count: int) -> void:

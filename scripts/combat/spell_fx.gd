@@ -48,10 +48,10 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 		"riff":
 			if model != null:
 				model.strum()
-			var stack := int(data.get("stack", 1))
-			ArcBolt.spawn(level, data["from"], data["to"], 0.1 + 0.06 * stack, 0.25, data.get("color", Color(0.55, 0.85, 1.0)))
+			var stack := int(data.get("stack", 1)) # n° de la note du mini-jeu (1 à 10)
+			ArcBolt.spawn(level, data["from"], data["to"], 0.1 + 0.025 * stack, 0.25, data.get("color", Color(0.55, 0.85, 1.0)))
 			# Volume réduit de 70 % (×0,3 ≈ -10,5 dB) : le riff couvrait tout le reste.
-			_sound(level, "riff", -13.5 + stack * 0.5, data["from"], remote, 0.0)
+			_sound(level, "riff", -13.5 + stack * 0.2, data["from"], remote, 0.0)
 		"bolt":
 			ArcBolt.spawn(level, data["from"], data["to"], float(data.get("width", 0.12)), float(data.get("life", 0.3)),
 				data.get("color", Color(0.55, 0.85, 1.0)))

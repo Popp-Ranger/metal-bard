@@ -1,5 +1,5 @@
 {
-	"_aide": "Liste de TOUS les objets du jeu. Modifiez ce fichier pour les contrôler : noms, descriptions, bonus (FOR, DEX, CON, INT, SAG, CHA), rareté (commun, peu commun, rare, épique), s'ils tombent sur les ennemis ('butin': true), ou les désactiver ('actif': false). Prix et chances de butin sont aussi réglables ici. Voir docs/OBJETS.md.",
+	"_aide": "Liste de TOUS les objets du jeu. Modifiez ce fichier pour les contrôler : noms, descriptions, bonus (FOR, DEX, CON, INT, SAG, CHA, appliqués seulement quand l'objet est équipé), emplacement d'équipement (tete, cou, torse, poignets, ceinture, pieds, anneau, talisman, mediator, cordes, grimoire), rareté (commun, peu commun, rare, épique), s'ils tombent sur les ennemis ('butin': true), ou les désactiver ('actif': false). Prix et chances de butin sont aussi réglables ici. Voir docs/OBJETS.md.",
 	"monnaie": {
 		"nom": "Médiator",
 		"nom_pluriel": "médiators",
@@ -38,6 +38,7 @@
 			"bonus": {"DEX": 1},
 			"rarete": "commun",
 			"butin": true,
+			"emplacement": "mediator",
 			"actif": true
 		},
 		"ceinture_cloutee": {
@@ -46,6 +47,7 @@
 			"bonus": {"CON": 1},
 			"rarete": "commun",
 			"butin": true,
+			"emplacement": "ceinture",
 			"actif": true
 		},
 		"bracelet_force": {
@@ -54,6 +56,7 @@
 			"bonus": {"FOR": 1},
 			"rarete": "commun",
 			"butin": true,
+			"emplacement": "poignets",
 			"actif": true
 		},
 		"cordes_dragon": {
@@ -62,6 +65,7 @@
 			"bonus": {"CHA": 1},
 			"rarete": "peu commun",
 			"butin": true,
+			"emplacement": "cordes",
 			"actif": true
 		},
 		"grimoire_tablatures": {
@@ -70,6 +74,7 @@
 			"bonus": {"INT": 1, "SAG": 1},
 			"rarete": "peu commun",
 			"butin": true,
+			"emplacement": "grimoire",
 			"actif": true
 		},
 		"pendentif_plume": {
@@ -78,6 +83,7 @@
 			"bonus": {"CHA": 1, "SAG": 1},
 			"rarete": "rare",
 			"butin": false,
+			"emplacement": "cou",
 			"actif": true
 		},
 		"couronne_gloubah": {
@@ -86,6 +92,7 @@
 			"bonus": {"CON": 2, "CHA": 1},
 			"rarete": "épique",
 			"butin": false,
+			"emplacement": "tete",
 			"actif": true
 		},
 		"portrait_aieule": {
@@ -94,6 +101,34 @@
 			"bonus": {"SAG": 1, "CHA": 1},
 			"rarete": "rare",
 			"butin": false,
+			"emplacement": "talisman",
+			"actif": true
+		},
+		"perfecto_cloute": {
+			"nom": "Perfecto clouté",
+			"desc": "Cuir noir, clous d'acier et une odeur tenace de bière renversée.",
+			"bonus": {"CON": 1},
+			"rarete": "commun",
+			"butin": true,
+			"emplacement": "torse",
+			"actif": true
+		},
+		"bottes_roadie": {
+			"nom": "Bottes de roadie",
+			"desc": "Coquées pour survivre aux pieds de micro et aux pogos.",
+			"bonus": {"DEX": 1},
+			"rarete": "commun",
+			"butin": true,
+			"emplacement": "pieds",
+			"actif": true
+		},
+		"chevaliere_bouc": {
+			"nom": "Chevalière tête de bouc",
+			"desc": "Argent terni. Le bouc vous fait un clin d'œil quand vous jouez faux.",
+			"bonus": {"CHA": 1, "INT": 1},
+			"rarete": "peu commun",
+			"butin": true,
+			"emplacement": "anneau",
 			"actif": true
 		}
 	}

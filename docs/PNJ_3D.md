@@ -1,11 +1,11 @@
 # Modèles 3D des PNJ et ennemis
 
 Modèles fournis par Ulysse (générés par IA, sans squelette) :
-`Imagerie/Personnages/3D/PNJ/<dossier>/*.glb` (hors dépôt), références 2D dans `Personnages/2D/PNJ`.
+`Imagerie/Personnages/3D/PNJ/<dossier>/*.glb` (hors dépôt ; le mage : `Mage/V2`), références 2D dans `Personnages/2D/PNJ`.
 
 | Modèle | Personnage du jeu | Taille | Clips |
 |---|---|---|---|
-| Mage (sorcier) | Zarathos le Grisonnant | 2,2 m (chapeau compris) | repos, marche, course |
+| Mage V2 (rockeur en perfecto, lunettes violettes ; remplace le sorcier au chapeau pointu le 4 oct. 2026) | Zarathos le Grisonnant | 1,85 m | repos, marche, course |
 | Tavernier (orc au tablier) | **Grokk Chope-de-Fer**, le tavernier (remplace Brunhilde) | 2,05 m (×1,25 en jeu : 2,56 m) | repos, marche, course |
 | Squelette paysan | tous les squelettes ennemis (soldats, capitaines, chef) | 1,75 m | repos et course de zombie, coup d'épée, sursaut, mort |
 

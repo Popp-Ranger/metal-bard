@@ -13,6 +13,12 @@ const WINDOW_PERFECT := 0.08
 const WINDOW_GOOD := 0.17
 const LANE_COLORS := [Color(0.3, 0.9, 0.35), Color(0.95, 0.25, 0.2), Color(1.0, 0.85, 0.2), Color(0.3, 0.55, 1.0)]
 const PANEL_SIZE := Vector2(400, 520)
+## Riff électrique : une seule corde (la touche du sort), notes rapides, fenêtres plus serrées.
+const RIFF_PANEL_W := 200.0
+const RIFF_NOTE_SPEED := 620.0
+const RIFF_WINDOW_PERFECT := 0.06
+const RIFF_WINDOW_GOOD := 0.12
+const RIFF_COLOR := Color(0.4, 0.95, 1.0)
 
 var _notes: Array[Dictionary] = []
 var _t := 0.0
@@ -22,10 +28,11 @@ var _feedback := ""
 var _feedback_color := Color.WHITE
 var _feedback_t := 0.0
 var _lane_flash := [0.0, 0.0, 0.0, 0.0]
+var _lanes := LANES
 var _end_t := 0.0
 ## "foudre" (Solo de la Foudre, 5 notes), "endiable" (Solo endiablé) ou "ballade" (Ballade
-## réparatrice : le vrai solo de la musique de la taverne). Les deux derniers s'arrêtent
-## à la première fausse note.
+## réparatrice : le vrai solo de la musique de la taverne) ou "riff" (Riff électrique : une seule note à
+## 160 BPM, la 1re jouée en lançant le sort). Tous sauf le Solo de la Foudre s'arrêtent à la première fausse note.
 var mode := "foudre"
 ## Extrait musical de la Ballade : lancé quand _t atteint _clip_at, à partir de _clip_offset.
 var _clip_source := ""
@@ -44,6 +51,7 @@ func _ready() -> void:
 
 func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -> void:
 	mode = solo_mode
+	_lanes = 1 if mode == "riff" else LANES
 	_clip_started = true
 	_clip_source = ""
 	_notes.clear()
@@ -83,6 +91,13 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 		_clip_offset = 0.0
 		_clip_at = LEAD_TIME
 		_clip_started = stream == null
+	if mode == "riff":
+		# La même note à 160 BPM : la 1re est partie avec le sort, les suivantes tombent sur chaque temps.
+		var beat := 60.0 / Balance.RIFF_BPM
+		for i in range(1, note_count):
+			_notes.append({"lane": 0, "time": beat * i, "judged": false, "hit": false})
+		t = beat * (note_count - 1)
+		note_count = 0
 	for i in note_count:
 		var lane := randi_range(0, LANES - 1)
 		if lane == last_lane:
@@ -93,7 +108,7 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 	_end_t = t + 0.5
 	_t = 0.0
 	_hits = 0
-	_feedback = "PRÉPARE-TOI !"
+	_feedback = "EN RYTHME !" if mode == "riff" else "PRÉPARE-TOI !"
 	_feedback_color = Color(1.0, 0.85, 0.4)
 	_feedback_t = 1.2
 	_active = true
@@ -113,7 +128,7 @@ func _process(delta: float) -> void:
 	for i in LANES:
 		_lane_flash[i] = maxf(0.0, float(_lane_flash[i]) - delta * 4.0)
 	for n in _notes:
-		if not n["judged"] and _t > float(n["time"]) + WINDOW_GOOD:
+		if not n["judged"] and _t > float(n["time"]) + _window_good():
 			n["judged"] = true
 			_set_feedback("RATÉ", Color(1.0, 0.35, 0.3))
 			Sfx.play("dud", -10.0)
@@ -135,7 +150,7 @@ func _all_judged() -> bool:
 func _input(event: InputEvent) -> void:
 	if not _active:
 		return
-	for lane in LANES:
+	for lane in _lanes:
 		if event.is_action_pressed("solo_lane_%d" % lane):
 			_press(lane)
 			get_viewport().set_input_as_handled()
@@ -150,11 +165,15 @@ func _press(lane: int) -> void:
 		if n["judged"] or int(n["lane"]) != lane:
 			continue
 		var err := absf(float(n["time"]) - _t)
-		if err <= WINDOW_GOOD and err < best_err:
+		if err <= _window_good() and err < best_err:
 			best_err = err
 			best = n
 	if best.is_empty():
 		Sfx.play("dud", -14.0)
+		if mode == "riff":
+			# Riff : un appui à contretemps est une fausse note.
+			_set_feedback("CONTRETEMPS", Color(1.0, 0.35, 0.3))
+			_finish()
 		return
 	best["judged"] = true
 	best["hit"] = true
@@ -162,10 +181,16 @@ func _press(lane: int) -> void:
 	Events.solo_note_hit.emit(mode, _hits)
 	if mode == "endiable": # la ballade et le Solo de la Foudre jouent un vrai morceau
 		Sfx.play("note_%d" % lane, -3.0, 0.0)
-	if best_err <= WINDOW_PERFECT:
+	if best_err <= (RIFF_WINDOW_PERFECT if mode == "riff" else WINDOW_PERFECT):
 		_set_feedback("PARFAIT !", Color(1.0, 0.9, 0.3))
 	else:
 		_set_feedback("BIEN", Color(0.6, 0.95, 0.6))
+	if mode == "riff" and _all_judged():
+		_finish() # dernière note du riff : la recharge démarre tout de suite
+
+
+func _window_good() -> float:
+	return RIFF_WINDOW_GOOD if mode == "riff" else WINDOW_GOOD
 
 
 func _set_feedback(text: String, color: Color) -> void:
@@ -188,38 +213,41 @@ func _draw() -> void:
 	var font := UiStyle.serif()
 	var vp := get_viewport_rect().size
 	# Panneau sur la droite de l'écran : l'action reste visible (le jeu n'est pas en pause).
-	var origin := Vector2(vp.x - PANEL_SIZE.x - 40.0, (vp.y - PANEL_SIZE.y) * 0.5)
-	var panel := Rect2(origin, PANEL_SIZE)
+	var size := Vector2(RIFF_PANEL_W, PANEL_SIZE.y) if mode == "riff" else PANEL_SIZE
+	var origin := Vector2(vp.x - size.x - 40.0, (vp.y - size.y) * 0.5)
+	var panel := Rect2(origin, size)
 	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
-	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE"}
-	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE"}
-	draw_string(font, origin + Vector2(0, 42), str(titles.get(mode, "SOLO")), HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 30, Color(1.0, 0.8, 0.4))
-	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits, _notes.size(), str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, PANEL_SIZE.x, 18, Color(1.0, 0.85, 0.45))
+	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "riff": "RIFF"}
+	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "160 BPM"}
+	var riff := 1 if mode == "riff" else 0 # la 1re note du riff est partie avec le sort
+	draw_string(font, origin + Vector2(0, 42), str(titles.get(mode, "SOLO")), HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
+	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits + riff, _notes.size() + riff, str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
 
 	var lane_w := 76.0
-	var lanes_x := origin.x + (PANEL_SIZE.x - lane_w * LANES) * 0.5
+	var lanes_x := origin.x + (size.x - lane_w * _lanes) * 0.5
 	var top := origin.y + 90.0
-	var hit_y := origin.y + PANEL_SIZE.y - 90.0
-	for i in LANES:
+	var hit_y := origin.y + size.y - 90.0
+	var speed := RIFF_NOTE_SPEED if mode == "riff" else NOTE_SPEED
+	for i in _lanes:
 		var x := lanes_x + i * lane_w
-		var c: Color = LANE_COLORS[i]
+		var c: Color = RIFF_COLOR if mode == "riff" else LANE_COLORS[i]
 		var flash := float(_lane_flash[i])
 		draw_rect(Rect2(x + 4, top, lane_w - 8, hit_y - top + 30), Color(c.r, c.g, c.b, 0.06 + flash * 0.25))
 		draw_line(Vector2(x + lane_w * 0.5, top), Vector2(x + lane_w * 0.5, hit_y + 30), Color(0.8, 0.8, 0.8, 0.25), 2.0)
 		# Cible.
 		draw_arc(Vector2(x + lane_w * 0.5, hit_y), 26, 0, TAU, 32, c.lightened(flash * 0.5), 4.0)
 		draw_string(font, Vector2(x, hit_y + 66), Controls.key_label("solo_lane_%d" % i), HORIZONTAL_ALIGNMENT_CENTER, lane_w, 30, UiStyle.BONE)
-	draw_line(Vector2(lanes_x, hit_y), Vector2(lanes_x + lane_w * LANES, hit_y), Color(1, 1, 1, 0.3), 2.0)
+	draw_line(Vector2(lanes_x, hit_y), Vector2(lanes_x + lane_w * _lanes, hit_y), Color(1, 1, 1, 0.3), 2.0)
 	# Notes.
 	for n in _notes:
 		if n["judged"] and n["hit"]:
 			continue
-		var y := hit_y - (float(n["time"]) - _t) * NOTE_SPEED
+		var y := hit_y - (float(n["time"]) - _t) * speed
 		if y < top - 20 or y > hit_y + 40:
 			continue
 		var lane := int(n["lane"])
-		var c: Color = LANE_COLORS[lane]
+		var c: Color = RIFF_COLOR if mode == "riff" else LANE_COLORS[lane]
 		if n["judged"]:
 			c = Color(0.3, 0.3, 0.3)
 		var center := Vector2(lanes_x + lane * lane_w + lane_w * 0.5, y)
@@ -227,8 +255,8 @@ func _draw() -> void:
 		draw_circle(center, 12, c.lightened(0.5))
 	if _feedback_t > 0.0:
 		var a := clampf(_feedback_t / 0.3, 0.0, 1.0)
-		draw_string(font, Vector2(origin.x, origin.y + PANEL_SIZE.y * 0.45), _feedback, HORIZONTAL_ALIGNMENT_CENTER,
-			PANEL_SIZE.x, 40, Color(_feedback_color.r, _feedback_color.g, _feedback_color.b, a))
+		draw_string(font, Vector2(origin.x, origin.y + size.y * 0.45), _feedback, HORIZONTAL_ALIGNMENT_CENTER,
+			size.x, 24 if mode == "riff" else 40, Color(_feedback_color.r, _feedback_color.g, _feedback_color.b, a))
 
 
 

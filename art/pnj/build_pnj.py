@@ -2,7 +2,7 @@
 #
 # Sources : C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\PNJ\<dossier>\*.glb
 #
-# Usage (sans interface), <perso> = mage | tavernier | squelette | demon (héros jouable, dans art/demon) :
+# Usage (sans interface), <perso> = mage | tavernier | squelette | demon | hella (héros jouables, dans art/demon et art/hella) :
 #   blender --background --factory-startup --python art/pnj/build_pnj.py -- prepare <perso>
 #       -> art/pnj/<perso>.blend : maillage ressoudé et allégé, à la taille du jeu, textures 2K
 #   blender --background art/pnj/<perso>.blend --python art/pnj/build_pnj.py -- views <perso> <dossier>
@@ -24,13 +24,24 @@ TEX_OTHER = 1024
 # Personnages : dossier source, nom, hauteur totale du modèle (m, chapeau compris) et articulations
 # relevées sur les vues de face et de profil (x, y, z ; .L = côté +X, gauche du personnage).
 CHARS = {
-    "mage": {"dir": "Mage", "name": "Mage", "height": 2.2, "joints": {
-        "hips": (0.0, 0.05, 1.0), "spine": (0.0, 0.05, 1.2), "chest": (0.0, 0.05, 1.40),
-        "neck": (0.0, 0.03, 1.60), "head": (0.0, 0.0, 1.68), "head_top": (0.0, 0.0, 2.2),
-        "shoulder.L": (0.23, 0.05, 1.55), "elbow.L": (0.33, 0.02, 1.25), "wrist.L": (0.40, -0.10, 1.06),
-        "shoulder.R": (-0.23, 0.05, 1.55), "elbow.R": (-0.34, 0.02, 1.25), "wrist.R": (-0.43, -0.10, 1.06),
-        "hip.L": (0.12, 0.05, 1.0), "knee.L": (0.18, 0.04, 0.56), "ankle.L": (0.26, 0.06, 0.13),
-        "hip.R": (-0.12, 0.05, 1.0), "knee.R": (-0.20, 0.04, 0.56), "ankle.R": (-0.29, 0.06, 0.13)}},
+    # Zarathos : « Mage V2 » (4 oct. 2026), rockeur en perfecto et lunettes violettes ; remplace le sorcier
+    # au chapeau pointu (Mage/V1).
+    "mage": {"dir": os.path.join("Mage", "V2"), "name": "Mage", "height": 1.85, "joints": {
+        "hips": (0.0, -0.01, 0.98), "spine": (0.0, 0.0, 1.15), "chest": (0.0, 0.02, 1.32),
+        "neck": (0.0, 0.03, 1.50), "head": (0.0, 0.04, 1.57), "head_top": (0.0, 0.04, 1.85),
+        "shoulder.L": (0.25, 0.08, 1.43), "elbow.L": (0.36, 0.10, 1.16), "wrist.L": (0.43, 0.05, 0.96),
+        "shoulder.R": (-0.25, 0.08, 1.43), "elbow.R": (-0.36, 0.10, 1.16), "wrist.R": (-0.43, 0.05, 0.96),
+        "hip.L": (0.10, -0.02, 0.92), "knee.L": (0.13, 0.0, 0.59), "ankle.L": (0.17, 0.05, 0.15),
+        "hip.R": (-0.10, -0.02, 0.92), "knee.R": (-0.12, 0.0, 0.59), "ankle.R": (-0.17, 0.05, 0.15)}},
+    # Hella, héroïne jouable (héros prédéfini) : modèle retravaillé par Ulysse dans Blender (Hella.glb, 4 oct. 2026).
+    "hella": {"src": r"C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\Humain\Féminin",
+              "file": "Hella.glb", "out": "hella", "name": "Hella", "height": 1.75, "tris": 40000, "cape": True, "joints": {
+        "hips": (0.0, -0.04, 0.95), "spine": (0.0, -0.045, 1.10), "chest": (0.0, -0.05, 1.25),
+        "neck": (0.0, -0.04, 1.40), "head": (0.0, -0.03, 1.48), "head_top": (0.0, -0.02, 1.75),
+        "shoulder.L": (0.21, 0.0, 1.36), "elbow.L": (0.28, 0.0, 1.13), "wrist.L": (0.31, -0.07, 0.90),
+        "shoulder.R": (-0.21, 0.0, 1.36), "elbow.R": (-0.28, 0.0, 1.13), "wrist.R": (-0.32, -0.07, 0.90),
+        "hip.L": (0.08, -0.04, 0.92), "knee.L": (0.12, -0.04, 0.53), "ankle.L": (0.15, 0.03, 0.12),
+        "hip.R": (-0.10, -0.04, 0.92), "knee.R": (-0.19, -0.04, 0.53), "ankle.R": (-0.22, 0.03, 0.12)}},
     "tavernier": {"dir": "Tavernier", "name": "Tavernier", "height": 2.05, "retouche": True, "joints": {
         "hips": (0.0, 0.05, 0.95), "spine": (0.0, 0.06, 1.15), "chest": (0.0, 0.08, 1.40),
         "neck": (0.0, 0.07, 1.72), "head": (0.0, 0.04, 1.78), "head_top": (0.0, 0.04, 2.05),
@@ -94,7 +105,8 @@ def _is_color(img):
 
 def prepare():
     c = cfg()
-    src = glob.glob(os.path.join(c.get("src") or os.path.join(SRC_DIR, c["dir"]), "*.glb"))[0]
+    src = glob.glob(os.path.join(c.get("src") or os.path.join(SRC_DIR, c["dir"]), c.get("file", "*.glb")))[0]
+    os.makedirs(os.path.dirname(blend_path()), exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=src)
     meshes = [o for o in bpy.data.objects if o.type == "MESH"]
@@ -254,9 +266,17 @@ def _candidates(co, j):
             return ["head", "neck", "chest"]
         if _demon_cape(co, j):
             return ["hips", "spine", "chest"]
-    if ARGS[1] == "mage" and co.z > j["knee.L"].z and co.z < j["hips"].z and abs(co.x) < 0.35 \
-            and min(_seg_dist(co, j["elbow.L"], j["wrist.L"]), _seg_dist(co, j["elbow.R"], j["wrist.R"])) > 0.12:
-        return ["hips", "thigh.L", "thigh.R"]
+    if ARGS[1] == "hella":
+        # Crinière dans le dos et grosse tresse (jusqu'au bas des reins) : tête, cou et buste ; cape sur le
+        # bassin et le dos seulement (comme le démon).
+        if co.z > 1.25 and co.y > 0.04 and abs(co.x) < 0.16:
+            return ["head", "neck", "chest"]
+        if co.z > 0.88 and co.y > 0.19 and abs(co.x) < 0.12:
+            return ["head", "neck", "chest"]
+        if _demon_cape(co, j):
+            return ["hips", "spine", "chest"]
+    if ARGS[1] == "mage" and co.z > 1.42 and co.y > 0.08 and abs(co.x) < 0.2:
+        return ["head", "neck"]  # longs cheveux noirs sur la nuque
     return None
 
 
@@ -329,7 +349,7 @@ def rig():
     segs = {n: (Vector(h), Vector(t)) for n, (h, t, p) in layout.items()}
     for bn in segs:
         body.vertex_groups.new(name=bn)
-    if ARGS[1] == "demon":
+    if ARGS[1] == "demon" or c.get("cape"):
         print("CUT bridges=%d" % _cut_demon_cape(body, j, segs))
     for v in body.data.vertices:
         p = v.co

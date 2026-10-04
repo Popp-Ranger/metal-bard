@@ -9,7 +9,6 @@ signal hero_hp_changed(hp: int, max_hp: int)
 signal hero_mana_changed(mana: float, max_mana: float)
 signal hero_died
 signal cooldown_started(skill_id: String, duration: float)
-signal riff_combo(stack: int, multiplier: float)
 
 # --- Progression -----------------------------------------------------------
 signal xp_changed(xp: int, next_level_xp: int, level: int)
@@ -29,13 +28,13 @@ signal toast(text: String, color: Color)
 signal interaction_prompt(text: String)
 signal dialogue_requested(npc_id: String)
 signal dialogue_closed
-signal solo_requested(mode: String, notes: int) # mode : "foudre" ou "endiable"
+signal solo_requested(mode: String, notes: int) # mode : "foudre", "endiable", "ballade" ou "riff"
 signal solo_finished(mode: String, hits: int, total: int)
 signal solo_note_hit(mode: String, hits: int)
 signal talents_changed
 signal shield_changed(amount: int)
 signal portal_opened
-## Échange avec Grokk (vendre et racheter des reliques) : ouvre l'inventaire en mode boutique.
+## Échange avec Grokk (vendre et racheter de l'équipement) : ouvre l'inventaire en mode boutique.
 signal shop_requested
 ## Touche T : portail bleu de retour à la taverne (traité par le donjon).
 signal town_portal_requested

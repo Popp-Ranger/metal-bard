@@ -24,9 +24,8 @@ var _rng := RandomNumberGenerator.new()
 var _state := {}
 ## Portes : [{room, node, body, interact, leaves, locked, open}] (index = identifiant sauvegardé).
 var doors: Array[Dictionary] = []
-## Torches murales, et celles de chaque salle encore occupée (salle -> torches en alerte, voir _update_torches).
+## Torches murales (rouges tant qu'on n'est pas passé près d'elles, voir _update_torches).
 var _torches: Array[Node3D] = []
-var _alarm_torches := {}
 var _torch_check := 0.0
 ## Voile noir de chaque salle non découverte (index de salle -> MeshInstance3D).
 var _covers := {}
@@ -431,7 +430,7 @@ func _spawn_chest(c: Vector3, chest_id: int, yaw: float = 0.0) -> void:
 		if _rng.randf() < 0.6:
 			var pool: Array[String] = []
 			for id: String in ItemDB.common_drops():
-				if not GameState.inventory.has(id):
+				if not GameState.owns(id):
 					pool.append(id)
 			if not pool.is_empty():
 				Pickup.spawn(self, c + Vector3(-0.8, 0, 1.0), "item", 0, pool.pick_random())
@@ -841,6 +840,8 @@ func _build_door(room: int, o: Dictionary) -> void:
 		elif c.name.contains("cadre") and c is MeshInstance3D:
 			frame_size = (c as MeshInstance3D).get_aabb().size
 	_door_walls(node, width, frame_size)
+	if not locked:
+		_door_torches(node, width, frame_size)
 	var idx := doors.size()
 	if variant == "ouverture":
 		# Simple ouverture : rien à ouvrir, la salle se découvre quand on y entre (voir _reveal_room_at).
@@ -890,6 +891,27 @@ func _door_walls(node: Node3D, width: float, frame_size: Vector3) -> void:
 	if top > 0.02:
 		Visuals.box(node, Vector3(minf(frame_size.x, width), top, DOOR_WALL_DEPTH),
 			Vector3(0, frame_size.y + top * 0.5, 0), _wall_material)
+
+
+## Une torche de chaque côté de la porte (sauf celle du boss), côté salle, contre le mur : sur le muret qui bouche
+## un couloir large, sinon sur le mur de la salle juste à côté. Pas de torche dans un angle de la salle.
+func _door_torches(node: Node3D, width: float, frame_size: Vector3) -> void:
+	var side_w := (width - frame_size.x) * 0.5
+	var on_filler := side_w >= 0.55
+	var inward := node.transform.basis.z
+	for s: float in [-1.0, 1.0]:
+		var x := frame_size.x * 0.5 + 0.45 + (0.0 if on_filler else maxf(side_w, 0.0))
+		var z := (DOOR_WALL_DEPTH * 0.5 if on_filler else 0.15) + 0.08
+		var p := node.transform * Vector3(s * x, 0.0, z)
+		var front := world_to_cell(p + inward * 0.5)
+		var back := world_to_cell(p - inward * 0.4)
+		if not gen.is_floor(front.x, front.y) or not (on_filler or gen.is_wall(back.x, back.y)):
+			continue
+		var taken := false
+		for t in _torches:
+			taken = taken or t.position.distance_to(p) < 1.2
+		if not taken:
+			_torches.append(DungeonDecor.torch(self, p, inward, false))
 
 
 func _on_door(idx: int) -> void:
@@ -964,36 +986,28 @@ func _build_room_covers() -> void:
 				(e as Enemy).set_dormant(true)
 
 
-## Torches des salles où des ennemis (posés au départ) sont encore en vie : flamme rouge orangé.
+## Torches : rouge orangé tant que le héros n'est pas passé à moins de TORCH_SEEN_RADIUS d'elles, flamme normale
+## ensuite (pour de bon, même après un aller-retour en ville) : on sait d'un coup d'œil où l'on est déjà venu.
+## Une torche encore cachée dans une salle fermée ne compte pas.
+const TORCH_SEEN_RADIUS := 15.0
+
+
 func _assign_torches() -> void:
-	for t in _torches:
-		var inward := t.global_basis.z
-		var c := world_to_cell(t.global_position + inward * 0.6)
-		for i in gen.rooms.size():
-			if gen.rooms[i].has_point(c) and _room_alive(i):
-				if not _alarm_torches.has(i):
-					_alarm_torches[i] = []
-				(_alarm_torches[i] as Array).append(t)
-				DungeonDecor.set_torch_alarm(t, true)
-				break
+	for i in _torches.size():
+		DungeonDecor.set_torch_alarm(_torches[i], not _state_has("torches", i))
 
 
-func _room_alive(room: int) -> bool:
-	for e: Variant in _room_enemies.get(room, []):
-		if is_instance_valid(e) and (e as Enemy).is_alive():
-			return true
-	return false
-
-
-## Salle nettoyée : ses torches reprennent leur flamme normale (on sait qu'on est déjà passé par là).
 func _update_torches() -> void:
-	for room: int in _alarm_torches.keys():
-		if _room_alive(room):
+	if hero == null:
+		return
+	var h := hero.global_position
+	for i in _torches.size():
+		var t := _torches[i]
+		if not is_instance_valid(t) or not t.is_visible_in_tree() or _state_has("torches", i):
 			continue
-		for t: Variant in _alarm_torches[room]:
-			if is_instance_valid(t):
-				DungeonDecor.set_torch_alarm(t as Node3D, false, true)
-		_alarm_torches.erase(room)
+		if Vector2(t.global_position.x - h.x, t.global_position.z - h.z).length() <= TORCH_SEEN_RADIUS:
+			_state_add("torches", i)
+			DungeonDecor.set_torch_alarm(t, false, true)
 
 
 func is_room_revealed(room: int) -> bool:

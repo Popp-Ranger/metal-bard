@@ -297,7 +297,7 @@ func _on_solo_note_hit(mode: String, _hits: int) -> void:
 	if GameState.has_talent("maitre_tempo"):
 		for e in hero.enemies():
 			if e.is_in_trance():
-				hero.hit_enemy(e, Dice.roll(1, 6, GameState.mod("CHA")), 0.0, "sound")
+				hero.hit_enemy(e, Dice.roll(1, 6, GameState.mod("CHA")), 0.0, "sound", Vector3.INF, true) # mini-jeu : touche toujours
 
 
 func _on_solo_finished(mode: String, hits: int, total: int) -> void:

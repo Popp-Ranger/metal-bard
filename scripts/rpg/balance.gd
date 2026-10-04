@@ -22,28 +22,35 @@ const XP_TABLE := [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
 	85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000]
 
 # --- Compétences -----------------------------------------------------------
-const MELEE_COOLDOWN := 0.65
+## Sorts sans mini-jeu (Accordage, Onde de choc, talents) : 8 chances sur 10 de toucher. Riff électrique, Solo de
+## la Foudre et les solos des talents (mini-jeux) touchent toujours, comme le coup de guitare.
+const SPELL_HIT_CHANCE := 0.8
+## Coup de guitare : touche toujours (pas de jet d'attaque), 1d6 + FOR, 20 % plus rapide qu'avant (0,65 s → 0,54 s).
+const MELEE_COOLDOWN := 0.54
+const MELEE_HIT_DELAY := 0.125 # instant du coup dans l'animation (0,5 s)
+const MELEE_DICE := 6
 const MELEE_RANGE := 1.9
 const MELEE_KNOCKBACK := 2.5
 
 # Accordage de cordes (clic droit) : arc électrique qui rebondit.
 const TUNING_COST := 12.0
-const TUNING_COOLDOWN := 1.2
+const TUNING_COOLDOWN := 10.0
 const TUNING_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis »
 const TUNING_FIRST_RANGE := 11.0
 const TUNING_JUMP_RANGE := 6.0
 const TUNING_FALLOFF := 0.12 # -12 % de dégâts à chaque rebond
 const ZAP_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc électrique
 
-# Riff électrique (touche 1) : une seule cible, combo rythmique.
+# Riff électrique (touche 1) : mini-jeu. Une seule note, très rapide (160 BPM) : la 1re part en lançant le sort, puis
+# chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à 8 notes). Une fausse note
+# arrête le riff et triple la recharge.
 const RIFF_COST := 6.0
 const RIFF_COOLDOWN := 3.0 # recharge du Riff électrique
-const RIFF_BEAT := 3.0 # en rythme = relancer dès la fin de la recharge...
-const RIFF_BEAT_TOLERANCE := 0.4 # ... dans les 0,4 s qui suivent
-const RIFF_MIN_INTERVAL := RIFF_COOLDOWN
-const RIFF_MAX_STACKS := 4 # « se multiplie jusqu'à 4 fois »...
-const RIFF_MAX_MULT := 3.0 # ... « pour atteindre au maximum 3 fois sa puissance »
-const RIFF_RANGE := 12.0
+const RIFF_BPM := 160.0
+const RIFF_NOTES := 8
+const RIFF_FAIL_COOLDOWN_MULT := 3.0
+const RIFF_RANGE := 12.0 # portée de la 1re cible
+const RIFF_CHAIN_RANGE := 8.0 # saut d'un ennemi au suivant
 
 const WAVE_COST := 20.0
 const WAVE_COOLDOWN := 4.0

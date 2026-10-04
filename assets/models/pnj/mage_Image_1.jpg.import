@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0otk08lxsags"
-path="res://.godot/imported/mage_Image_0.jpg-98f92d584f1f718257f652b43739c25a.ctex"
+uid="uid://dv7a4o5spuafr"
+path="res://.godot/imported/mage_Image_1.jpg-f8a94758a0332739486303401db44520.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "7bd16ef1536f0485fede35e9b31e0446"
+"md5": "7fbc10b9f5caad0b9c1fb40d3e5e5967"
 }
 
 [deps]
 
-source_file="res://assets/models/pnj/mage_Image_0.jpg"
-dest_files=["res://.godot/imported/mage_Image_0.jpg-98f92d584f1f718257f652b43739c25a.ctex"]
+source_file="res://assets/models/pnj/mage_Image_1.jpg"
+dest_files=["res://.godot/imported/mage_Image_1.jpg-f8a94758a0332739486303401db44520.ctex"]
 
 [params]
 

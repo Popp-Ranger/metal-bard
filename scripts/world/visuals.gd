@@ -192,6 +192,16 @@ static func label(parent: Node3D, text: String, pos: Vector3, color: Color, size
 	return l
 
 
+## Remplissage `k` (0..1) d'une barre de vie 3D (QuadMesh en billboard, large de `width`) : le bord gauche reste
+## fixe, la barre se vide de la droite vers la gauche.
+static func set_bar_fill(fill: MeshInstance3D, k: float, width: float) -> void:
+	var q := fill.mesh as QuadMesh
+	k = clampf(k, 0.0, 1.0)
+	q.size.x = maxf(width * k, 0.001)
+	q.center_offset.x = -width * 0.5 * (1.0 - k)
+	fill.visible = k > 0.0
+
+
 ## Environnement (« dungeon », « tavern » ou « night ») : pénombre lugubre, aussi sombre que la toute première
 ## version (mêmes réglages, v0.1.35), mais sans ses filtres (ni occlusion ambiante, ni contraste, ni désaturation) ;
 ## pas de lumière principale : seules les torches, lanternes et le halo du héros éclairent.

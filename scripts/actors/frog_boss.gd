@@ -214,19 +214,31 @@ func _leap() -> void:
 func _die() -> void:
 	super._die()
 	Events.boss_health.emit(display_name, 0, max_hp)
-	Pickup.spawn(get_parent(), global_position, "item", 0, "couronne_gloubah")
-	Pickup.spawn(get_parent(), global_position, "potion")
 	Events.boss_defeated.emit("gloubah")
+
+
+## Sa couronne (et une potion) restent sur son corps, à fouiller comme les autres.
+func _drop_loot() -> void:
+	super._drop_loot()
+	loot.append({"kind": "item", "item": "couronne_gloubah"})
+	loot.append({"kind": "potion"})
 
 
 func _death_anim() -> void:
 	Sfx.play("croak", 0.0, 0.0)
 	Events.camera_shake.emit(0.4, 1.0)
+	create_tween().tween_property(model, "scale", Vector3(1.4, 0.4, 1.4), 1.2).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	_corpse(3.2)
+
+
+func _vanish() -> void:
 	var tw := create_tween()
-	tw.tween_property(model, "scale", Vector3(1.4, 0.4, 1.4), 1.2).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	tw.tween_interval(2.0)
 	tw.tween_property(model, "scale", Vector3(1.4, 0.02, 1.4), 1.0)
 	tw.tween_callback(queue_free)
+
+
+func _corpse_center() -> Vector3:
+	return global_position # écrasé sur place
 
 
 func _physics_process(delta: float) -> void:

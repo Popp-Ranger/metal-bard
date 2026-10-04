@@ -63,8 +63,15 @@ func _attack_anim(windup: float) -> void:
 
 func _death_anim() -> void:
 	Sfx.play("clack", -8.0, 0.3)
+	create_tween().tween_property(model, "rotation:z", PI, 0.25) # sur le dos
+	_corpse(1.45)
+
+
+func _vanish() -> void:
 	var tw := create_tween()
-	tw.tween_property(model, "rotation:z", PI, 0.25)
-	tw.tween_interval(1.2)
 	tw.tween_property(model, "scale", Vector3(1.5, 0.07, 1.5), 0.4)
 	tw.tween_callback(queue_free)
+
+
+func _corpse_center() -> Vector3:
+	return global_position # retourné sur place

@@ -26,9 +26,9 @@ var _regen_tick := 0.0
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
 var cooldowns := {"attack": 0.0, "dash": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
-## Combo du Riff électrique : nombre d'appuis consécutifs en rythme (1..RIFF_MAX_STACKS).
-var riff_stack := 0
-var _riff_last := -100.0
+## Riff électrique en cours (mini-jeu) et ennemis déjà frappés, dans l'ordre.
+var casting_riff := false
+var _riff_chain: Array[Enemy] = []
 var radius := 0.35
 ## Peut-on jouer ici ? Non dans la taverne hors du sous-sol : ni sorts ni coups de guitare,
 ## guitare portée dans le dos (voir Level.spells_allowed_at).
@@ -71,6 +71,7 @@ func _ready() -> void:
 	halo.shadow_enabled = false # ombres courtes : seule la lumière du dessus en projette
 	add_child(halo)
 	Events.solo_finished.connect(_on_solo_finished)
+	Events.solo_note_hit.connect(_on_solo_note_hit)
 	_update_zone()
 
 
@@ -282,7 +283,9 @@ func _interactable_under_cursor() -> Node3D:
 		var n3 := n as Node3D
 		if n3 == null or not n3.is_visible_in_tree():
 			continue
-		var d := _cursor_distance(n3.global_position, 1.7, 0.5)
+		var h: Variant = n3.get("click_height") # zone cliquable propre (corps à fouiller, couchés au sol)
+		var r: Variant = n3.get("click_radius")
+		var d := _cursor_distance(n3.global_position, float(h) if h != null else 1.7, float(r) if r != null else 0.5)
 		if d < best_d:
 			best_d = d
 			best = n3
@@ -361,7 +364,7 @@ func _cooldown(skill: String, base: float) -> void:
 
 
 func _ready_skill(skill: String) -> bool:
-	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not captive and not resting \
+	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not casting_riff and not leaping and not captive and not resting \
 		and not planted and not dashing and not talents_caster.blocks_actions()
 
 
@@ -379,25 +382,31 @@ func no_mana() -> void:
 
 
 ## Inflige des dégâts de sort à un ennemi : bonus racial (Démon), recul, et talent Pogo
-## (les ennemis fortement repoussés restent assommés).
-func hit_enemy(e: Enemy, dmg: int, knockback: float, kind: String, from: Vector3 = Vector3.INF) -> void:
+## (les ennemis fortement repoussés restent assommés). Un sort touche sa cible 8 fois sur 10
+## (GameState.spell_hit_chance) ; ceux joués en mini-jeu (`sure`) touchent toujours. Renvoie false si raté.
+func hit_enemy(e: Enemy, dmg: int, knockback: float, kind: String, from: Vector3 = Vector3.INF, sure: bool = false) -> bool:
 	if e == null or not e.is_alive():
-		return
+		return false
+	if not sure and randf() >= GameState.spell_hit_chance():
+		e.show_miss()
+		return false
 	var origin := global_position if from == Vector3.INF else from
 	e.take_damage(maxi(1, roundi(dmg * GameState.spell_power())), origin, knockback, false, kind)
 	if knockback >= 4.0 and GameState.has_talent("pogo") and e.is_alive():
 		e.stun(1.5)
+	return true
 
 
 # --- Compétences -----------------------------------------------------------
 
-## Coup de luth au corps-à-corps : jet d'attaque d20 + maîtrise + FOR contre la CA.
+## Coup de guitare au corps-à-corps : touche à coup sûr (pas de jet d'attaque), 1d6 + FOR (1 chance sur 20 de
+## coup critique : 2d6 + FOR).
 func melee() -> void:
 	if not _ready_skill("attack") or not can_cast():
 		return
 	_cooldown("attack", Balance.MELEE_COOLDOWN)
 	SpellFx.cast(self, "swing") # visible aussi chez les autres joueurs
-	await get_tree().create_timer(0.15, false).timeout
+	await get_tree().create_timer(Balance.MELEE_HIT_DELAY, false).timeout
 	if dead:
 		return
 	var hit_any := false
@@ -410,12 +419,8 @@ func melee() -> void:
 		if d > 0.4 and facing.dot(to / d) < 0.3:
 			continue
 		hit_any = true
-		var result := Dice.attack_roll(GameState.proficiency() + GameState.mod("FOR"), e.armor_class)
-		if result == 0:
-			e.show_miss()
-			continue
-		var crit := result == 2
-		var dmg := Dice.roll(2 if crit else 1, 8, GameState.mod("FOR") + (2 if GameState.race() == "orc" else 0))
+		var crit := Dice.d20() == 20
+		var dmg := Dice.roll(2 if crit else 1, Balance.MELEE_DICE, GameState.mod("FOR") + (2 if GameState.race() == "orc" else 0))
 		e.take_damage(maxi(1, dmg), global_position, Balance.MELEE_KNOCKBACK, crit, "phys")
 	Sfx.play("thud" if hit_any else "swoosh", -4.0 if hit_any else -10.0)
 
@@ -443,9 +448,10 @@ func cast_tuning() -> void:
 		hit_enemy(targets[i], dmg, 0.8, "shock")
 
 
-## Riff électrique (touche 1) : éclair sur UNE cible. Chaque appui en rythme
-## (dès la fin de la recharge de 3 s, dans les 0,4 s) fait monter le combo : ×1 → ×1,67 → ×2,33 → ×3.
-## Au maximum, le riff reste à ×3 tant qu'on garde le rythme ; un contretemps remet à ×1.
+## Riff électrique (touche 1) : mini-jeu. La 1re note part en lançant le sort, sur l'ennemi visé ; puis la même
+## note revient à 160 BPM : chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à
+## 8 notes, 10 avec Overdrive ; s'il ne reste personne d'autre, il refrappe le même). Les notes touchent toujours.
+## Une seule fausse note (ou un appui à contretemps) arrête le riff et triple la recharge.
 func cast_riff() -> void:
 	if not _ready_skill("riff") or not can_cast():
 		return
@@ -456,42 +462,83 @@ func cast_riff() -> void:
 	if not GameState.spend_mana(Balance.RIFF_COST):
 		_no_mana()
 		return
-	var now := Time.get_ticks_msec() / 1000.0
-	var on_beat := absf((now - _riff_last) - Balance.RIFF_BEAT) <= Balance.RIFF_BEAT_TOLERANCE
-	var max_stacks := riff_max_stacks()
-	riff_stack = mini(riff_stack + 1, max_stacks) if on_beat else 1
-	_riff_last = now
-	var mult := riff_multiplier(riff_stack, max_stacks, riff_max_mult())
-	# Délai fixe (non réduit par l'INT) : le tempo doit rester stable.
-	cooldowns["riff"] = Balance.RIFF_MIN_INTERVAL
-	Events.cooldown_started.emit("riff", Balance.RIFF_MIN_INTERVAL)
-	Events.riff_combo.emit(riff_stack, mult)
-	var k := float(riff_stack - 1) / float(max_stacks - 1)
+	casting_riff = true
+	_riff_chain.clear()
+	_riff_strike(target, 1)
+	Events.solo_requested.emit("riff", riff_notes())
+
+
+## Fin du mini-jeu du riff : recharge normale si toutes les notes sont passées, triplée à la moindre fausse note.
+func _riff_finished(hits: int, total: int) -> void:
+	casting_riff = false
+	var notes := hits + 1 # la 1re note est partie avec le sort
+	if hits >= total:
+		_cooldown("riff", Balance.RIFF_COOLDOWN)
+		Events.notify("RIFF PARFAIT ! %d notes" % notes, Events.COLOR_GOLD)
+		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), "EN RYTHME ×%d !" % notes, Color(1.0, 0.8, 0.3))
+	else:
+		_cooldown("riff", Balance.RIFF_COOLDOWN * Balance.RIFF_FAIL_COOLDOWN_MULT)
+		Events.notify("Fausse note ! Riff interrompu (%d note%s) : recharge triplée." % [notes, "s" if notes > 1 else ""], Events.COLOR_BAD)
+
+
+## Nombre de notes du Riff électrique (Overdrive : 2 de plus).
+func riff_notes() -> int:
+	return Balance.RIFF_NOTES + (2 if GameState.has_talent("overdrive") else 0)
+
+
+## Note réussie du mini-jeu : l'éclair saute sur l'ennemi suivant.
+func _on_solo_note_hit(mode: String, hits: int) -> void:
+	if mode != "riff" or not casting_riff:
+		return
+	var next := _riff_next()
+	if next != null:
+		_riff_strike(next, hits + 1)
+	else:
+		Sfx.play("riff", -13.5) # plus personne à portée : le riff résonne quand même
+
+
+## Éclair du riff sur `target` (note n° `note`), depuis la guitare ou depuis l'ennemi précédent.
+func _riff_strike(target: Enemy, note: int) -> void:
+	var last: Enemy = _riff_chain[-1] if not _riff_chain.is_empty() else null
+	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
+	if last != null and is_instance_valid(last) and last != target:
+		from = last.global_position + Vector3(0, 0.9, 0)
+	_riff_chain.append(target)
+	var k := clampf(float(note - 1) / float(maxi(1, riff_notes() - 1)), 0.0, 1.0)
 	var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
 	# Éclair et son riff electrique.wav, visibles et audibles par tous les joueurs.
-	SpellFx.cast(self, "riff", {"from": global_position + Vector3(0, 1.1, 0) + facing * 0.4,
-		"to": target.global_position + Vector3(0, 0.9, 0), "stack": riff_stack, "color": color})
-	var dmg := roundi(Dice.roll(1, 10, GameState.mod("CHA")) * mult)
-	target.take_damage(maxi(1, roundi(dmg * GameState.spell_power())), global_position, 0.4, riff_stack >= max_stacks, "shock")
+	SpellFx.cast(self, "riff", {"from": from, "to": target.global_position + Vector3(0, 0.9, 0), "stack": note, "color": color})
+	var dmg := Dice.roll(1, 10, GameState.mod("CHA"))
+	if GameState.has_talent("overdrive"):
+		dmg = roundi(dmg * 1.25)
+	hit_enemy(target, dmg, 0.4, "shock", global_position, true)
 	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
 		target.slow(0.6, 2.0)
-	if riff_stack > 1:
-		var label := "RYTHME ×%.1f" % mult if riff_stack < max_stacks else "EN RYTHME ×%d !" % roundi(mult)
-		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), label, color)
 
 
-static func riff_multiplier(stack: int, max_stacks: int = Balance.RIFF_MAX_STACKS, max_mult: float = Balance.RIFF_MAX_MULT) -> float:
-	var steps := float(max_stacks - 1)
-	return 1.0 + (max_mult - 1.0) * float(clampi(stack, 1, max_stacks) - 1) / steps
-
-
-## Overdrive : 5 paliers et ×4 au lieu de 4 paliers et ×3.
-func riff_max_stacks() -> int:
-	return Balance.RIFF_MAX_STACKS + (1 if GameState.has_talent("overdrive") else 0)
-
-
-func riff_max_mult() -> float:
-	return Balance.RIFF_MAX_MULT + (1.0 if GameState.has_talent("overdrive") else 0.0)
+## Ennemi suivant du riff : le plus proche du précédent (à 8 m au plus) qui n'a pas encore été touché, sinon le
+## précédent lui-même (ou, s'il est tombé, l'ennemi le plus proche).
+func _riff_next() -> Enemy:
+	var last: Enemy = _riff_chain[-1] if not _riff_chain.is_empty() else null
+	var origin := last.global_position if last != null and is_instance_valid(last) else global_position
+	var best: Enemy = null
+	var best_d := Balance.RIFF_CHAIN_RANGE
+	for e in enemies():
+		var d := _flat_dist(e.global_position, origin)
+		if d < best_d and not _riff_chain.has(e):
+			best_d = d
+			best = e
+	if best != null:
+		return best
+	if last != null and is_instance_valid(last) and last.is_alive():
+		return last
+	best_d = Balance.RIFF_RANGE
+	for e in enemies():
+		var d := _flat_dist(e.global_position, origin)
+		if d < best_d:
+			best_d = d
+			best = e
+	return best
 
 
 func _riff_target() -> Enemy:
@@ -559,8 +606,7 @@ func cast_wave() -> void:
 		var dmg := Dice.roll(2, 8, GameState.mod("CHA"))
 		if e.saving_throw(dc):
 			dmg = floori(dmg / 2.0)
-		hit_enemy(e, dmg, wave_knock, "sound")
-		if e.is_alive():
+		if hit_enemy(e, dmg, wave_knock, "sound") and e.is_alive():
 			e.headbang(Balance.WAVE_HEADBANG)
 
 
@@ -578,6 +624,9 @@ func cast_solo() -> void:
 
 
 func _on_solo_finished(mode: String, hits: int, total: int) -> void:
+	if mode == "riff" and casting_riff:
+		_riff_finished(hits, total)
+		return
 	if mode != "foudre" or not casting_solo:
 		return
 	casting_solo = false

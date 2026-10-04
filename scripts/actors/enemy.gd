@@ -438,7 +438,7 @@ func _flash() -> void:
 	if not is_instance_valid(self):
 		return
 	for m in _flash_mats:
-		m.emission = Color.BLACK
+		m.emission = LOOT_GLOW if _glow_tween != null else Color.BLACK # mort entre-temps : lueur du butin
 
 
 func _die() -> void:
@@ -454,19 +454,19 @@ func _die() -> void:
 	_death_anim()
 
 
+## Butin tiré à la mort, gardé sur le corps : médiators, potion, équipement (ramassé en fouillant le corps).
 func _drop_loot() -> void:
-	var parent := get_parent()
 	if randf() < ItemDB.money_drop_chance():
-		Pickup.spawn(parent, global_position, "gold", randi_range(gold_range.x, gold_range.y))
+		loot.append({"kind": "gold", "value": randi_range(gold_range.x, gold_range.y)})
 	if randf() < ItemDB.potion_drop_chance():
-		Pickup.spawn(parent, global_position, "potion")
+		loot.append({"kind": "potion"})
 	if randf() < Balance.DROP_ITEM_CHANCE:
 		var pool: Array[String] = []
 		for id: String in ItemDB.common_drops():
-			if not GameState.inventory.has(id):
+			if not GameState.owns(id):
 				pool.append(id)
 		if not pool.is_empty():
-			Pickup.spawn(parent, global_position, "item", 0, pool.pick_random())
+			loot.append({"kind": "item", "item": pool.pick_random()})
 
 
 func _death_anim() -> void:
@@ -474,9 +474,109 @@ func _death_anim() -> void:
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(model, "rotation:x", -PI * 0.5, 0.45).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	tw.tween_property(model, "position:y", 0.15, 0.45)
-	tw.chain().tween_interval(1.5)
-	tw.chain().tween_property(model, "scale", Vector3(1.0, 0.05, 1.0), 0.6)
-	tw.chain().tween_callback(queue_free)
+	_corpse(1.95)
+
+
+# --- Corps et butin ------------------------------------------------------------------------
+# Le butin reste sur le corps : on le ramasse en cliquant dessus (ou [E] à côté). Tant qu'il y a quelque chose à
+# prendre, le corps reste au sol ; s'il porte un équipement, il « respire » en doré (1 s pour s'allumer, 1 s pour
+# s'éteindre).
+
+const LOOT_GLOW := Color(1.0, 0.78, 0.25)
+const LOOT_GLOW_FADE := 1.0
+
+## Butin du corps : [{kind: "gold" | "potion" | "item", value, item}].
+var loot: Array[Dictionary] = []
+var _loot_spot: Interactable
+var _glow_tween: Tween
+var _glow_light: OmniLight3D
+
+
+## Après la chute : sans butin, le corps s'efface au bout de `linger` secondes ; sinon il attend d'être fouillé.
+func _corpse(linger: float) -> void:
+	if not loot.is_empty():
+		_make_lootable()
+		return
+	await get_tree().create_timer(linger, false).timeout
+	if is_instance_valid(self):
+		_vanish()
+
+
+## Le corps s'efface (écrasé puis retiré).
+func _vanish() -> void:
+	var tw := create_tween()
+	tw.tween_property(model, "scale", Vector3(model.scale.x, 0.05, model.scale.z), 0.6)
+	tw.tween_callback(queue_free)
+
+
+## Milieu du corps couché (tombé en arrière) : c'est là qu'on clique pour le fouiller.
+func _corpse_center() -> Vector3:
+	var yaw := model.rotation.y
+	return global_position - Vector3(sin(yaw), 0.0, cos(yaw)) * height * 0.4
+
+
+func _make_lootable() -> void:
+	_loot_spot = Interactable.create(get_parent(), _corpse_center(), loot_prompt(), loot_all, 1.8)
+	_loot_spot.click_height = 0.6
+	_loot_spot.click_radius = maxf(0.6, radius * 2.0)
+	if has_equipment_loot():
+		_start_gold_glow()
+
+
+func has_equipment_loot() -> bool:
+	for l in loot:
+		if str(l["kind"]) == "item":
+			return true
+	return false
+
+
+func loot_prompt() -> String:
+	var parts: PackedStringArray = []
+	for l in loot:
+		match str(l["kind"]):
+			"gold":
+				parts.append("%d médiators" % int(l["value"]))
+			"potion":
+				parts.append("potion de soin")
+			_:
+				parts.append(str(ItemDB.get_item(str(l["item"])).get("name", l["item"])))
+	return "Fouiller le corps : %s" % ", ".join(parts)
+
+
+## Fouille le corps : tout son butin va au héros, puis le corps s'efface.
+func loot_all() -> void:
+	for l in loot:
+		Pickup.grant(get_parent(), global_position, str(l["kind"]), int(l.get("value", 0)), str(l.get("item", "")))
+	loot.clear()
+	if _loot_spot != null and is_instance_valid(_loot_spot):
+		_loot_spot.queue_free()
+	if _glow_tween != null:
+		_glow_tween.kill()
+	_set_glow(0.0)
+	_vanish()
+
+
+func _start_gold_glow() -> void:
+	_glow_light = OmniLight3D.new()
+	_glow_light.light_color = LOOT_GLOW
+	_glow_light.omni_range = 3.0
+	_glow_light.light_energy = 0.0
+	_glow_light.position = _corpse_center() - global_position + Vector3(0, 0.6, 0)
+	add_child(_glow_light)
+	for m in _flash_mats:
+		m.emission = LOOT_GLOW
+	_set_glow(0.0)
+	_glow_tween = create_tween().set_loops()
+	_glow_tween.tween_method(_set_glow, 0.0, 1.0, LOOT_GLOW_FADE).set_trans(Tween.TRANS_SINE)
+	_glow_tween.tween_method(_set_glow, 1.0, 0.0, LOOT_GLOW_FADE).set_trans(Tween.TRANS_SINE)
+
+
+## Intensité de la lueur dorée (0 à 1).
+func _set_glow(k: float) -> void:
+	for m in _flash_mats:
+		m.emission_energy_multiplier = 1.4 * k
+	if _glow_light != null:
+		_glow_light.light_energy = 1.8 * k
 
 
 # --- Barre de vie -----------------------------------------------------------
@@ -515,7 +615,7 @@ func _update_hp_bar() -> void:
 		Events.boss_health.emit(display_name, maxi(hp, 0), max_hp)
 		return
 	_hp_bar.visible = hp > 0
-	_hp_fill.scale.x = clampf(float(hp) / max_hp, 0.001, 1.0)
+	Visuals.set_bar_fill(_hp_fill, float(hp) / max_hp, 0.86) # se vide de la droite vers la gauche
 
 
 # --- Cibles et coopération ----------------------------------------------------------

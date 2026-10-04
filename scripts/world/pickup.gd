@@ -1,6 +1,7 @@
 class_name Pickup
 extends Node3D
-## Butin au sol : or, potion ou relique. Attiré par le héros quand il s'approche.
+## Butin au sol (coffres) : médiators, potion ou équipement. Attiré par le héros quand il s'approche. Le butin
+## des ennemis, lui, reste sur leur corps (Enemy.loot).
 
 var kind := "gold" # "gold", "potion", "item"
 var value := 0
@@ -60,16 +61,22 @@ func _process(delta: float) -> void:
 
 
 func _collect() -> void:
-	match kind:
+	grant(get_parent(), global_position, kind, value, item_id)
+	queue_free()
+
+
+## Donne un butin au héros local (médiators, potion ou équipement), avec son petit effet : objets au sol (coffres)
+## et corps fouillés (Enemy.loot_all).
+static func grant(parent: Node, at: Vector3, loot_kind: String, loot_value: int = 0, loot_item: String = "") -> void:
+	match loot_kind:
 		"gold":
-			GameState.add_gold(value)
+			GameState.add_gold(loot_value)
 			Sfx.play("coin", -6.0)
-			DamageNumber.spawn(get_parent(), global_position + Vector3(0, 1.2, 0), "+%d médiators" % value, Events.COLOR_GOLD)
+			DamageNumber.spawn(parent, at + Vector3(0, 1.2, 0), "+%d médiators" % loot_value, Events.COLOR_GOLD)
 		"potion":
 			GameState.add_potion()
 			Sfx.play("coin", -6.0, 0.2)
 			Events.notify("Potion de soin ramassée (%d)" % GameState.potions, Events.COLOR_GOOD)
 		_:
 			Sfx.play("levelup", -8.0)
-			GameState.add_item(item_id)
-	queue_free()
+			GameState.add_item(loot_item)

@@ -11,8 +11,11 @@ var hp := 1
 var mana := 0.0
 var gold := 0
 var potions := 0
+## Sac : objets ramassés mais pas équipés (leurs bonus ne comptent pas).
 var inventory: Array[String] = []
-## Reliques vendues à Grokk, la plus récente en premier : on peut les lui racheter (BUYBACK_MAX au plus).
+## Équipement porté : emplacement (ItemDB.SLOTS) -> objet. Seuls ces objets donnent leurs bonus.
+var equipment := {}
+## Objets vendus à Grokk, la plus récente en premier : on peut les lui racheter (BUYBACK_MAX au plus).
 var buyback: Array[String] = []
 ## Fromage d'hibours de Gérald (offert si on refuse sa quête jusqu'au bout) : +20 % de PV max pendant 20 min.
 var cheese_time := 0.0
@@ -73,6 +76,7 @@ func new_game() -> void:
 	gold = ItemDB.starting_money()
 	potions = ItemDB.starting_potions()
 	inventory.clear()
+	equipment = {}
 	buyback.clear()
 	cheese_time = 0.0
 	flags = {}
@@ -98,10 +102,10 @@ func new_game() -> void:
 
 # --- Caractéristiques dérivées (règles D&D adaptées) -------------------------
 
-## Valeur totale d'une caractéristique : base + bonus des reliques.
+## Valeur totale d'une caractéristique : base + race + bonus de l'équipement porté (pas du sac).
 func ability(ab: String) -> int:
 	var total := stats.base(ab) + RaceDB.bonus(race(), ab)
-	for item_id in inventory:
+	for item_id: String in equipment.values():
 		var bonus: Dictionary = ItemDB.active_bonus(item_id)
 		total += int(bonus.get(ab, 0))
 	return mini(total, 30)
@@ -200,16 +204,58 @@ func add_potion(count: int = 1) -> void:
 	Events.potions_changed.emit(potions)
 
 
+## Nouvel objet : il va dans le sac ; il faut l'équiper (fiche de personnage ou inventaire) pour profiter de ses bonus.
 func add_item(id: String) -> void:
-	if id.is_empty() or inventory.has(id):
+	if id.is_empty() or owns(id):
 		return
 	inventory.append(id)
 	var item := ItemDB.get_item(id)
-	Events.notify("Relique obtenue : %s (%s)" % [item.get("name", id), ItemDB.bonus_text(id)], ItemDB.color_of(id))
+	Events.notify("Équipement trouvé : %s (%s, %s) — à équiper dans la fiche [%s]" % [item.get("name", id), ItemDB.slot_name(ItemDB.slot_of(id)),
+		ItemDB.bonus_text(id), Controls.key_label("character_sheet")], ItemDB.color_of(id))
 	_on_stats_changed()
 
 
-## Vend une relique à Grokk : elle quitte l'inventaire (ses bonus aussi) et rejoint l'historique de rachat.
+## Objet possédé, dans le sac ou équipé.
+func owns(id: String) -> bool:
+	return inventory.has(id) or is_equipped(id)
+
+
+func is_equipped(id: String) -> bool:
+	return equipment.values().has(id)
+
+
+## Équipe un objet du sac dans son emplacement ; celui qui l'occupait retourne dans le sac.
+func equip(id: String) -> bool:
+	if not inventory.has(id):
+		return false
+	var slot := ItemDB.slot_of(id)
+	var old := str(equipment.get(slot, ""))
+	inventory.erase(id)
+	if not old.is_empty():
+		inventory.append(old)
+	equipment[slot] = id
+	_on_gear_changed()
+	return true
+
+
+## Retire l'objet d'un emplacement : il retourne dans le sac (et ses bonus disparaissent).
+func unequip(slot: String) -> bool:
+	var id := str(equipment.get(slot, ""))
+	if id.is_empty():
+		return false
+	equipment.erase(slot)
+	inventory.append(id)
+	_on_gear_changed()
+	return true
+
+
+func _on_gear_changed() -> void:
+	_on_stats_changed()
+	Events.hero_hp_changed.emit(hp, max_hp())
+	Events.hero_mana_changed.emit(mana, max_mana())
+
+
+## Vend à Grokk un objet du sac (on ne vend pas ce qu'on porte) : il rejoint l'historique de rachat.
 func sell_item(id: String) -> bool:
 	if not inventory.has(id):
 		return false
@@ -222,10 +268,10 @@ func sell_item(id: String) -> bool:
 	return true
 
 
-## Rachète à Grokk une relique vendue, au prix où il l'a payée.
+## Rachète à Grokk un objet vendu, au prix où il l'a payé (il revient dans le sac).
 func buy_back(id: String) -> bool:
 	var price := ItemDB.sell_price(id)
-	if not buyback.has(id) or gold < price or inventory.has(id):
+	if not buyback.has(id) or gold < price or owns(id):
 		return false
 	add_gold(-price)
 	buyback.erase(id)
@@ -305,6 +351,11 @@ func g(masculine: String, feminine: String) -> String:
 ## Multiplicateur des dégâts de sorts (Démon : Sang infernal).
 func spell_power() -> float:
 	return 1.1 if race() == "demon" else 1.0
+
+
+## Chance qu'un sort touche sa cible (80 % sans amélioration ; les sorts joués en mini-jeu touchent toujours).
+func spell_hit_chance() -> float:
+	return Balance.SPELL_HIT_CHANCE
 
 
 func has_talent(id: String) -> bool:
@@ -539,6 +590,7 @@ func _snapshot() -> Dictionary:
 		"gold": gold,
 		"potions": potions,
 		"inventory": inventory,
+		"equipment": equipment,
 		"buyback": buyback,
 		"quests": quests,
 		"flags": flags,
@@ -602,6 +654,12 @@ func load_slot(slot: int) -> bool:
 	var data := _read_slot(slot)
 	if data.is_empty():
 		return false
+	apply_save(data)
+	return true
+
+
+## Remet la partie dans l'état d'une sauvegarde (contenu du fichier JSON).
+func apply_save(data: Dictionary) -> void:
 	new_game()
 	stats.from_dict(data.get("stats", {}))
 	gold = int(data.get("gold", 0))
@@ -609,6 +667,17 @@ func load_slot(slot: int) -> bool:
 	inventory.clear()
 	for id: Variant in data.get("inventory", []):
 		inventory.append(str(id))
+	equipment = {}
+	if data.has("equipment"):
+		var saved_gear: Dictionary = data["equipment"]
+		for gear_slot: String in saved_gear:
+			if ItemDB.SLOTS.has(gear_slot) and not ItemDB.get_item(str(saved_gear[gear_slot])).is_empty():
+				equipment[gear_slot] = str(saved_gear[gear_slot])
+	else:
+		# Sauvegarde d'avant l'équipement (0.1.38 et avant) : les reliques portées sont équipées d'office.
+		for id: String in inventory.duplicate():
+			if not equipment.has(ItemDB.slot_of(id)):
+				equip(id)
 	buyback.clear()
 	for id: Variant in data.get("buyback", []):
 		buyback.append(str(id))
@@ -637,7 +706,6 @@ func load_slot(slot: int) -> bool:
 	dungeon_state = data.get("dungeon_state", {})
 	town_portal = data.get("town_portal", {})
 	location = data.get("location", {})
-	return true
 
 
 ## Scène où reprendre après un chargement (et position du héros si elle est connue).
