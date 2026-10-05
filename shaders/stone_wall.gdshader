@@ -6,6 +6,10 @@ render_mode diffuse_toon, specular_toon; // cel shading
 uniform vec4 stone_color : source_color = vec4(0.23, 0.22, 0.25, 1.0);
 uniform vec4 mortar_color : source_color = vec4(0.07, 0.065, 0.075, 1.0);
 uniform vec4 moss_color : source_color = vec4(0.16, 0.22, 0.12, 1.0);
+// Texture de maçonnerie (assets/textures) : remplace les briques procédurales si use_tex ; stone_color la teinte.
+uniform bool use_tex = false;
+uniform sampler2D albedo_tex : source_color, repeat_enable, filter_linear_mipmap_anisotropic;
+uniform float tex_metres = 2.0;
 uniform float brick_height = 0.42;
 uniform float brick_length = 0.9;
 uniform float moss_amount = 0.25;
@@ -47,17 +51,23 @@ void fragment() {
 		u = world_pos.x;
 		v = world_pos.z;
 	}
-	float row = floor(v / brick_height);
-	float uu = u / brick_length + mod(row, 2.0) * 0.5;
-	vec2 cell = vec2(floor(uu), row);
-	vec2 f = vec2(fract(uu), fract(v / brick_height));
-	float mortar = step(0.06, f.x) * step(f.x, 0.96) * step(0.08, f.y) * step(f.y, 0.94);
-	float variation = hash(cell) * 0.35 + 0.8;
-	vec3 col = stone_color.rgb * variation;
-	float moss = smoothstep(1.0 - moss_amount, 1.0, hash(cell * 1.7 + 3.1)) * smoothstep(1.2, 0.0, v);
-	col = mix(col, moss_color.rgb, moss * 0.7);
-	col = mix(mortar_color.rgb, col, mortar);
-	ALBEDO = col;
-	ROUGHNESS = 0.95;
-	SPECULAR = 0.2;
+	if (use_tex) {
+		ALBEDO = texture(albedo_tex, vec2(u, -v) / tex_metres).rgb * stone_color.rgb;
+		ROUGHNESS = 0.92;
+		SPECULAR = 0.2;
+	} else {
+		float row = floor(v / brick_height);
+		float uu = u / brick_length + mod(row, 2.0) * 0.5;
+		vec2 cell = vec2(floor(uu), row);
+		vec2 f = vec2(fract(uu), fract(v / brick_height));
+		float mortar = step(0.06, f.x) * step(f.x, 0.96) * step(0.08, f.y) * step(f.y, 0.94);
+		float variation = hash(cell) * 0.35 + 0.8;
+		vec3 col = stone_color.rgb * variation;
+		float moss = smoothstep(1.0 - moss_amount, 1.0, hash(cell * 1.7 + 3.1)) * smoothstep(1.2, 0.0, v);
+		col = mix(col, moss_color.rgb, moss * 0.7);
+		col = mix(mortar_color.rgb, col, mortar);
+		ALBEDO = col;
+		ROUGHNESS = 0.95;
+		SPECULAR = 0.2;
+	}
 }

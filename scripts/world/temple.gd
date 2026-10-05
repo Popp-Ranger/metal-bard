@@ -28,8 +28,8 @@ var _dark_stone: StandardMaterial3D
 func _ready() -> void:
 	GameState.flags.erase("in_dungeon")
 	setup_level("night", "Le Temple du Dragon")
-	_stone = Visuals.mat(Color(0.3, 0.28, 0.3), 0.9)
-	_dark_stone = Visuals.mat(Color(0.12, 0.11, 0.13), 0.9)
+	_stone = Visuals.textured("dalles", 3.0, Color(0.62, 0.6, 0.64))
+	_dark_stone = Visuals.textured("roche", 3.0, Color(0.3, 0.28, 0.32))
 	_build_storm()
 	_build_plaza()
 	_build_terrace()
@@ -133,7 +133,7 @@ func _build_stairs(start: Vector3, dir: float, count: int) -> void:
 		var z := start.z + dir * (k * STEP_DEPTH + STEP_DEPTH * 0.5)
 		var height := absf(h) + 0.3
 		var step := Visuals.box(self, Vector3(9.0, height, STEP_DEPTH), Vector3(start.x, h - height * 0.5 + (0.0 if dir < 0.0 else 0.0), z),
-			_stone if k % 2 == 0 else Visuals.mat(Color(0.38, 0.36, 0.39), 0.9))
+			_stone if k % 2 == 0 else Visuals.textured("dalles", 3.0, Color(0.74, 0.72, 0.76)))
 		step.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if k % 3 == 1:
 			for side: float in [-1.0, 1.0]:

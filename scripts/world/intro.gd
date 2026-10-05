@@ -172,7 +172,7 @@ func _moon_position() -> Vector3:
 
 func _build_ground() -> void:
 	var center := road_point(ROAD_LENGTH * 0.5)
-	var grass := Visuals.mat(Color(0.08, 0.1, 0.06), 0.95)
+	var grass := Visuals.textured("herbe_terre", 6.0, Color(0.3, 0.34, 0.28), 0.95)
 	var ground := Visuals.box(self, Vector3(420, 0.1, 420), center + Vector3(0, -0.06, 0), grass)
 	ground.rotation.y = PI * 0.25
 	# Touffes d'herbe et fleurs fanées (MultiMesh).
@@ -244,7 +244,7 @@ func _build_road() -> void:
 	mmi.material_override = m
 	add_child(mmi)
 	# Bas-côtés de terre battue.
-	var dirt := Visuals.mat(Color(0.1, 0.075, 0.05), 1.0)
+	var dirt := Visuals.textured("terre", 3.0, Color(0.32, 0.27, 0.22), 1.0)
 	var k := -8.0
 	while k < TAVERN_S:
 		var d := road_dir(k)
@@ -322,9 +322,9 @@ func _dead_tree(p: Vector3) -> void:
 # =====================================================================================
 
 func _build_cemetery() -> void:
-	var stone := Visuals.mat(Color(0.3, 0.29, 0.3), 0.9)
-	var dark_stone := Visuals.mat(Color(0.18, 0.17, 0.18), 0.9)
-	var dirt := Visuals.mat(Color(0.14, 0.09, 0.05), 1.0)
+	var stone := Visuals.textured("dalles_usees", 1.5, Color(0.9, 0.88, 0.92))
+	var dark_stone := Visuals.textured("dalles_usees", 1.5, Color(0.55, 0.54, 0.57))
+	var dirt := Visuals.textured("terre", 2.0, Color(0.3, 0.24, 0.2), 1.0)
 	var hole := Visuals.mat(Color(0.01, 0.008, 0.006), 1.0)
 	var wood := Visuals.mat(Color(0.2, 0.12, 0.06), 0.85)
 	var origin := road_point(2.0)
@@ -398,7 +398,7 @@ func _build_chapel(center: Vector3, yaw: float) -> void:
 	chapel.position = center
 	chapel.rotation.y = yaw
 	add_child(chapel)
-	var stone := Visuals.mat(Color(0.26, 0.25, 0.27), 0.9)
+	var stone := Visuals.textured("blocs_pierre", 2.5, Color(0.52, 0.5, 0.54))
 	var roof := Visuals.mat(Color(0.1, 0.08, 0.09), 0.8)
 	Visuals.box(chapel, Vector3(5.0, 4.0, 8.0), Vector3(0, 2.0, 0), stone)
 	for side: float in [-1.0, 1.0]:
@@ -473,7 +473,7 @@ func _build_tavern_exterior() -> void:
 	inn.position = center
 	inn.rotation.y = yaw + PI # la façade regarde la route
 	add_child(inn)
-	var stone := Visuals.mat(Color(0.3, 0.27, 0.25), 0.9)
+	var stone := Visuals.textured("blocs_pierre", 2.5, Color(0.6, 0.55, 0.52))
 	var timber := Visuals.mat(Color(0.18, 0.1, 0.05), 0.8)
 	var roof := Visuals.mat(Color(0.14, 0.07, 0.05), 0.85)
 	Visuals.box(inn, Vector3(14.0, 5.0, 9.0), Vector3(0, 2.5, 0), stone)

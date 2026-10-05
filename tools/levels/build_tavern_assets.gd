@@ -66,13 +66,10 @@ func _item(lib: MeshLibrary, id: int, item_name: String, parts: Array, shape_siz
 
 func _floor_tiles() -> MeshLibrary:
 	var lib := MeshLibrary.new()
-	var a := Visuals.mat(Color(0.18, 0.135, 0.1), 0.8)
-	var b := Visuals.mat(Color(0.22, 0.165, 0.12), 0.8)
-	_item(lib, PLANK, "Plancher", [[Vector3(1.0, 0.1, 0.47), Vector3(0, -0.05, -0.25), a],
-		[Vector3(1.0, 0.1, 0.47), Vector3(0, -0.05, 0.25), b], [Vector3(1.0, 0.08, 1.0), Vector3(0, -0.07, 0), Visuals.mat(Color(0.03, 0.02, 0.02))]],
+	# Textures projetées dans le repère du monde : les lames et les dalles se raccordent d'une case à l'autre.
+	_item(lib, PLANK, "Plancher", [[Vector3(1.0, 0.1, 1.0), Vector3(0, -0.05, 0), Visuals.textured("parquet", 3.0, Color(0.5, 0.44, 0.4), 0.8)]],
 		Vector3(1, 0.2, 1), Vector3(0, -0.1, 0))
-	_item(lib, TILES, "Dalles", [[Vector3(0.96, 0.1, 0.96), Vector3(0, -0.05, 0), Visuals.mat(Color(0.2, 0.19, 0.19), 0.9)],
-		[Vector3(1.0, 0.08, 1.0), Vector3(0, -0.07, 0), Visuals.mat(Color(0.08, 0.08, 0.08))]],
+	_item(lib, TILES, "Dalles", [[Vector3(1.0, 0.1, 1.0), Vector3(0, -0.05, 0), Visuals.textured("dalles", 3.0, Color(0.5, 0.48, 0.48))]],
 		Vector3(1, 0.2, 1), Vector3(0, -0.1, 0))
 	return lib
 
@@ -80,8 +77,8 @@ func _floor_tiles() -> MeshLibrary:
 ## Murs posés sur le bord nord de leur case (z = -0,5), à tourner avec la touche S.
 func _wall_tiles() -> MeshLibrary:
 	var lib := MeshLibrary.new()
-	var stone := Visuals.stone_material(false, Color(0.3, 0.27, 0.25))
-	var cut := Visuals.stone_material(true, Color(0.32, 0.28, 0.25))
+	var stone := Visuals.stone_material(false, Color(0.72, 0.66, 0.62), "briques", 2.0)
+	var cut := Visuals.stone_material(true, Color(0.75, 0.68, 0.62), "briques", 2.0)
 	var wood := Visuals.mat(Color(0.2, 0.11, 0.06), 0.8)
 	var z := -0.5
 	var cap := [Vector3(1.0, 0.2, 0.45), Vector3(0, 3.9, z), wood]

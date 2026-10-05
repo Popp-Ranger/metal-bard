@@ -8,13 +8,34 @@ extends RefCounted
 const LAVA_WIDTH := 1.3
 
 
+## Teinte des murs (qui multiplie leur texture).
 static func wall_color(theme: String) -> Color:
 	match theme:
 		"crypte":
-			return Color(0.2, 0.14, 0.13)
+			return Color(0.62, 0.46, 0.42) # basalte brun-rouge
 		"temple":
-			return Color(0.4, 0.38, 0.36)
-	return Color(0.23, 0.22, 0.25)
+			return Color(0.95, 0.92, 0.88)
+	return Color(0.62, 0.62, 0.66)
+
+
+## Textures des murs et des sols par thème (assets/textures) : [nom, mètres couverts par une répétition].
+const WALL_TEXTURES := {"catacombes": ["blocs_pierre", 3.0], "crypte": ["roche", 2.5], "temple": ["pierre_claire", 3.0]}
+const FLOOR_TEXTURES := {"catacombes": ["pierre_moussue", 4.0], "crypte": ["roche_lave", 6.0], "temple": ["damier", 4.0]}
+
+
+## Matériau des murs du thème : texture de maçonnerie et découpe autour du héros.
+static func wall_material(theme: String) -> ShaderMaterial:
+	var t: Array = WALL_TEXTURES.get(theme, WALL_TEXTURES["catacombes"])
+	return Visuals.stone_material(true, wall_color(theme), str(t[0]), float(t[1]))
+
+
+## Matériau du sol du thème (les fissures de la roche des Cryptes rougeoient). La couleur de chaque dalle
+## (vertex color) le nuance.
+static func floor_material(theme: String) -> StandardMaterial3D:
+	var t: Array = FLOOR_TEXTURES.get(theme, FLOOR_TEXTURES["catacombes"])
+	var m := Visuals.textured(str(t[0]), float(t[1]), Color.WHITE, 0.9, 0.35 if theme == "crypte" else 0.0).duplicate() as StandardMaterial3D
+	m.vertex_color_use_as_albedo = true
+	return m
 
 
 # --- Lave -------------------------------------------------------------------------------------
@@ -22,7 +43,8 @@ static func wall_color(theme: String) -> Color:
 static var _lava_mat: ShaderMaterial
 
 
-## Lave en fusion : bouillonnement orange et jaune (bruit qui dérive), sans éclairage (elle brille d'elle-même).
+## Lave en fusion : bouillonnement orange et jaune (bruit qui dérive), sans éclairage (elle brille d'elle-même),
+## où dérivent des plaques de croûte noire (texture « coulee_lave » : roche et fissures incandescentes).
 static func lava_material() -> ShaderMaterial:
 	if _lava_mat == null:
 		var sh := Shader.new()
@@ -30,6 +52,8 @@ static func lava_material() -> ShaderMaterial:
 shader_type spatial;
 render_mode unshaded;
 uniform sampler2D noise_tex : repeat_enable, filter_linear;
+uniform sampler2D crust_tex : source_color, repeat_enable, filter_linear_mipmap;
+uniform sampler2D crust_glow : source_color, repeat_enable, filter_linear_mipmap;
 varying vec3 wpos;
 void vertex() {
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -41,11 +65,20 @@ void fragment() {
 	float h = smoothstep(0.3, 0.75, n * 0.6 + m * 0.4);
 	vec3 col = mix(vec3(0.3, 0.02, 0.0), vec3(1.0, 0.45, 0.05), h);
 	col = mix(col, vec3(1.0, 0.85, 0.4), smoothstep(0.82, 0.95, h));
-	ALBEDO = col * 1.8;
+	col *= 1.8;
+	// Croûte : là où le bouillonnement est le plus froid, la roche noire et ses fissures qui rougeoient.
+	vec2 q = wpos.xz * 0.45 + vec2(TIME * 0.025, TIME * 0.015);
+	vec3 rock = texture(crust_tex, q).rgb * 0.7;
+	vec3 glow = texture(crust_glow, q).rgb;
+	float crust = smoothstep(0.42, 0.25, h) * (1.0 - smoothstep(0.08, 0.35, dot(glow, vec3(0.33))));
+	col = mix(col, rock + glow * 1.5, crust * 0.9);
+	ALBEDO = col;
 }
 """
 		_lava_mat = ShaderMaterial.new()
 		_lava_mat.shader = sh
+		_lava_mat.set_shader_parameter("crust_tex", Visuals.texture("coulee_lave", "couleur"))
+		_lava_mat.set_shader_parameter("crust_glow", Visuals.texture("coulee_lave", "emission"))
 		var tex := NoiseTexture2D.new()
 		var noise := FastNoiseLite.new()
 		noise.frequency = 0.02
@@ -67,7 +100,7 @@ static func lava_stream(parent: Node3D, a: Vector3, b: Vector3, width: float = L
 	var lava := Visuals.box(parent, Vector3(width, 0.04, length), mid + Vector3(0, 0.03, 0), lava_material())
 	lava.rotation.y = yaw
 	lava.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var basalt := Visuals.mat(Color(0.06, 0.04, 0.04), 0.9)
+	var basalt := Visuals.textured("roche", 1.5, Color(0.28, 0.2, 0.19))
 	var side := Vector3(cos(yaw), 0, -sin(yaw)) # perpendiculaire au ruisseau
 	for s: float in [-1.0, 1.0]:
 		var rim := Visuals.box(parent, Vector3(0.18, 0.1, length), mid + side * s * (width * 0.5 + 0.09) + Vector3(0, 0.05, 0), basalt)

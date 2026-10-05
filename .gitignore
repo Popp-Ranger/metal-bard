@@ -26,3 +26,6 @@ __pycache__/
 
 # Vidéo du guide de l'éditeur (94 Mo) : gardée en local
 docs/guide_editeur/*.mp4
+
+# Packs de textures bruts (4K, ~480 Mo) : seules les versions 1K de assets/textures/<nom>/ sont versionnées
+assets/textures/*.zip

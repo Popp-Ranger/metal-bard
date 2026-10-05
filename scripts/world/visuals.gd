@@ -33,6 +33,43 @@ static func mat(color: Color, roughness: float = 0.85, metallic: float = 0.0) ->
 	return m
 
 
+## Matériau texturé (assets/textures/<nom>/ : couleur, normale, émission éventuelle ; voir docs/TEXTURES.md),
+## projeté sur les trois axes du monde : la texture ne s'étire pas, quelle que soit la taille des blocs, et se
+## raccorde d'un bloc à l'autre. `metres` : largeur couverte par une répétition de la texture. Mis en cache.
+static func textured(tex_name: String, metres: float = 2.0, tint: Color = Color.WHITE, roughness: float = 0.9,
+		emission_energy: float = 0.0) -> StandardMaterial3D:
+	var key := "tex|%s|%.2f|%s|%.2f|%.2f" % [tex_name, metres, tint.to_html(), roughness, emission_energy]
+	if _mat_cache.has(key):
+		var cached: StandardMaterial3D = _mat_cache[key]
+		return cached
+	var m := StandardMaterial3D.new()
+	m.albedo_color = tint
+	m.albedo_texture = texture(tex_name, "couleur")
+	m.roughness = roughness
+	var normal := texture(tex_name, "normal")
+	if normal != null:
+		m.normal_enabled = true
+		m.normal_texture = normal
+	var glow := texture(tex_name, "emission")
+	if glow != null and emission_energy > 0.0:
+		m.emission_enabled = true
+		m.emission = Color.BLACK
+		m.emission_texture = glow
+		m.emission_energy_multiplier = emission_energy
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE / metres
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	_mat_cache[key] = m
+	return m
+
+
+## Une carte d'une texture du jeu (`kind` : « couleur », « normal », « emission ») ; null si elle manque.
+static func texture(tex_name: String, kind: String) -> Texture2D:
+	var path := "res://assets/textures/%s/%s_%s.jpg" % [tex_name, tex_name, kind]
+	return load(path) as Texture2D if ResourceLoader.exists(path) else null
+
+
 ## Matériau lumineux (non mis en cache : souvent animé).
 static func glow_mat(color: Color, energy: float = 2.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -57,10 +94,18 @@ static func transparent_mat(color: Color, emission_energy: float = 0.0) -> Stand
 	return m
 
 
-static func stone_material(cut_enabled: bool, stone: Color = Color(0.23, 0.22, 0.25)) -> ShaderMaterial:
+## Mur de pierre (shader stone_wall : découpe autour du héros). Sans texture : briques procédurales de couleur
+## `stone` ; avec `tex_name` (assets/textures) : cette texture, teintée par `stone`, répétée tous les `metres` m.
+static func stone_material(cut_enabled: bool, stone: Color = Color(0.23, 0.22, 0.25), tex_name: String = "",
+		metres: float = 2.0) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = STONE_SHADER
 	m.set_shader_parameter("stone_color", stone)
+	var tex: Texture2D = texture(tex_name, "couleur") if tex_name != "" else null
+	if tex != null:
+		m.set_shader_parameter("use_tex", true)
+		m.set_shader_parameter("albedo_tex", tex)
+		m.set_shader_parameter("tex_metres", metres)
 	m.set_shader_parameter("cut_radius", 3.4 if cut_enabled else 0.0)
 	return m
 

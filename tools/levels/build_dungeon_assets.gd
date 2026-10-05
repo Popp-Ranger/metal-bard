@@ -36,10 +36,7 @@ func _tiles() -> MeshLibrary:
 	var lib := MeshLibrary.new()
 	var slab := BoxMesh.new()
 	slab.size = Vector3(CELL, 0.2, CELL)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.32, 0.31, 0.33)
-	mat.roughness = 0.9
-	slab.material = mat
+	slab.material = Visuals.textured("pierre_moussue", 4.0, Color(0.6, 0.6, 0.62))
 	lib.create_item(0)
 	lib.set_item_name(0, "Sol (dalles)")
 	lib.set_item_mesh(0, slab)

@@ -1,16 +1,26 @@
-[gd_resource type="MeshLibrary" format=3 uid="uid://begqhuyhxdyr"]
+[gd_resource type="MeshLibrary" format=3]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lpf62"]
-albedo_color = Color(0.32, 0.31, 0.33, 1)
+[ext_resource type="Texture2D" path="res://assets/textures/pierre_moussue/pierre_moussue_couleur.jpg" id="1_n566i"]
+[ext_resource type="Texture2D" path="res://assets/textures/pierre_moussue/pierre_moussue_normal.jpg" id="2_o8hpw"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rqqmk"]
+albedo_color = Color(0.6, 0.6, 0.62, 1)
+albedo_texture = ExtResource("1_n566i")
 roughness = 0.9
+normal_enabled = true
+normal_texture = ExtResource("2_o8hpw")
+uv1_scale = Vector3(0.25, 0.25, 0.25)
+uv1_triplanar = true
+uv1_world_triplanar = true
+texture_filter = 5
 
-[sub_resource type="BoxMesh" id="BoxMesh_58tw3"]
-material = SubResource("StandardMaterial3D_lpf62")
+[sub_resource type="BoxMesh" id="BoxMesh_teibv"]
+material = SubResource("StandardMaterial3D_rqqmk")
 size = Vector3(2, 0.2, 2)
 
 [resource]
 item/0/name = "Sol (dalles)"
-item/0/mesh = SubResource("BoxMesh_58tw3")
+item/0/mesh = SubResource("BoxMesh_teibv")
 item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 item/0/mesh_cast_shadow = 1
 item/0/shapes = []

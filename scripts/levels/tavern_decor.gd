@@ -24,7 +24,7 @@ static func mat(key: String) -> Material:
 			"iron":
 				_mats[key] = Visuals.mat(Color(0.15, 0.15, 0.16), 0.4, 0.8)
 			"stone":
-				_mats[key] = Visuals.stone_material(false, Color(0.3, 0.27, 0.25))
+				_mats[key] = Visuals.stone_material(false, Color(0.7, 0.66, 0.62), "blocs_pierre", 1.5)
 			"candle":
 				_mats[key] = Visuals.mat(Color(0.9, 0.85, 0.7))
 			"beer":

@@ -218,48 +218,33 @@ func _build_floor() -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
-	# 4 dalles de 1 m par case de 2 m, légèrement irrégulières.
+	# Une dalle par case de 2 m : la texture du thème (projetée dans le repère du monde) dessine les pierres
+	# et se raccorde d'une case à l'autre ; chaque case est à peine nuancée.
 	var tile := BoxMesh.new()
-	tile.size = Vector3(CELL * 0.5 - 0.05, 0.2, CELL * 0.5 - 0.05)
+	tile.size = Vector3(CELL, 0.2, CELL)
 	mm.mesh = tile
-	mm.instance_count = cells.size() * 4
-	var quarter := CELL * 0.25
+	mm.instance_count = cells.size()
 	for i in cells.size():
-		for k in 4:
-			var off := Vector3(quarter if k % 2 == 1 else -quarter, 0, quarter if k >= 2 else -quarter)
-			var p := cell_to_world(cells[i]) + off + Vector3(0, -0.1 + _rng.randf_range(-0.02, 0.02), 0)
-			var basis := Basis(Vector3.UP, _rng.randf_range(-0.03, 0.03))
-			mm.set_instance_transform(i * 4 + k, Transform3D(basis, p))
-			var v := _rng.randf_range(0.8, 1.05)
-			mm.set_instance_color(i * 4 + k, _floor_color(cells[i], k, v))
+		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, cell_to_world(cells[i]) + Vector3(0, -0.1, 0)))
+		mm.set_instance_color(i, _floor_color(cells[i], _rng.randf_range(0.88, 1.04)))
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.9
-	mmi.material_override = mat
+	mmi.material_override = DungeonThemes.floor_material(theme)
 	add_child(mmi)
 	# Joints sombres entre les dalles.
 	var under := Vector3(gen.width * CELL, 0.1, gen.height * CELL)
 	_under = Visuals.box(self, under, _grid_origin() + Vector3(under.x * 0.5, -0.2, under.z * 0.5), Visuals.mat(Color(0.02, 0.02, 0.02)))
 
 
-## Couleur d'une dalle (1 m) : pierre moussue (catacombes), basalte fendu de braises (cryptes), damier de marbre
-## noir et blanc (temple).
-func _floor_color(cell: Vector2i, k: int, v: float) -> Color:
+## Teinte d'une case de sol (multiplie la texture du thème : pierre moussue, roche de lave, damier de marbre),
+## assombrie pour l'ambiance du donjon et nuancée de `v`.
+func _floor_color(_cell: Vector2i, v: float) -> Color:
 	match theme:
 		"crypte":
-			var c := Color(0.13 * v, 0.1 * v, 0.1 * v)
-			if _rng.randf() < 0.08:
-				c = c.lerp(Color(0.45, 0.1, 0.03), 0.45) # dalle fendue, rougeoyante
-			return c
+			return Color(0.55 * v, 0.5 * v, 0.5 * v)
 		"temple":
-			var white := (k % 2 + (k >> 1)) % 2 == 0 # damier de 1 m (les cases de 2 m en ont quatre)
-			return Color(0.5 * v, 0.47 * v, 0.44 * v) if white else Color(0.08 * v, 0.06 * v, 0.07 * v)
-	var col := Color(0.16 * v, 0.155 * v, 0.16 * v)
-	if _rng.randf() < 0.1:
-		col = col.lerp(Color(0.1, 0.17, 0.09), 0.6) # mousse
-	return col
+			return Color(0.62 * v, 0.6 * v, 0.6 * v)
+	return Color(0.5 * v, 0.5 * v, 0.52 * v)
 
 
 func _build_walls() -> void:
@@ -289,7 +274,7 @@ func _build_walls() -> void:
 		body.add_child(col)
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	_wall_material = Visuals.stone_material(true, DungeonThemes.wall_color(theme))
+	_wall_material = DungeonThemes.wall_material(theme)
 	mmi.material_override = _wall_material
 	add_child(mmi)
 

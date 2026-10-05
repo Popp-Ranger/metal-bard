@@ -231,6 +231,10 @@
 - [x] L'autre univers : marches interminables, temple à tête de dragon, épreuve de 40 notes à 120 BPM (80 %), bénédiction +10 % de dégâts du premier coup, porte ouverte dans le tonnerre
 - [x] Temple du Dragon : vitraux, nef à la fontaine de sang de l'ange déchu, embuscade de démons ailés puis éclair, ange déchu et partition maudite (qui foudroie sans le Pick du Destin)
 
+## ✅ v0.1.41 — Vraies textures
+- [x] Textures peintes (packs « Stylized » d'Ulysse, ramenées en 1K) sur les sols et les murs : pierre moussue et blocs de pierre (Catacombes), roche de lave et basalte (Cryptes), damier et pierre claire (Temple), parquet, briques et dalles (taverne), dalles et roche (parvis du temple), herbe, terre et pierres tombales (intro) — voir docs/TEXTURES.md
+- [x] Lave : croûte de roche noire aux fissures incandescentes qui dérive sur le bouillonnement
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort
