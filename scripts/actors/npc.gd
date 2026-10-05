@@ -24,9 +24,9 @@ const COSTUMES := {
 }
 const DEFAULT_COSTUME := {"sex": "m", "race": "humain", "beard": 0, "hair": 1, "hair_color": 1,
 	"outfit": {"plain": true, "top": Color(0.4, 0.4, 0.4), "legs": Color(0.2, 0.2, 0.2)}}
-## PNJ au modèle 3D importé (art/pnj, CharacterSkin) : Ozz (mage) et le tavernier orc ; les autres
+## PNJ au modèle 3D importé (art/pnj, CharacterSkin) : Ozz (mage), le tavernier orc et Back Jlack (sage) ; les autres
 ## sont générés (HeroModel). Sans le modèle, on revient au costume.
-const SKINS := {"zarathos": "mage", "brunhilde": "tavernier"}
+const SKINS := {"zarathos": "mage", "brunhilde": "tavernier", "backjlack": "sage"}
 ## Bâton d'Ozz : point empoigné (repère du torse), le bâton passe dans le poing.
 const STAFF_GRIP := Vector3(0.27, 0.18, 0.25)
 

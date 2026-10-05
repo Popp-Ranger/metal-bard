@@ -266,6 +266,7 @@
 
 ## ✅ v0.1.48 — Riffald's Twin
 - [x] Cinquième héros prédéfini : Riffald's Twin (RiffaldV1.glb fourni par Ulysse), squelette de Riffald, 16 animations, Flying V (docs/TWIN.md)
+- [x] Back Jlack : son modèle 3D (PNJ/Sage fourni par Ulysse), animé, sur le parvis du temple, dans les portraits de dialogue et dans la cinématique de la légende
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau

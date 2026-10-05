@@ -51,7 +51,15 @@ CHARS = {
         "shoulder.R": (-0.27, 0.04, 1.31), "elbow.R": (-0.37, 0.04, 1.07), "wrist.R": (-0.42, -0.03, 0.92),
         "hip.L": (0.11, 0.0, 0.91), "knee.L": (0.15, 0.0, 0.53), "ankle.L": (0.19, 0.04, 0.15),
         "hip.R": (-0.11, 0.0, 0.91), "knee.R": (-0.15, 0.0, 0.53), "ankle.R": (-0.19, 0.04, 0.15)}},
-    # GLOUBAH, LE ROI GRENOUILLE (BOSS DES CATACOMBES) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
+    # Back Jlack, le sage du rock (Temple du Dragon, cinématique de la légende) : PNJ/Sage (5 oct. 2026).
+    "sage": {"dir": "Sage", "file": "Back Jlack.glb", "name": "Sage", "height": 1.65, "joints": {
+        "hips": (0.0, 0.04, 0.72), "spine": (0.0, 0.04, 0.88), "chest": (0.0, 0.05, 1.07),
+        "neck": (0.0, 0.04, 1.22), "head": (0.0, 0.0, 1.27), "head_top": (0.0, 0.0, 1.65),
+        "shoulder.L": (0.32, 0.10, 1.12), "elbow.L": (0.44, 0.06, 0.93), "wrist.L": (0.47, 0.03, 0.75),
+        "shoulder.R": (-0.32, 0.10, 1.12), "elbow.R": (-0.44, 0.06, 0.93), "wrist.R": (-0.47, 0.03, 0.75),
+        "hip.L": (0.18, 0.04, 0.64), "knee.L": (0.20, 0.04, 0.42), "ankle.L": (0.22, 0.06, 0.14),
+        "hip.R": (-0.18, 0.04, 0.64), "knee.R": (-0.19, 0.04, 0.42), "ankle.R": (-0.22, 0.06, 0.14)}},
+    # Gloubah, le Roi Grenouille (boss des Catacombes) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
     # Préparé à la taille d'un héros ; le jeu l'agrandit de 50 % (CharacterSkin.SCALES).
     "gloubah": {"dir": os.path.join("Ennemis", "Gloubah"), "name": "Gloubah", "height": 1.84, "joints": {
         "hips": (0.0, 0.08, 0.68), "spine": (0.0, 0.08, 0.85), "chest": (0.0, 0.10, 1.05),
@@ -307,6 +315,12 @@ def _candidates(co, j):
             return ["head", "neck", "chest"]
         if _demon_cape(co, j):
             return ["hips", "spine", "chest"]
+    if ARGS[1] == "sage":
+        # Grande barbe sur le torse et longs cheveux sur les épaules : ils suivent la tête et le cou.
+        if co.z > 1.16 and co.y < -0.06 and abs(co.x) < 0.15:
+            return ["head", "neck"]
+        if co.z > 1.12 and co.y > 0.1 and abs(co.x) < 0.24:
+            return ["head", "neck", "chest"]
     if ARGS[1] == "mage" and co.z > 1.42 and co.y > 0.08 and abs(co.x) < 0.2:
         return ["head", "neck"]  # longs cheveux noirs sur la nuque
     return None

@@ -7,6 +7,7 @@ extends CanvasLayer
 
 signal finished
 
+## Visage du modèle généré (secours, sans le modèle 3D de Back Jlack).
 const FACE := Vector3(0.0, 1.62, 0.0)
 
 var lines: Array = DialogueDB.LEGEND_LINES
@@ -14,7 +15,11 @@ var speaker := ""
 var _index := -1
 var _vp: SubViewport
 var _cam: Camera3D
-var _model: HeroModel
+## Back Jlack : son modèle 3D (art/pnj, « sage ») ou, à défaut, un modèle généré (HeroModel).
+var _model: Node3D
+var _skin: CharacterSkin
+## Centre de son visage (que la caméra regarde).
+var _face := FACE
 var _sky: ShaderMaterial
 var _storm: DirectionalLight3D
 var _bolts: Node3D
@@ -86,19 +91,27 @@ func _build_world() -> void:
 	env.glow_enabled = true
 	we.environment = env
 	_vp.add_child(we)
-	var look := RaceDB.DEFAULT_APPEARANCE.duplicate()
-	look.merge(Npc.COSTUMES["backjlack"], true)
-	look["guitar"] = false
-	_model = HeroModel.new()
-	_model.anim_style = "pnj_corps"
-	_model.appearance = look
-	_vp.add_child(_model)
+	_skin = CharacterSkin.create("sage")
+	if _skin != null:
+		_model = _skin
+		_vp.add_child(_skin)
+		_skin.step(0.016, false, 0.0)
+		_face = _skin.face_point()
+	else:
+		var look := RaceDB.DEFAULT_APPEARANCE.duplicate()
+		look.merge(Npc.COSTUMES["backjlack"], true)
+		look["guitar"] = false
+		var generated := HeroModel.new()
+		generated.anim_style = "pnj_corps"
+		generated.appearance = look
+		_model = generated
+		_vp.add_child(_model)
 	# Contre-plongée : la caméra sous le menton regarde le visage, l'orage derrière.
 	_cam = Camera3D.new()
 	_cam.fov = 38.0
 	_vp.add_child(_cam)
-	_cam.position = Vector3(0.12, 1.05, 1.3)
-	_cam.look_at(FACE + Vector3(0, 0.08, 0))
+	_cam.position = Vector3(0.12, _face.y - 0.57, 1.3)
+	_cam.look_at(_face + Vector3(0, 0.08, 0))
 	# Nuages d'orage : grand panneau accroché derrière, face à la caméra.
 	var sky := MeshInstance3D.new()
 	var quad := QuadMesh.new()
@@ -165,8 +178,10 @@ void fragment() {
 func _process(delta: float) -> void:
 	_t += delta
 	# Lent travelling avant et léger souffle de la caméra.
-	_cam.position = Vector3(0.12 + sin(_t * 0.3) * 0.03, 1.05 + sin(_t * 0.5) * 0.01, maxf(0.85, 1.3 - _t * 0.015))
-	_cam.look_at(FACE + Vector3(0, 0.08, 0))
+	_cam.position = Vector3(0.12 + sin(_t * 0.3) * 0.03, _face.y - 0.57 + sin(_t * 0.5) * 0.01, maxf(0.85, 1.3 - _t * 0.015))
+	_cam.look_at(_face + Vector3(0, 0.08, 0))
+	if _skin != null:
+		_skin.step(delta, false, 0.0) # il respire (clip de repos)
 	_next_bolt -= delta
 	if _next_bolt <= 0.0 and not _done:
 		_next_bolt = randf_range(2.0, 4.5)

@@ -1713,7 +1713,7 @@ func _test_chapter_two() -> void:
 	# Cinématique : visage de Back Jlack en contre-plongée, orage, puis départ vers l'autre univers.
 	var cine := LegendCinematic.play(self)
 	await _frames(3)
-	var face_ok := cine._model != null and cine._cam.global_position.y < LegendCinematic.FACE.y
+	var face_ok := cine._skin != null and cine._skin.model_id == "sage" and cine._cam.global_position.y < cine._face.y
 	_check(get_tree().paused and face_ok and cine._text.text == str(DialogueDB.LEGEND_LINES[0]) and DialogueDB.LEGEND_LINES[2].contains("Mèhn-Strïm"),
 		"cinématique : Back Jlack en gros plan en contre-plongée, sur fond d'orage")
 	var ended := [false]
@@ -1737,8 +1737,8 @@ func _test_chapter_two() -> void:
 	for c in temple.get_children():
 		if c is Interactable and (c as Interactable).prompt.begins_with("Gravir les marches"):
 			climb = true
-	_check(bj != null and bj.npc_id == "backjlack" and door.prompt.contains("scellée") and climb,
-		"Temple du Dragon : marches interminables, Back Jlack, porte scellée")
+	_check(bj != null and bj.npc_id == "backjlack" and bj.skin != null and bj.skin.model_id == "sage" and door.prompt.contains("scellée") and climb,
+		"Temple du Dragon : marches interminables, Back Jlack (son modèle 3D), porte scellée")
 	var hero := temple.get("hero") as Hero
 	# L'épreuve : le solo du sage en entier, une note sur chacune de ses notes (partition détectée dans le morceau).
 	temple.call("_on_story_action", "epreuve")
