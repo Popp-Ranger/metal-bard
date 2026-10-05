@@ -62,8 +62,8 @@ func _test_display() -> void:
 	add_child(life)
 	life.set_value(30, 50, "VIE 60 %")
 	var span := Reservoir._mask_span(load("res://assets/ui/enceinte_db_masque.png"))
-	_check(is_equal_approx(life.ratio, 0.6) and life._label.text == "VIE 60 %" and span.x > 0.1 and span.y > span.x + 0.1,
-		"HUD : réservoir de vie (main cornue) à 60 %, cuve de l'enceinte repérée dans son masque")
+	_check(is_equal_approx(life.ratio, 0.6) and life._label.text == "VIE 60 %" and span.y > span.x + 0.6,
+		"HUD : réservoir de vie (main cornue) à 60 %, l'enceinte entière est le récipient (masque de toute sa hauteur)")
 	life.queue_free()
 
 
