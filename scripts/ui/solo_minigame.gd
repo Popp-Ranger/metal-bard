@@ -128,7 +128,8 @@ func _process(delta: float) -> void:
 	_t += delta
 	if not _clip_started and _t >= _clip_at:
 		_clip_started = true
-		Sfx.play_clip(_clip_source, _clip_offset + (_t - _clip_at))
+		var volume := -4.0 + (EPREUVE_GAIN_DB if mode == "epreuve" else 0.0)
+		Sfx.play_clip(_clip_source, _clip_offset + (_t - _clip_at), volume)
 	_feedback_t -= delta
 	for i in LANES:
 		_lane_flash[i] = maxf(0.0, float(_lane_flash[i]) - delta * 4.0)
@@ -267,6 +268,8 @@ func _draw() -> void:
 
 const BALLADE_CHART_PATH := "res://data/ballade_solo.json"
 const EPREUVE_CHART_PATH := "res://data/epreuve_solo.json"
+## Le Chant de fer joué 20 % plus fort que les autres solos (amplitude × 1,2, soit +1,6 dB).
+const EPREUVE_GAIN_DB := 1.58
 static var _chart_cache := {}
 
 
