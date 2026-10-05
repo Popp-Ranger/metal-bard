@@ -264,6 +264,9 @@
 - [x] Le Minotaure : charge, fendoir, et à 5 % de PV un duel de guitare sur « Edge of the Cliff » (94 notes détectées, 80 % requis) ; le Pick du Destin sur son corps
 - [x] Nouvelles textures : herbe, falaise, terre et roche des grottes, neige, glace
 
+## ✅ v0.1.48 — Riffald's Twin
+- [x] Cinquième héros prédéfini : Riffald's Twin (RiffaldV1.glb fourni par Ulysse), squelette de Riffald, 16 animations, Flying V (docs/TWIN.md)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

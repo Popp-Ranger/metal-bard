@@ -1154,6 +1154,23 @@ func _test_characters() -> void:
 	var err_h := maxf((sk_h.get_bone_global_pose(sk_h.find_bone("hand.L")).origin - hands_h["L"]).length(),
 		(sk_h.get_bone_global_pose(sk_h.find_bone("hand.R")).origin - hands_h["R"]).length())
 	_check(err_h < 0.03, "Hella : mains sur la guitare (écart %.3f m)" % err_h)
+	# Riffald's Twin (RiffaldV1.glb fourni par Ulysse).
+	var twin_i := RaceDB.PRESET_ORDER.find("twin")
+	creation._set_hero_mode(twin_i)
+	creation._refresh()
+	await _frames(3)
+	var twin: HeroModel = creation._model
+	_check(twin_i >= 0 and creation._name_edit.text == "Riffald's Twin" and str(creation.appearance["sex"]) == "m"
+		and twin._skin != null and twin._skin.skeleton.get_bone_count() == 17 and twin._anim != null
+		and twin._anim.lengths.size() >= 16 and is_equal_approx(twin.height(), 1.84),
+		"Riffald's Twin : héros prédéfini, son modèle, les 17 os et les %d animations de Riffald, 1,84 m" % (twin._anim.lengths.size() if twin._anim else 0))
+	var sk_t := twin._skin.skeleton
+	await sk_t.skeleton_updated
+	var gt_t := twin._anim._skel_to_model().affine_inverse() * twin._guitar.transform.orthonormalized()
+	var hands_t := twin._anim.hand_targets(gt_t)
+	var err_t := maxf((sk_t.get_bone_global_pose(sk_t.find_bone("hand.L")).origin - hands_t["L"]).length(),
+		(sk_t.get_bone_global_pose(sk_t.find_bone("hand.R")).origin - hands_t["R"]).length())
+	_check(err_t < 0.03, "Riffald's Twin : mains sur la guitare (écart %.3f m)" % err_t)
 	creation._set_hero_mode(RaceDB.PRESET_ORDER.size())
 	creation._refresh()
 	_check(str(creation.appearance["preset"]) == "" and creation._name_edit.editable, "création : passage en personnage personnalisé")

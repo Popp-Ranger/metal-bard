@@ -157,8 +157,17 @@ const PRESETS := {
 		"height": 1.75,
 		"rig": {"guitar_scale": 1.1, "play_pick": Vector3(-0.11, 0.86, 0.16), "back_pos": Vector3(0.0, 1.1, -0.22)},
 	},
+	"twin": {
+		"name": "Riffald's Twin",
+		"title": "Riffald's Twin, le double de la Lune de Sang",
+		"desc": "Humain, le jumeau de Riffald : crinière rousse flamboyante, cuir noir et sangles croisées, épaulières à pointes, gemme rouge au col, genouillères d'acier, bottes à boucles, cape bordeaux en lambeaux. Armé de la même Flying V.",
+		"appearance": {"sex": "m", "race": "humain", "horns": 0, "tusks": 0, "beard": 0, "hair": 3, "hair_color": 5, "preset": "twin"},
+		"model": "res://assets/models/twin/twin.glb",
+		"height": 1.84,
+		"rig": {"guitar_scale": 1.3, "play_pick": Vector3(-0.15, 0.9, 0.16), "back_pos": Vector3(0.0, 1.15, -0.27)},
+	},
 }
-const PRESET_ORDER := ["riffald", "persof1", "demon", "hella"]
+const PRESET_ORDER := ["riffald", "persof1", "demon", "hella", "twin"]
 
 
 ## Modèle 3D d'un héros prédéfini ("" si personnage personnalisé ou sans modèle).

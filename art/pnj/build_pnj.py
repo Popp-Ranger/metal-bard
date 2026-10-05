@@ -2,7 +2,7 @@
 #
 # Sources : C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\PNJ\<dossier>\*.glb
 #
-# Usage (sans interface), <perso> = mage | tavernier | squelette | demon | hella (héros jouables, dans art/demon et art/hella) :
+# Usage (sans interface), <perso> = mage | tavernier | squelette | demon | hella | twin (héros jouables, dans art/demon, art/hella et art/twin) :
 #   blender --background --factory-startup --python art/pnj/build_pnj.py -- prepare <perso>
 #       -> art/pnj/<perso>.blend : maillage ressoudé et allégé, à la taille du jeu, textures 2K
 #   blender --background art/pnj/<perso>.blend --python art/pnj/build_pnj.py -- views <perso> <dossier>
@@ -42,7 +42,16 @@ CHARS = {
         "shoulder.R": (-0.21, 0.0, 1.36), "elbow.R": (-0.28, 0.0, 1.13), "wrist.R": (-0.32, -0.07, 0.90),
         "hip.L": (0.08, -0.04, 0.92), "knee.L": (0.12, -0.04, 0.53), "ankle.L": (0.15, 0.03, 0.12),
         "hip.R": (-0.10, -0.04, 0.92), "knee.R": (-0.19, -0.04, 0.53), "ankle.R": (-0.22, 0.03, 0.12)}},
-    # Gloubah, le Roi Grenouille (boss des Catacombes) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
+    # Riffald's Twin, héros jouable : RiffaldV1.glb fourni par Ulysse (Humain/Masculin, 5 oct. 2026).
+    "twin": {"src": r"C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\Humain\Masculin",
+             "file": "RiffaldV1.glb", "out": "twin", "name": "Twin", "height": 1.84, "tris": 40000, "cape": True, "joints": {
+        "hips": (0.0, 0.0, 0.95), "spine": (0.0, 0.0, 1.06), "chest": (0.0, 0.01, 1.19),
+        "neck": (0.0, 0.01, 1.41), "head": (0.0, 0.01, 1.47), "head_top": (0.0, 0.01, 1.84),
+        "shoulder.L": (0.27, 0.04, 1.31), "elbow.L": (0.37, 0.04, 1.07), "wrist.L": (0.42, -0.03, 0.92),
+        "shoulder.R": (-0.27, 0.04, 1.31), "elbow.R": (-0.37, 0.04, 1.07), "wrist.R": (-0.42, -0.03, 0.92),
+        "hip.L": (0.11, 0.0, 0.91), "knee.L": (0.15, 0.0, 0.53), "ankle.L": (0.19, 0.04, 0.15),
+        "hip.R": (-0.11, 0.0, 0.91), "knee.R": (-0.15, 0.0, 0.53), "ankle.R": (-0.19, 0.04, 0.15)}},
+    # GLOUBAH, LE ROI GRENOUILLE (BOSS DES CATACOMBES) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
     # Préparé à la taille d'un héros ; le jeu l'agrandit de 50 % (CharacterSkin.SCALES).
     "gloubah": {"dir": os.path.join("Ennemis", "Gloubah"), "name": "Gloubah", "height": 1.84, "joints": {
         "hips": (0.0, 0.08, 0.68), "spine": (0.0, 0.08, 0.85), "chest": (0.0, 0.10, 1.05),
@@ -289,6 +298,12 @@ def _candidates(co, j):
         if co.z > 1.25 and co.y > 0.04 and abs(co.x) < 0.16:
             return ["head", "neck", "chest"]
         if co.z > 0.88 and co.y > 0.19 and abs(co.x) < 0.12:
+            return ["head", "neck", "chest"]
+        if _demon_cape(co, j):
+            return ["hips", "spine", "chest"]
+    if ARGS[1] == "twin":
+        # Crinière rousse sur la nuque et les épaulières : tête, cou et buste ; cape sur le bassin et le dos.
+        if co.z > 1.3 and co.y > 0.05 and abs(co.x) < 0.24:
             return ["head", "neck", "chest"]
         if _demon_cape(co, j):
             return ["hips", "spine", "chest"]
