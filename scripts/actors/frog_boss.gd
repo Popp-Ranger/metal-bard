@@ -9,6 +9,9 @@ extends Enemy
 ##   • Phase 2 (sous 50 % PV) : rage, vagues plus fréquentes, invoque 2 squelettes.
 ## Avant le combat : dès que le héros arrive à portée, Gloubah l'interpelle (dialogue
 ## « gloubah ») ; selon les réponses, il combat, capture le héros ou devient amical.
+## Modèle 3D importé (crapaud debout couronné, art/pnj « gloubah », 50 % plus grand que les héros) : repos, marche,
+## coup de patte (« slash ») avec la langue qui jaillit, sursaut, mort (CharacterSkin) ; yeux et langue accrochés à
+## l'os de la tête.
 
 var spawn_minion: Callable # Callable(pos: Vector3) fourni par le donjon
 ## Passive tant que le dialogue n'a pas tranché ; amicale si le héros l'a amadouée.
@@ -22,10 +25,14 @@ var _wave_timer := 4.0
 var _leap_timer := 8.0
 var _busy := false
 var _phase := 1
-var _body: MeshInstance3D
+var skin: CharacterSkin
 var _eye_mats: Array[StandardMaterial3D] = []
-var _tongue: MeshInstance3D
-var _throat: MeshInstance3D
+## Langue (accrochée à la tête) : elle jaillit en s'allongeant (scale.z).
+var _tongue: Node3D
+const TONGUE_REST := 0.05
+## Yeux et bouche dans le repère du modèle préparé (avant l'agrandissement de 50 %), relevés sur ses vues.
+const EYE := Vector3(0.146, 1.527, 0.17)
+const MOUTH := Vector3(0.0, 1.415, 0.2)
 
 
 func _configure() -> void:
@@ -41,70 +48,50 @@ func _configure() -> void:
 	lose_radius = 30.0
 	xp_reward = 450
 	gold_range = Vector2i(60, 90)
-	radius = 1.1
-	height = 2.2
+	radius = 0.9
+	height = 2.76 # 1,84 m agrandi de 50 %
 	wander_radius = 1.5
 
 
 func _build_model() -> void:
-	var skin := own_mat(Color(0.3, 0.45, 0.2), 0.4)
-	var belly := own_mat(Color(0.7, 0.68, 0.45), 0.6)
-	var dark := own_mat(Color(0.1, 0.14, 0.07), 0.6)
-	var lily := Visuals.mat(Color(0.15, 0.4, 0.15), 0.7)
-	_body = Visuals.sphere(model, 1.0, Vector3(0, 1.0, 0), skin, Vector3(1.35, 0.95, 1.25))
-	Visuals.sphere(model, 0.85, Vector3(0, 0.85, 0.45), belly, Vector3(1.1, 0.8, 0.8))
-	_throat = Visuals.sphere(model, 0.45, Vector3(0, 0.75, 1.0), belly, Vector3(1.2, 0.8, 0.8))
-	# Pattes.
+	skin = CharacterSkin.create("gloubah", "pnj")
+	model.add_child(skin)
+	_flash_mats.append_array(skin.flash_materials)
+	var head_origin := skin.skeleton.get_bone_global_rest(skin.skeleton.find_bone("head")).origin
+	# Yeux luisants (jaunes ; rouges en phase 2, roses s'il devient amical).
 	for side: float in [-1.0, 1.0]:
-		Visuals.sphere(model, 0.45, Vector3(1.05 * side, 0.4, -0.3), skin, Vector3(0.9, 0.6, 1.4))
-		Visuals.sphere(model, 0.3, Vector3(0.8 * side, 0.2, 0.9), skin, Vector3(1.2, 0.5, 1.0))
-		# Yeux globuleux jaunes.
-		var eye_mat := Visuals.glow_mat(Color(1.0, 0.85, 0.2), 1.5)
-		_eye_mats.append(eye_mat)
-		Visuals.sphere(model, 0.3, Vector3(0.55 * side, 1.85, 0.55), skin)
-		Visuals.sphere(model, 0.22, Vector3(0.55 * side, 1.9, 0.72), eye_mat)
-		Visuals.box(model, Vector3(0.05, 0.2, 0.05), Vector3(0.55 * side, 1.9, 0.93), Visuals.mat(Color.BLACK))
-	# Pustules.
-	for i in 12:
-		var a := randf() * TAU
-		Visuals.sphere(model, randf_range(0.06, 0.12),
-			Vector3(cos(a) * 1.1, 1.0 + randf_range(-0.2, 0.5), sin(a) * 1.0 - 0.1), dark)
-	# Bouche et langue.
-	Visuals.box(model, Vector3(1.3, 0.06, 0.1), Vector3(0, 1.25, 1.12), Visuals.mat(Color(0.05, 0.02, 0.02)), Vector3(10, 0, 0))
-	# Sang frais sur la bouche : commissures, coulures sur le menton et le jabot.
-	var blood := Visuals.mat(Color(0.5, 0.02, 0.03), 0.1)
-	for side: float in [-1.0, 1.0]:
-		Visuals.sphere(model, 0.1, Vector3(0.6 * side, 1.23, 1.05), blood, Vector3(1.3, 0.7, 0.6))
-	for k in 5:
-		var x := -0.45 + k * 0.22
-		var drip := 0.12 + fmod(k * 0.37, 0.2)
-		Visuals.capsule(model, 0.035, drip, Vector3(x, 1.2 - drip * 0.5, 1.13 - absf(x) * 0.15), blood)
-	Visuals.sphere(model, 0.2, Vector3(0.15, 0.95, 1.12), blood, Vector3(1.2, 0.6, 0.3))
-	_tongue = Visuals.box(model, Vector3(0.18, 0.06, 1.0), Vector3(0, 1.2, 1.1), own_mat(Color(0.8, 0.3, 0.35)))
-	_tongue.scale = Vector3(1, 1, 0.05)
-	# Couronne de nénuphar rongée + fleur.
-	Visuals.cylinder(model, 0.55, 0.6, 0.06, Vector3(0, 2.02, -0.1), lily, Vector3(-8, 0, 0))
-	Visuals.sphere(model, 0.16, Vector3(0.2, 2.15, -0.1), Visuals.glow_mat(Color(0.95, 0.4, 0.7), 0.8), Vector3(1, 0.6, 1))
-	for i in 5:
-		var a := TAU * i / 5.0
-		Visuals.cylinder(model, 0.0, 0.06, 0.25, Vector3(cos(a) * 0.45, 2.15, sin(a) * 0.45 - 0.1),
-			Visuals.mat(Color(0.7, 0.6, 0.2), 0.3, 0.8))
+		var e := Visuals.glow_mat(Color(1.0, 0.85, 0.2), 0.8)
+		_eye_mats.append(e)
+		var eye := Node3D.new()
+		Visuals.sphere(eye, 0.028, Vector3.ZERO, e)
+		skin.place(eye, "head", Basis.IDENTITY, 0.0, Vector3(EYE.x * side, EYE.y, EYE.z) - head_origin)
+		skin.attach("head", eye)
+	# Langue : rentrée dans la bouche au repos.
+	_tongue = Node3D.new()
+	Visuals.box(_tongue, Vector3(0.12, 0.04, 1.0), Vector3(0, 0, 0.5), own_mat(Color(0.8, 0.3, 0.35)))
+	Visuals.sphere(_tongue, 0.07, Vector3(0, 0, 1.0), own_mat(Color(0.85, 0.35, 0.4)))
+	skin.place(_tongue, "head", Basis.IDENTITY, 0.0, MOUTH - head_origin)
+	skin.attach("head", _tongue)
+	_tongue.scale = Vector3(1, 1, TONGUE_REST)
 
 
-func _animate(_delta: float, moving: bool) -> void:
-	# Respiration et gorge qui gonfle.
-	var breath := sin(_anim_t * 2.0)
-	_body.scale = Vector3(1.35, 0.95 + breath * 0.03, 1.25)
-	_throat.scale = Vector3(1.2, 0.8, 0.8) * (1.0 + maxf(0.0, sin(_anim_t * 3.3)) * 0.25)
-	if moving and not _busy:
-		model.position.y = absf(sin(_anim_t * 4.0)) * 0.25
+func _animate(delta: float, moving: bool) -> void:
+	skin.step(delta, moving and not _busy, _speed_now)
 
 
+## Coup de patte et coup de langue (elle jaillit à la fin de l'élan).
 func _attack_anim(windup: float) -> void:
+	skin.action("slash", windup / 0.55)
 	var tw := create_tween()
 	tw.tween_interval(windup * 0.8)
-	tw.tween_property(_tongue, "scale:z", 2.2, 0.08)
-	tw.tween_property(_tongue, "scale:z", 0.05, 0.25)
+	tw.tween_property(_tongue, "scale:z", 1.5, 0.08)
+	tw.tween_property(_tongue, "scale:z", TONGUE_REST, 0.25)
+
+
+func _flash() -> void:
+	if skin != null:
+		skin.hurt()
+	super()
 
 
 func _update_special(delta: float, dist: float) -> void:
@@ -227,7 +214,7 @@ func _drop_loot() -> void:
 func _death_anim() -> void:
 	Sfx.play("croak", 0.0, 0.0)
 	Events.camera_shake.emit(0.4, 1.0)
-	create_tween().tween_property(model, "scale", Vector3(1.4, 0.4, 1.4), 1.2).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	skin.die()
 	_corpse(3.2)
 
 

@@ -11,16 +11,22 @@ const MODELS := {
 	"mage": "res://assets/models/pnj/mage.glb",
 	"tavernier": "res://assets/models/pnj/tavernier.glb",
 	"squelette": "res://assets/models/pnj/squelette.glb",
+	"gloubah": "res://assets/models/pnj/gloubah.glb",
+	"hibours": "res://assets/models/pnj/hibours.glb",
 }
 ## Hauteur des modèles (m, chapeau compris) : étiquettes, barres de vie.
-const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75}
+const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75, "gloubah": 1.84, "hibours": 1.2}
 ## Agrandissement en jeu (le tavernier orc domine son comptoir) : hauteur et foulée suivent.
-const SCALES := {"tavernier": 1.25}
+const SCALES := {"tavernier": 1.25, "gloubah": 1.5} # Gloubah : 50 % plus grand que les héros
+## Hauteur du visage au-dessus de l'os de la tête (m, avant agrandissement) : portrait du dialogue. Gloubah a les yeux
+## haut perchés au-dessus de sa grosse tête.
+const FACE_OFFSETS := {"gloubah": 0.17}
 
 var skeleton: Skeleton3D
 var player: AnimationPlayer
 var tree: AnimationTree
 var style := "pnj"
+var model_id := ""
 var height := 1.8
 ## Matériaux qui clignotent quand le personnage est touché.
 var flash_materials: Array[StandardMaterial3D] = []
@@ -40,6 +46,7 @@ static func create(id: String, anim_style: String = "pnj") -> CharacterSkin:
 	var s := CharacterSkin.new()
 	s.name = "Skin"
 	s.style = anim_style
+	s.model_id = id
 	var k := float(SCALES.get(id, 1.0))
 	s.scale = Vector3.ONE * k
 	s.height = float(HEIGHTS.get(id, 1.8)) * k
@@ -150,7 +157,7 @@ func die() -> void:
 ## Centre du visage (repère du monde) : portraits de la fenêtre de dialogue.
 func face_point() -> Vector3:
 	var head := skeleton.find_bone("head")
-	return skeleton.global_transform * (skeleton.get_bone_global_pose(head).origin + Vector3(0, 0.08, 0))
+	return skeleton.global_transform * (skeleton.get_bone_global_pose(head).origin + Vector3(0, float(FACE_OFFSETS.get(model_id, 0.08)), 0))
 
 
 ## Accroche `node` à l'os `bone` (il suit l'animation) ; renvoie le point d'attache.

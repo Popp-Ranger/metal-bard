@@ -32,6 +32,10 @@ CHARACTERS = {
     "hella": ("Hella_rig", "Hella", os.path.join(ROOT, "assets", "models", "hella", "hella.glb"), None),
     "mage": ("Mage_rig", "Mage", os.path.join(PNJ_GLB, "mage.glb"), {"idle": "idle_pnj", "walk": "walk", "run": "run"}),
     "tavernier": ("Tavernier_rig", "Tavernier", os.path.join(PNJ_GLB, "tavernier.glb"), {"idle": "idle_orc", "walk": "walk", "run": "run"}),
+    "gloubah": ("Gloubah_rig", "Gloubah", os.path.join(PNJ_GLB, "gloubah.glb"),
+                {"idle": "idle_orc", "walk": "walk", "run": "run", "slash": "slash", "hit": "hit", "die": "die", "victory": "victory"}),
+    "hibours": ("Hibours_rig", "Hibours", os.path.join(PNJ_GLB, "hibours.glb"),
+                {"idle": "idle_pnj", "walk": "walk", "run": "run", "victory": "victory"}),
     "squelette": ("Squelette_rig", "Squelette", os.path.join(PNJ_GLB, "squelette.glb"),
                   ["zombie_idle", "zombie_run", "slash", "hit", "die"]),
 }

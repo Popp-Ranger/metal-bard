@@ -1,7 +1,8 @@
 class_name OwlbearCub
 extends Node3D
 ## Plumeau, le bébé hibours de Gérald. Enfermé dans une cage au fond du donjon ;
-## une fois libéré, il suit le héros en sautillant.
+## une fois libéré, il suit le héros. Modèle 3D importé (bébé hibours debout, art/pnj « hibours », 1,2 m) : repos,
+## marche et course selon sa vitesse (CharacterSkin).
 
 var following := false
 var _target: Node3D
@@ -9,26 +10,14 @@ var _speed := 6.0
 var _repath := 0.0
 var _walker: NavWalker
 var _t := randf() * 10.0
-var _visual: Node3D
+var skin: CharacterSkin
 
 
 func _ready() -> void:
 	_walker = NavWalker.new()
 	add_child(_walker)
-	_visual = Node3D.new()
-	add_child(_visual)
-	var fur := Visuals.mat(Color(0.45, 0.3, 0.18), 0.95)
-	var feathers := Visuals.mat(Color(0.85, 0.8, 0.7), 0.9)
-	Visuals.sphere(_visual, 0.35, Vector3(0, 0.4, 0), fur, Vector3(1.0, 1.05, 0.95))
-	Visuals.sphere(_visual, 0.24, Vector3(0, 0.35, 0.2), feathers, Vector3(1.0, 1.1, 0.5))
-	Visuals.sphere(_visual, 0.26, Vector3(0, 0.85, 0.03), fur)
-	Visuals.sphere(_visual, 0.2, Vector3(0, 0.84, 0.17), feathers, Vector3(1.1, 1.0, 0.5)) # disque facial
-	for s: float in [-1.0, 1.0]:
-		Visuals.sphere(_visual, 0.075, Vector3(0.08 * s, 0.88, 0.25), Visuals.mat(Color(0.95, 0.75, 0.2), 0.3))
-		Visuals.sphere(_visual, 0.04, Vector3(0.08 * s, 0.88, 0.3), Visuals.mat(Color.BLACK, 0.2))
-		Visuals.cylinder(_visual, 0.0, 0.05, 0.16, Vector3(0.15 * s, 1.1, 0.0), fur, Vector3(0, 0, -20 * s)) # aigrettes
-		Visuals.sphere(_visual, 0.1, Vector3(0.3 * s, 0.45, 0.05), fur, Vector3(0.6, 1.2, 0.8)) # petites ailes
-	Visuals.cylinder(_visual, 0.0, 0.04, 0.1, Vector3(0, 0.8, 0.3), Visuals.mat(Color(0.9, 0.6, 0.2)), Vector3(90, 0, 0)) # bec
+	skin = CharacterSkin.create("hibours", "pnj")
+	add_child(skin)
 
 
 func celebrate() -> void:
@@ -62,8 +51,8 @@ func follow(target: Node3D = null, speed: float = 6.0) -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	var moving := _walker != null and _walker.walking
-	var hop := absf(sin(_t * (7.0 if moving else 3.0))) * (0.2 if moving else 0.06)
-	_visual.position.y = hop
+	if skin != null:
+		skin.step(delta, moving, _speed if moving else 0.0)
 	if not following:
 		return
 	if _target == null or not is_instance_valid(_target):

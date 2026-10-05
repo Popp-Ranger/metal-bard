@@ -248,6 +248,10 @@
 ## ✅ v0.1.44 — Options d'affichage
 - [x] Options > Affichage : fenêtré ou plein écran, résolution (les courantes jusqu'à celle de l'écran), fluidité 60 / 90 / 120 / 140 images/s ; sauvegardées dans settings.cfg et appliquées au lancement (autoload Display)
 
+## ✅ v0.1.45 — Gloubah et Plumeau en 3D
+- [x] Gloubah, le Roi Grenouille : nouveau modèle 3D (crapaud debout couronné), 50 % plus grand que les héros (2,76 m), animé (repos, marche, coup de patte avec la langue, sursaut, mort) ; yeux luisants et langue accrochés à sa tête
+- [x] Plumeau : nouveau modèle 3D de bébé hibours (1,2 m), qui marche et court en suivant le héros
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

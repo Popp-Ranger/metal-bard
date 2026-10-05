@@ -42,6 +42,23 @@ CHARS = {
         "shoulder.R": (-0.21, 0.0, 1.36), "elbow.R": (-0.28, 0.0, 1.13), "wrist.R": (-0.32, -0.07, 0.90),
         "hip.L": (0.08, -0.04, 0.92), "knee.L": (0.12, -0.04, 0.53), "ankle.L": (0.15, 0.03, 0.12),
         "hip.R": (-0.10, -0.04, 0.92), "knee.R": (-0.19, -0.04, 0.53), "ankle.R": (-0.22, 0.03, 0.12)}},
+    # Gloubah, le Roi Grenouille (boss des Catacombes) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
+    # Préparé à la taille d'un héros ; le jeu l'agrandit de 50 % (CharacterSkin.SCALES).
+    "gloubah": {"dir": os.path.join("Ennemis", "Gloubah"), "name": "Gloubah", "height": 1.84, "joints": {
+        "hips": (0.0, 0.08, 0.68), "spine": (0.0, 0.08, 0.85), "chest": (0.0, 0.10, 1.05),
+        "neck": (0.0, 0.08, 1.30), "head": (0.0, 0.05, 1.36), "head_top": (0.0, 0.03, 1.84),
+        "shoulder.L": (0.36, 0.11, 1.19), "elbow.L": (0.50, 0.07, 0.88), "wrist.L": (0.53, 0.02, 0.67),
+        "shoulder.R": (-0.36, 0.11, 1.19), "elbow.R": (-0.50, 0.07, 0.88), "wrist.R": (-0.53, 0.02, 0.67),
+        "hip.L": (0.16, 0.10, 0.63), "knee.L": (0.23, 0.15, 0.40), "ankle.L": (0.18, 0.11, 0.13),
+        "hip.R": (-0.16, 0.10, 0.63), "knee.R": (-0.23, 0.15, 0.40), "ankle.R": (-0.18, 0.11, 0.13)}},
+    # Plumeau, le bébé hibours de Gérald (Ours Hiboux, 5 oct. 2026).
+    "hibours": {"dir": "Ours Hiboux", "name": "Hibours", "height": 1.2, "joints": {
+        "hips": (0.0, 0.03, 0.40), "spine": (0.0, 0.03, 0.55), "chest": (0.0, 0.04, 0.72),
+        "neck": (0.0, 0.05, 0.88), "head": (0.0, 0.04, 0.92), "head_top": (0.0, 0.04, 1.20),
+        "shoulder.L": (0.15, 0.08, 0.86), "elbow.L": (0.29, 0.03, 0.84), "wrist.L": (0.37, -0.02, 0.84),
+        "shoulder.R": (-0.15, 0.08, 0.86), "elbow.R": (-0.29, 0.03, 0.84), "wrist.R": (-0.37, -0.02, 0.84),
+        "hip.L": (0.10, 0.04, 0.34), "knee.L": (0.12, 0.03, 0.19), "ankle.L": (0.13, 0.05, 0.06),
+        "hip.R": (-0.10, 0.04, 0.34), "knee.R": (-0.12, 0.03, 0.19), "ankle.R": (-0.13, 0.05, 0.06)}},
     "tavernier": {"dir": "Tavernier", "name": "Tavernier", "height": 2.05, "retouche": True, "joints": {
         "hips": (0.0, 0.05, 0.95), "spine": (0.0, 0.06, 1.15), "chest": (0.0, 0.08, 1.40),
         "neck": (0.0, 0.07, 1.72), "head": (0.0, 0.04, 1.78), "head_top": (0.0, 0.04, 2.05),
