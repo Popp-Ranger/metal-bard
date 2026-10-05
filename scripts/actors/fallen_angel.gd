@@ -6,9 +6,11 @@ extends Enemy
 ##   • Coup de guitare (attaque de base) : il abat sa guitare comme une hache.
 ##   • Riff infernal (toutes les ~6 s) : trois cercles au sol (sur le héros et autour), puis la foudre y tombe.
 ##   • Phase 2 (sous 50 % PV) : ailes déployées, yeux rouges, riffs plus rapides ; il invoque trois diablotins.
-## Butin : la partition maudite du Riff Ultime (objet de quête), sur son corps.
+## Butin : la partition maudite du Riff Ultime (objet de quête) et sa guitare, la Batguitare, sur son corps.
 
 var spawn_minion: Callable # Callable(pos: Vector3) fourni par le donjon
+## Sa guitare, à looter sur son corps (data/items.json, emplacement « guitare »).
+const BATGUITARE := "batguitare"
 var _riff_timer := 4.0
 var _busy := false
 var _phase := 1
@@ -88,7 +90,18 @@ func _build_model() -> void:
 	_guitar_arm = Node3D.new()
 	_guitar_arm.position = Vector3(0, 2.15, 0.25)
 	body.add_child(_guitar_arm)
-	var g := DemonParts.infernal_guitar(_guitar_arm, 1.5)
+	# Sa guitare : la Batguitare (le modèle qu'on loote sur son corps), tenue par le manche.
+	var g: Node3D
+	var bat := ItemDB.guitar_model(BATGUITARE)
+	if bat != ItemDB.DEFAULT_GUITAR:
+		g = Node3D.new()
+		g.scale = Vector3.ONE * 1.4
+		_guitar_arm.add_child(g)
+		var inst := (load(bat) as PackedScene).instantiate() as Node3D
+		inst.position = Vector3(0, -0.25, 0) # la main tient le manche, 25 cm au-dessus du corps
+		g.add_child(inst)
+	else:
+		g = DemonParts.infernal_guitar(_guitar_arm, 1.5)
 	g.position = Vector3(-0.1, -0.2, 0.15)
 	g.rotation_degrees = Vector3(0, 0, -60)
 	var aura := OmniLight3D.new()
@@ -190,10 +203,12 @@ func _infernal_riff() -> void:
 	_busy = false
 
 
-## La partition maudite (et une potion) restent sur son corps.
+## La partition maudite, sa guitare (la Batguitare, à équiper) et une potion restent sur son corps.
 func _drop_loot() -> void:
 	super._drop_loot()
 	loot.append({"kind": "quest", "item": "partition_maudite"})
+	if not GameState.owns(BATGUITARE):
+		loot.append({"kind": "item", "item": BATGUITARE})
 	loot.append({"kind": "potion"})
 
 

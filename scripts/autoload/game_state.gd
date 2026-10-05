@@ -271,6 +271,11 @@ func _on_gear_changed() -> void:
 	Events.hero_mana_changed.emit(mana, max_mana())
 
 
+## Modèle de la guitare équipée (emplacement « guitare »), sinon la guitare des héros.
+func guitar_model() -> String:
+	return ItemDB.guitar_model(str(equipment.get("guitare", "")))
+
+
 ## Vend à Grokk un objet du sac (on ne vend pas ce qu'on porte) : il rejoint l'historique de rachat.
 func sell_item(id: String) -> bool:
 	if not inventory.has(id):

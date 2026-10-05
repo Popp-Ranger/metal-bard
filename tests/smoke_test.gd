@@ -920,8 +920,9 @@ func _test_inventory() -> void:
 	var slots_ok := true
 	for id: String in relics:
 		slots_ok = slots_ok and ItemDB.SLOTS.has(ItemDB.slot_of(id))
-	_check(slots_ok and ItemDB.SLOTS.size() == 11 and ItemDB.slot_of("couronne_gloubah") == "tete" and ItemDB.slot_of("bottes_roadie") == "pieds",
-		"équipement : 11 emplacements (tête, cou, torse... cordes, grimoire), chaque objet a le sien")
+	_check(slots_ok and ItemDB.SLOTS.size() == 12 and ItemDB.slot_of("couronne_gloubah") == "tete" and ItemDB.slot_of("bottes_roadie") == "pieds"
+		and ItemDB.slot_of("batguitare") == "guitare",
+		"équipement : 12 emplacements (guitare, tête, cou, torse... cordes, grimoire), chaque objet a le sien")
 	_check(GameState.equip("cordes_dragon") and GameState.equipment.get("cordes", "") == "cordes_dragon"
 		and not GameState.inventory.has("cordes_dragon") and GameState.ability("CHA") == cha_base + 1,
 		"équiper les cordes en boyau de dragon : +1 CHA")
@@ -1689,6 +1690,16 @@ func _test_crypt() -> void:
 	await get_tree().create_timer(0.7).timeout
 	_check(GameState.hp < hp0, "marcher dans la lave brûle (%d → %d PV)" % [hp0, GameState.hp])
 	GameState.hp = GameState.max_hp()
+	# Plus de 4 s de marche : la guitare passe dans le dos ; elle revient en main pour frapper.
+	hero._update_travel(3.0, true)
+	var early := hero.model.guitar_slung
+	hero._update_travel(1.2, true)
+	var slung := hero.travel_slung and hero.model.guitar_slung
+	hero._update_travel(0.5, false)
+	var still := hero.model.guitar_slung
+	hero.can_cast()
+	_check(not early and slung and still and not hero.model.guitar_slung and not hero.travel_slung,
+		"après 4 s de marche, le héros range sa guitare dans son dos ; il la reprend pour frapper")
 	# On revient toujours au portail démoniaque de la taverne ; les Cryptes seront tirées à nouveau.
 	var dest := str(crypt.call("_exit_scene"))
 	_check(dest == Router.TAVERN and bool(GameState.flags.get("from_crypt", false)) and GameState.crypt_seed == 0,
@@ -1820,6 +1831,16 @@ func _test_chapter_two() -> void:
 	_check(GameState.quest_items.has("partition_maudite") and GameState.quest_state("pick_destin") == QuestDB.State.OBJECTIVE_DONE and exit_ok,
 		"partition ramassée : objectif accompli, portail vers le parvis de Back Jlack")
 	_check(str(dg.call("_exit_scene")) == Router.TEMPLE, "on ressort du temple sur le parvis, dans l'autre univers")
+	# Sa guitare, la Batguitare : ramassée sur son corps, elle s'équipe et passe dans les mains du héros.
+	var bat_ok := GameState.inventory.has("batguitare") and ItemDB.slot_of("batguitare") == "guitare"
+	GameState.equip("batguitare")
+	await _frames(1)
+	_check(bat_ok and GameState.guitar_model().ends_with("batguitare.glb") and hero.model.guitar_model == GameState.guitar_model()
+		and hero.model._guitar != null and hero.model._guitar.get_child_count() > 0,
+		"l'ange déchu laisse sa Batguitare : équipée, elle remplace la guitare du héros")
+	GameState.unequip("guitare")
+	await _frames(1)
+	_check(hero.model.guitar_model == ItemDB.DEFAULT_GUITAR, "guitare retirée : le héros reprend sa Flying V")
 	# Jouer la partition sans le Pick du Destin : la foudre frappe (sans tuer).
 	GameState.hp = 5
 	var inv := InventoryWindow.new()

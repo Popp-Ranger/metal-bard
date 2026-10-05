@@ -14,9 +14,10 @@ const MODELS := {
 	"gloubah": "res://assets/models/pnj/gloubah.glb",
 	"hibours": "res://assets/models/pnj/hibours.glb",
 	"sage": "res://assets/models/pnj/sage.glb",
+	"gobelin": "res://assets/models/pnj/gobelin.glb",
 }
 ## Hauteur des modèles (m, chapeau compris) : étiquettes, barres de vie.
-const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75, "gloubah": 1.84, "hibours": 1.2, "sage": 1.65}
+const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75, "gloubah": 1.84, "hibours": 1.2, "sage": 1.65, "gobelin": 1.15}
 ## Agrandissement en jeu (le tavernier orc domine son comptoir) : hauteur et foulée suivent.
 const SCALES := {"tavernier": 1.25, "gloubah": 1.5} # Gloubah : 50 % plus grand que les héros
 ## Hauteur du visage au-dessus de l'os de la tête (m, avant agrandissement) : portrait du dialogue. Gloubah a les yeux

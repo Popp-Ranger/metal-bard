@@ -1589,6 +1589,8 @@ func _spawn_angel_room() -> void:
 		DungeonThemes.candelabra(self, c + Vector3(cos(a), 0, sin(a)) * 6.5)
 	Events.boss_defeated.connect(_on_angel_defeated)
 	if bool(_state.get("boss_dead", false)):
+		if not GameState.owns(FallenAngel.BATGUITARE):
+			Pickup.spawn(self, c + Vector3(1.0, 0, 0), "item", 0, FallenAngel.BATGUITARE) # sa guitare, pas encore ramassée
 		if not GameState.quest_items.has("partition_maudite"):
 			Pickup.spawn(self, c, "quest", 0, "partition_maudite")
 		elif GameState.quest_state(quest_id) == QuestDB.State.OBJECTIVE_DONE:

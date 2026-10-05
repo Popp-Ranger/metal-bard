@@ -17,7 +17,7 @@ const RARITY_COLORS := {
 
 ## Emplacements d'équipement, dans l'ordre de la fiche de personnage (clé "emplacement" de chaque objet).
 const SLOTS := {
-	"tete": "Tête", "cou": "Cou", "torse": "Torse", "poignets": "Poignets", "ceinture": "Ceinture", "pieds": "Pieds",
+	"guitare": "Guitare", "tete": "Tête", "cou": "Cou", "torse": "Torse", "poignets": "Poignets", "ceinture": "Ceinture", "pieds": "Pieds",
 	"anneau": "Anneau", "talisman": "Talisman", "mediator": "Médiator", "cordes": "Cordes", "grimoire": "Grimoire",
 }
 const DEFAULT_SLOT := "talisman"
@@ -201,3 +201,15 @@ static func sell_price(id: String) -> int:
 static func quest_item(id: String) -> Dictionary:
 	var q: Dictionary = (data().get("quete", {}) as Dictionary).get(id, {})
 	return q
+
+
+# --- Guitares -------------------------------------------------------------------------------
+
+## Guitare des héros sans guitare équipée (voir docs/GUITARE.md).
+const DEFAULT_GUITAR := "res://assets/models/guitare/guitare_heros.glb"
+
+
+## Modèle 3D d'une guitare (clé « modele » de l'objet) ; la guitare des héros par défaut.
+static func guitar_model(id: String) -> String:
+	var path := str((relics().get(id, {}) as Dictionary).get("modele", ""))
+	return path if not path.is_empty() and ResourceLoader.exists(path) else DEFAULT_GUITAR

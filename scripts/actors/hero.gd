@@ -33,6 +33,11 @@ var radius := 0.35
 ## Peut-on jouer ici ? Non dans la taverne hors du sous-sol : ni sorts ni coups de guitare,
 ## guitare portée dans le dos (voir Level.spells_allowed_at).
 var spells_allowed := true
+## Après SLING_AFTER secondes de marche sans s'arrêter, le héros range sa guitare dans son dos ; il la reprend
+## en main dès qu'il frappe ou joue un sort.
+const SLING_AFTER := 4.0
+var travel_slung := false
+var _travel_time := 0.0
 var _blocked_notice := 0.0
 
 var _invuln := 0.0
@@ -48,7 +53,9 @@ func _ready() -> void:
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	model = HeroModel.new()
 	model.move_speed = Balance.HERO_SPEED # foulée de course
+	model.guitar_model = GameState.guitar_model() # guitare équipée (Batguitare...)
 	add_child(model)
+	Events.stats_changed.connect(_on_gear_changed)
 	# Collision adaptée à la taille de la race (1,8 m à 2,5 m).
 	var h := model.height()
 	radius = 0.35 * model.scale.x
@@ -75,17 +82,23 @@ func _ready() -> void:
 	_update_zone()
 
 
+## Équipement changé : la guitare équipée passe dans les mains du héros.
+func _on_gear_changed() -> void:
+	model.set_guitar_model(GameState.guitar_model())
+
+
 ## Zone où l'on ne joue pas : guitare dans le dos (mise à jour à chaque image, escaliers compris).
 func _update_zone() -> void:
 	var level := Level.of(self)
 	spells_allowed = level == null or level.spells_allowed_at(global_position)
-	model.set_guitar_slung(not spells_allowed)
+	model.set_guitar_slung(not spells_allowed or travel_slung)
 
 
 ## Sorts et coups de guitare : refusés (avec un message, pas plus d'une fois par seconde et demie)
 ## là où l'on ne joue pas.
 func can_cast() -> bool:
 	if spells_allowed:
+		_draw_guitar()
 		return true
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - _blocked_notice > 1.5:
@@ -161,12 +174,29 @@ func _physics_process(delta: float) -> void:
 		facing = move.normalized()
 	model.rotation.y = lerp_angle(model.rotation.y, atan2(facing.x, facing.z), 1.0 - exp(-20.0 * delta))
 	model.set_moving(move.length() > 0.1)
+	_update_travel(delta, move.length() > 0.1 and not dashing)
 	model.tired = GameState.hp <= GameState.max_hp() * 0.3 # posture épuisée (modèle animé)
 
 	# Maj + clic : frapper sur place (sans bouger), comme dans Diablo.
 	if Input.is_action_pressed("attack") and Input.is_key_pressed(KEY_SHIFT) and not (DialogueBox.active or InventoryWindow.active):
 		melee()
 	_update_interaction()
+
+
+## Marche continue : au-delà de SLING_AFTER secondes, la guitare passe dans le dos (le compteur repart à chaque arrêt).
+func _update_travel(delta: float, moving: bool) -> void:
+	_travel_time = _travel_time + delta if moving else 0.0
+	if _travel_time >= SLING_AFTER and not travel_slung:
+		travel_slung = true
+		model.set_guitar_slung(true)
+
+
+## Le héros reprend sa guitare en main (pour frapper ou jouer).
+func _draw_guitar() -> void:
+	_travel_time = 0.0
+	if travel_slung:
+		travel_slung = false
+		model.set_guitar_slung(not spells_allowed)
 
 
 # --- Déplacement à la souris (façon Diablo / Path of Exile) ------------------------------

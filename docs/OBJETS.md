@@ -32,8 +32,8 @@ ramassé va dans le **sac** ; on l'équipe depuis la fiche de personnage (**C** 
 emplacement occupé renvoie l'ancien dans le sac. Les sauvegardes d'avant la v0.1.39 équipent d'office les reliques
 qu'on avait.
 
-Emplacements : tête, cou, torse, poignets, ceinture, pieds, anneau, talisman, médiator, cordes, grimoire
-(`tete`, `cou`, `torse`, `poignets`, `ceinture`, `pieds`, `anneau`, `talisman`, `mediator`, `cordes`, `grimoire`).
+Emplacements : guitare, tête, cou, torse, poignets, ceinture, pieds, anneau, talisman, médiator, cordes, grimoire
+(`guitare`, `tete`, `cou`, `torse`, `poignets`, `ceinture`, `pieds`, `anneau`, `talisman`, `mediator`, `cordes`, `grimoire`).
 
 | Identifiant | Nom | Emplacement | Bonus | Rareté | Tombe sur les ennemis ? |
 |---|---|---|---|---|---|
@@ -48,6 +48,7 @@ Emplacements : tête, cou, torse, poignets, ceinture, pieds, anneau, talisman, m
 | `pendentif_plume` | Pendentif de plume de hibours | cou | CHA +1, SAG +1 | rare | non (plus distribué) |
 | `portrait_aieule` | Portrait de l'arrière-arrière-arrière-grand-mère de Gérald | talisman | SAG +1, CHA +1 | rare | non (récompense de Gérald, avec 50 médiators) |
 | `couronne_gloubah` | Couronne de nénuphar de Gloubah | tête | CON +2, CHA +1 | épique | non (butin de Gloubah) |
+| `batguitare` | Batguitare de l'Ange déchu | guitare | CHA +2, INT +1 | épique | non (sur le corps de l'ange déchu, Temple du Dragon) |
 
 **Butin sur les corps** : ce que lâche un ennemi (médiators, potion, équipement) reste sur son corps ; on le ramasse
 en **cliquant sur le corps** (ou [E] à côté). Le corps ne disparaît pas tant qu'il reste du butin, et s'il porte un
@@ -87,9 +88,19 @@ Chaque objet d'équipement ressemble à ceci :
 - **`butin`** : `true` si l'objet peut tomber sur les ennemis et dans les coffres.
 - **`emplacement`** : où il se porte (voir la liste plus haut) ; sans emplacement (ou inconnu), il va en talisman.
 - **`actif`** : `false` pour désactiver la relique. Elle ne tombe plus, et ses bonus ne s'appliquent plus même si le personnage la possède déjà.
+- **`modele`** (guitares seulement) : modèle 3D (.glb) que le héros tient quand la guitare est équipée (même repère que `assets/models/guitare/guitare_heros.glb`, voir docs/GUITARE.md).
 
 ## Ajouter un équipement
 
 Copier un bloc, lui donner un nouvel identifiant (sans espace ni accent, par ex. `"collier_crocs"`), puis régler ses valeurs. Avec `"butin": true`, elle tombe aussitôt sur les ennemis.
 
 Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule après le dernier. Si le fichier devient illisible, le jeu repart sur les objets par défaut et affiche un avertissement dans la console de Godot.
+
+## Guitares (emplacement « Guitare »)
+
+- **Batguitare de l'Ange déchu** (`batguitare`) : la guitare de l'ange déchu, qui en joue pendant le combat ; elle
+  reste sur son corps (Temple du Dragon). Modèle fourni par Ulysse (`Imagerie/Guitares/3D/batguitare.glb`), préparé
+  par `art/guitare/prepare_batguitare.py` (300 000 → 24 000 faces) dans le même repère que la guitare des héros
+  (origine à la jonction manche / corps, sillet à 0,385 m) → `assets/models/guitare/batguitare.glb`.
+- Équipée, elle remplace la Flying V dans les mains du héros (`GameState.guitar_model()`, `HeroModel.set_guitar_model`) ;
+  retirée, il reprend la Flying V.

@@ -36,6 +36,8 @@ CHARACTERS = {
     "gloubah": ("Gloubah_rig", "Gloubah", os.path.join(PNJ_GLB, "gloubah.glb"),
                 {"idle": "idle_orc", "walk": "walk", "run": "run", "slash": "slash", "hit": "hit", "die": "die", "victory": "victory"}),
     "sage": ("Sage_rig", "Sage", os.path.join(PNJ_GLB, "sage.glb"), {"idle": "idle_pnj", "walk": "walk", "run": "run"}),
+    "gobelin": ("Gobelin_rig", "Gobelin", os.path.join(PNJ_GLB, "gobelin.glb"),
+                {"idle": "idle_orc", "walk": "walk", "run": "run", "slash": "slash", "hit": "hit", "die": "die"}),
     "hibours": ("Hibours_rig", "Hibours", os.path.join(PNJ_GLB, "hibours.glb"),
                 {"idle": "idle_pnj", "walk": "walk", "run": "run", "victory": "victory"}),
     "squelette": ("Squelette_rig", "Squelette", os.path.join(PNJ_GLB, "squelette.glb"),

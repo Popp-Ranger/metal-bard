@@ -40,6 +40,16 @@
 		}
 	},
 	"reliques": {
+		"batguitare": {
+			"nom": "Batguitare de l'Ange déchu",
+			"desc": "Arrachée à l'ange déchu : caisse aux ailes de chauve-souris, tête de vampire, pentagramme gravé sous les cordes. Elle sent le soufre et le sang de la fontaine.",
+			"bonus": {"CHA": 2, "INT": 1},
+			"rarete": "épique",
+			"butin": false,
+			"emplacement": "guitare",
+			"modele": "res://assets/models/guitare/batguitare.glb",
+			"actif": true
+		},
 		"mediator_os": {
 			"nom": "Médiator en os",
 			"desc": "Taillé dans la phalange d'un squelette trop bavard.",

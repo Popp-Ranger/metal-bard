@@ -268,6 +268,11 @@
 - [x] Cinquième héros prédéfini : Riffald's Twin (RiffaldV1.glb fourni par Ulysse), squelette de Riffald, 16 animations, Flying V (docs/TWIN.md)
 - [x] Back Jlack : son modèle 3D (PNJ/Sage fourni par Ulysse), animé, sur le parvis du temple, dans les portraits de dialogue et dans la cinématique de la légende
 
+## ✅ v0.1.49 — Guitare dans le dos, gobelins, Batguitare
+- [x] Après 4 s de marche sans s'arrêter, le héros range sa guitare dans son dos ; il la reprend dès qu'il frappe ou joue un sort (visible aussi en coop)
+- [x] Gobelins : le modèle 3D d'Ulysse (Ennemis/Gobelin), animé, avec son arme en main
+- [x] Batguitare : la guitare de l'ange déchu, sur son corps ; nouvel emplacement d'équipement « Guitare » : équipée, elle passe dans les mains du héros
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

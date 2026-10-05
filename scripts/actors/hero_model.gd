@@ -33,6 +33,8 @@ const GUITAR_STRIKE := Vector3(1.2, 0.0, -2.9) # abattue vers l'avant
 ## Modèles importés de Blender (voir docs/RIFFALD.md et docs/GUITARE.md).
 const RIFFALD_MODEL := "res://assets/models/riffald/riffald.glb"
 const GUITAR_MODEL := "res://assets/models/guitare/guitare_heros.glb"
+## Guitare tenue (modèle importé) : celle des héros, ou la guitare équipée du héros local (GameState.guitar_model).
+var guitar_model := GUITAR_MODEL
 ## Longueur du manche de la Flying V procédurale (sillet), pour placer la main gauche.
 const PROC_NUT := 0.64
 ## Main gauche sur le bout du manche, près du sillet (fraction jonction → sillet) ; pendant le solo,
@@ -509,7 +511,7 @@ func _curl_fingers(fingers: Array, curls: Array) -> void:
 ## deux micros double bobinage, chevalet Tune-o-matic, cordier en V, 3 boutons en ligne).
 ## Repère local : manche vers +Y, face avant vers +Z, pointe du V à l'origine.
 func _build_flying_v(g: Node3D, chrome: Material) -> void:
-	if ResourceLoader.exists(GUITAR_MODEL):
+	if ResourceLoader.exists(guitar_model):
 		_build_imported_guitar(g)
 		return
 	var cherry := Visuals.mat(Color(0.5, 0.04, 0.05), 0.22, 0.1)
@@ -583,7 +585,7 @@ func _use_skin(path: String) -> void:
 ## Guitare des héros modélisée dans Blender (même repère que la Flying V procédurale :
 ## manche vers +Y, face vers +Z, pointe du V à l'origine).
 func _build_imported_guitar(g: Node3D) -> void:
-	var inst := (load(GUITAR_MODEL) as PackedScene).instantiate()
+	var inst := (load(guitar_model) as PackedScene).instantiate()
 	g.add_child(inst)
 	g.scale = Vector3.ONE
 	_neck_scale = 0.385 / PROC_NUT # sillet de la nouvelle guitare
@@ -608,6 +610,21 @@ func _build_imported_guitar(g: Node3D) -> void:
 			mi.set_surface_override_material(i, m)
 	if _strings_mat == null:
 		_strings_mat = Visuals.glow_mat(Color(0.55, 0.85, 1.0), 0.8)
+
+
+## Change de guitare (guitare équipée) : le nouveau modèle remplace l'ancien, au même endroit (même repère).
+func set_guitar_model(path: String) -> void:
+	if path == guitar_model or not ResourceLoader.exists(path):
+		return
+	guitar_model = path
+	if _guitar == null:
+		return
+	var keep := _guitar.transform
+	for c in _guitar.get_children():
+		c.free()
+	_strings_mat = null
+	_build_imported_guitar(_guitar)
+	_guitar.transform = keep
 
 
 func _own_mat(color: Color, roughness: float) -> StandardMaterial3D:

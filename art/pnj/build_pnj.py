@@ -59,6 +59,14 @@ CHARS = {
         "shoulder.R": (-0.32, 0.10, 1.12), "elbow.R": (-0.44, 0.06, 0.93), "wrist.R": (-0.47, 0.03, 0.75),
         "hip.L": (0.18, 0.04, 0.64), "knee.L": (0.20, 0.04, 0.42), "ankle.L": (0.22, 0.06, 0.14),
         "hip.R": (-0.18, 0.04, 0.64), "knee.R": (-0.19, 0.04, 0.42), "ankle.R": (-0.22, 0.06, 0.14)}},
+    # Gobelin des montagnes (chapitre 3) : Ennemis/Gobelin (5 oct. 2026).
+    "gobelin": {"dir": os.path.join("Ennemis", "Gobelin"), "file": "gobelin3D.glb", "name": "Gobelin", "height": 1.15, "joints": {
+        "hips": (0.0, 0.03, 0.505), "spine": (0.0, 0.04, 0.60), "chest": (0.0, 0.04, 0.70),
+        "neck": (0.0, -0.01, 0.835), "head": (0.0, -0.03, 0.856), "head_top": (0.0, -0.02, 1.15),
+        "shoulder.L": (0.17, 0.07, 0.78), "elbow.L": (0.27, 0.08, 0.63), "wrist.L": (0.32, 0.04, 0.52),
+        "shoulder.R": (-0.17, 0.07, 0.78), "elbow.R": (-0.27, 0.08, 0.63), "wrist.R": (-0.32, 0.04, 0.52),
+        "hip.L": (0.10, 0.03, 0.45), "knee.L": (0.11, -0.01, 0.28), "ankle.L": (0.13, 0.03, 0.10),
+        "hip.R": (-0.10, 0.03, 0.45), "knee.R": (-0.11, -0.01, 0.28), "ankle.R": (-0.13, 0.03, 0.10)}},
     # Gloubah, le Roi Grenouille (boss des Catacombes) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
     # Préparé à la taille d'un héros ; le jeu l'agrandit de 50 % (CharacterSkin.SCALES).
     "gloubah": {"dir": os.path.join("Ennemis", "Gloubah"), "name": "Gloubah", "height": 1.84, "joints": {

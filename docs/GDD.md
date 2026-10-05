@@ -161,8 +161,8 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 | **Gloubah** (boss) | 120 | 12 | +5, 2d6+3 (langue) | Voir ci-dessous |
 | **Diablotin** | 9 (+3/niv.) | 12 | +4, 1d6+1 (hachette) | Petit démon rouge cornu, ailes de chauve-souris : vole droit sur le héros (0,45 × sa vitesse), détecte à 6 m |
 | **Démon cornu** | 32 (+9/niv.) | 14 | +5, 2d6+2 (grande hache) | Colosse de 2,4 m aux cornes de bélier et sabots ; le **Gardien des Cryptes** (30 % plus grand) garde la sortie des Cryptes |
-| **L'Ange déchu** (boss) | 260 (+40/niv.) | 14 | +6, 2d8+2 (guitare) | Boss du Temple du Dragon : riff infernal (la foudre tombe sur trois cercles), phase 2 sous 50 % (trois diablotins), garde la partition maudite |
-| **Gobelin** | 10 (+3/niv.) | 12 | +4, 1d6+1 | Petit et vert, rapide (0,32 × la vitesse du héros), détecte à 5 m ; gourdin, coutelas ou lance (plus d'allonge) |
+| **L'Ange déchu** (boss) | 260 (+40/niv.) | 14 | +6, 2d8+2 (guitare) | Boss du Temple du Dragon : riff infernal (la foudre tombe sur trois cercles), phase 2 sous 50 % (trois diablotins), garde la partition maudite ; laisse sa guitare, la Batguitare |
+| **Gobelin** | 10 (+3/niv.) | 12 | +4, 1d6+1 | Modèle 3D d'Ulysse ; petit et vert, rapide (0,32 × la vitesse du héros), détecte à 5 m ; gourdin, coutelas ou lance (plus d'allonge) |
 | **Élémentaire de roche** | 30 (+8/niv.) | 15 | +5, 2d6+2 | Rochers empilés liés par du magma ; très lent, coriace |
 | **Élémentaire de glace** | 20 (+6/niv.) | 13 | +5, 1d8+2 | Cristaux de glace flottants, rapide (0,28) |
 | **Le Bigfoot** (boss) | 210 (+32/niv.) | 13 | +6, 2d8+3 | Flancs de la montagne : lancer de rocher (cercle au sol), martèlement (onde de 4 m), rage sous 50 % |

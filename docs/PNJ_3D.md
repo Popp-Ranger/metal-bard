@@ -11,6 +11,7 @@ Modèles fournis par Ulysse (générés par IA, sans squelette) :
 | Gloubah (crapaud debout couronné, Ennemis/Gloubah) | **Gloubah**, le Roi Grenouille (boss des Catacombes) | 1,84 m (×1,5 en jeu : 2,76 m) | repos d'orc, marche, course, coup de patte (+ langue), sursaut, mort, victoire |
 | Ours Hiboux (bébé hibours au harnais) | **Plumeau**, le bébé hibours de Gérald | 1,2 m | repos, marche, course, victoire |
 | Sage (rockeur trapu, barbe grise, gilet clouté, t-shirt tie-dye) | **Back Jlack**, le sage du rock (parvis du Temple du Dragon, cinématique de la légende) | 1,65 m | repos, marche, course |
+| Gobelin (casque de cuir, épaulière au crâne, Ennemis/Gobelin) | tous les **gobelins** (chapitre 3) ; arme (gourdin, coutelas ou lance) accrochée à la main droite | 1,15 m | repos d'orc, marche, course, coup, sursaut, mort |
 
 ## Préparation (Blender, `art/pnj/build_pnj.py`)
 
@@ -21,7 +22,7 @@ blender --background art/pnj/<perso>.blend --python art/pnj/build_pnj.py -- rig 
 blender --background art/pnj/<perso>.blend --python art/riffald/retarget_mixamo.py -- export
 ```
 
-`<perso>` = `mage`, `tavernier`, `squelette`, `gloubah`, `hibours` ou `sage`.
+`<perso>` = `mage`, `tavernier`, `squelette`, `gloubah`, `hibours`, `sage` ou `gobelin`.
 1. **prepare** : tranches ressoudées, 30 000 triangles, mis à la taille du jeu, textures 2K.
 2. **views** : vues de face et de profil quadrillées, pour relever les articulations (dictionnaire `CHARS`).
 3. **rig** : squelette de Riffald (17 os), pondération par distance aux os ; chapeau et barbe suivent la
