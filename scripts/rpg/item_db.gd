@@ -213,3 +213,9 @@ const DEFAULT_GUITAR := "res://assets/models/guitare/guitare_heros.glb"
 static func guitar_model(id: String) -> String:
 	var path := str((relics().get(id, {}) as Dictionary).get("modele", ""))
 	return path if not path.is_empty() and ResourceLoader.exists(path) else DEFAULT_GUITAR
+
+
+## Variante du Riff électrique que donne une guitare (clé « sort_riff ») : « black_metal » (Batguitare : Riff black
+## metal, trait brumeux violet et vent brumeux), sinon « » (Riff électrique).
+static func riff_variant(id: String) -> String:
+	return str((relics().get(id, {}) as Dictionary).get("sort_riff", ""))

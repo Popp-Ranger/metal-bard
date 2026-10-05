@@ -104,3 +104,7 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
   (origine à la jonction manche / corps, sillet à 0,385 m) → `assets/models/guitare/batguitare.glb`.
 - Équipée, elle remplace la Flying V dans les mains du héros (`GameState.guitar_model()`, `HeroModel.set_guitar_model`) ;
   retirée, il reprend la Flying V.
+- **Riff black metal** : avec la Batguitare équipée, le Riff électrique (touche 1) devient le Riff black metal (clé
+  `sort_riff` : `black_metal`) : même mini-jeu et mêmes dégâts (violets), mais un **trait brumeux violet** (`MistTrail`)
+  au lieu de l'éclair, et un **vent brumeux** synthétisé (`Sfx` « mist_wind ») au lieu du son du riff. Vu et entendu
+  par tous les joueurs.

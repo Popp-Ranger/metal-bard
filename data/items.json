@@ -48,6 +48,7 @@
 			"butin": false,
 			"emplacement": "guitare",
 			"modele": "res://assets/models/guitare/batguitare.glb",
+			"sort_riff": "black_metal",
 			"actif": true
 		},
 		"mediator_os": {

@@ -1838,9 +1838,17 @@ func _test_chapter_two() -> void:
 	_check(bat_ok and GameState.guitar_model().ends_with("batguitare.glb") and hero.model.guitar_model == GameState.guitar_model()
 		and hero.model._guitar != null and hero.model._guitar.get_child_count() > 0,
 		"l'ange déchu laisse sa Batguitare : équipée, elle remplace la guitare du héros")
+	# La Batguitare change le Riff électrique en Riff black metal : trait brumeux violet et vent brumeux.
+	var riff_label: Label = (dg as Level).hud._slots["riff"]["name"]
+	SpellFx.play(dg, hero, "riff_black", {"from": hero.global_position + Vector3(0, 1, 0), "to": hero.global_position + Vector3(4, 1, 0), "stack": 2}, false)
+	await _frames(1)
+	var mist := dg.get_children().filter(func(n: Node) -> bool: return n is MistTrail).size()
+	_check(GameState.black_metal_riff() and Hero.riff_name() == "Riff black metal" and riff_label.text.contains("black metal")
+		and mist == 1 and Sfx._streams.has("mist_wind"), "Batguitare équipée : le Riff électrique devient le Riff black metal (trait brumeux violet, vent brumeux)")
 	GameState.unequip("guitare")
 	await _frames(1)
-	_check(hero.model.guitar_model == ItemDB.DEFAULT_GUITAR, "guitare retirée : le héros reprend sa Flying V")
+	_check(hero.model.guitar_model == ItemDB.DEFAULT_GUITAR and not GameState.black_metal_riff() and riff_label.text.contains("électrique"),
+		"guitare retirée : le héros reprend sa Flying V et son Riff électrique")
 	# Jouer la partition sans le Pick du Destin : la foudre frappe (sans tuer).
 	GameState.hp = 5
 	var inv := InventoryWindow.new()

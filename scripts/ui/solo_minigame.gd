@@ -43,6 +43,8 @@ var _clip_source := ""
 var _clip_offset := 0.0
 var _clip_at := 0.0
 var _clip_started := true
+## Couleur de la corde du Riff (violette pour le Riff black metal de la Batguitare).
+var _riff_color := RIFF_COLOR
 
 
 func _ready() -> void:
@@ -97,6 +99,7 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 		_clip_offset = 0.0
 		_clip_at = LEAD_TIME
 		_clip_started = stream == null
+	_riff_color = Color(0.72, 0.42, 1.0) if GameState.black_metal_riff() else RIFF_COLOR # Batguitare : riff violet
 	if mode == "riff":
 		# La même note à 90 BPM : la 1re est partie avec le sort, les suivantes tombent sur chaque temps.
 		var beat := 60.0 / Balance.RIFF_BPM
@@ -228,7 +231,8 @@ func _draw() -> void:
 	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "riff": "RIFF", "epreuve": "L'ÉPREUVE DE BACK JLACK", "duel": "DUEL : LE MINOTAURE"}
 	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "90 BPM", "epreuve": "80 % requis", "duel": "80 % requis"}
 	var riff := 1 if mode == "riff" else 0 # la 1re note du riff est partie avec le sort
-	draw_string(font, origin + Vector2(0, 42), str(titles.get(mode, "SOLO")), HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
+	var title := "BLACK METAL" if mode == "riff" and _riff_color != RIFF_COLOR else str(titles.get(mode, "SOLO"))
+	draw_string(font, origin + Vector2(0, 42), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
 	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits + riff, _notes.size() + riff, str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
 
 	var lane_w := 76.0
@@ -238,7 +242,7 @@ func _draw() -> void:
 	var speed := RIFF_NOTE_SPEED if mode == "riff" else NOTE_SPEED
 	for i in _lanes:
 		var x := lanes_x + i * lane_w
-		var c: Color = RIFF_COLOR if mode == "riff" else LANE_COLORS[i]
+		var c: Color = _riff_color if mode == "riff" else LANE_COLORS[i]
 		var flash := float(_lane_flash[i])
 		draw_rect(Rect2(x + 4, top, lane_w - 8, hit_y - top + 30), Color(c.r, c.g, c.b, 0.06 + flash * 0.25))
 		draw_line(Vector2(x + lane_w * 0.5, top), Vector2(x + lane_w * 0.5, hit_y + 30), Color(0.8, 0.8, 0.8, 0.25), 2.0)
@@ -254,7 +258,7 @@ func _draw() -> void:
 		if y < top - 20 or y > hit_y + 40:
 			continue
 		var lane := int(n["lane"])
-		var c: Color = RIFF_COLOR if mode == "riff" else LANE_COLORS[lane]
+		var c: Color = _riff_color if mode == "riff" else LANE_COLORS[lane]
 		if n["judged"]:
 			c = Color(0.3, 0.3, 0.3)
 		var center := Vector2(lanes_x + lane * lane_w + lane_w * 0.5, y)

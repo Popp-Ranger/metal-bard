@@ -123,6 +123,7 @@ func _connect_events() -> void:
 	Events.interaction_prompt.connect(func(t: String) -> void: _prompt.text = t)
 	Events.cooldown_started.connect(_on_cooldown)
 	Events.talents_changed.connect(_refresh_talent_slots)
+	Events.stats_changed.connect(_refresh_riff_slot)
 	Events.shield_changed.connect(func(_s: int) -> void: _on_hp(GameState.hp, GameState.max_hp()))
 	Events.quest_updated.connect(_refresh_quest)
 	Events.portal_opened.connect(func() -> void: _refresh_quest(""))
@@ -263,6 +264,7 @@ func _build_skills() -> void:
 		_slots[s["id"]] = {"overlay": overlay, "panel": panel, "remaining": 0.0, "duration": 1.0, "extra": extra, "cost": cost, "name": name_label}
 	_on_potions(GameState.potions)
 	_refresh_talent_slots()
+	_refresh_riff_slot()
 	var help := UiStyle.label("ZQSD / clic : se déplacer  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : inventaire  •  %s : talents  •  %s : portail  •  Échap : pause" % [
 		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("inventory"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
@@ -635,6 +637,24 @@ func _revive() -> void:
 	GameState.flags["in_dungeon"] = true
 	GameState.save_game()
 	Router.go_to(Router.TAVERN)
+
+
+## Touche 1 : Riff électrique, ou Riff black metal (violet) quand la Batguitare est équipée.
+const BLACK_METAL_COLOR := Color(0.72, 0.42, 1.0)
+
+
+func _refresh_riff_slot() -> void:
+	if not _slots.has("riff"):
+		return
+	var slot: Dictionary = _slots["riff"]
+	var black := GameState.black_metal_riff()
+	var color: Color = BLACK_METAL_COLOR if black else Color(0.4, 0.95, 1.0)
+	var name_label: Label = slot["name"]
+	name_label.text = "Riff\nblack metal" if black else "Riff\nélectrique"
+	name_label.add_theme_color_override("font_color", color)
+	var bg := UiStyle.box(Color(0.06, 0.045, 0.045, 0.95), color.darkened(0.45), 1, 2)
+	bg.shadow_size = 0
+	(slot["panel"] as Panel).add_theme_stylebox_override("panel", bg)
 
 
 ## Met à jour les emplacements 4 à 7 selon les talents actifs assignés.

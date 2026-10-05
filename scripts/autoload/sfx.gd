@@ -251,6 +251,7 @@ func _build_all() -> void:
 	_streams["coin"] = _fx(_coin())
 	_streams["potion"] = _fx(_potion())
 	_streams["portal"] = _fx(_portal())
+	_streams["mist_wind"] = _fx(_mist_wind())
 	_streams["dud"] = _fx(_dud())
 	_streams["levelup"] = _fx(_arpeggio([329.63, 415.3, 493.88, 659.25], 0.11))
 	_streams["solo_start"] = _fx(_arpeggio([164.81, 246.94, 329.63], 0.08))
@@ -442,6 +443,35 @@ func _bones() -> PackedFloat32Array:
 			if dt >= 0.0 and dt < 0.06:
 				s += sin(TAU * (900.0 + c * 900.0) * dt) * exp(-dt * 90.0)
 		b[i] = s * 0.5
+	return b
+
+
+## Vent brumeux (Riff black metal de la Batguitare) : souffle qui enfle et retombe, sifflement de vent qui monte et
+## descend (bruit filtré par deux résonances qui glissent), grondement sourd en dessous.
+func _mist_wind() -> PackedFloat32Array:
+	var dur := 1.15
+	var b := _buffer(dur)
+	var low := 0.0
+	var bands := [[0.0, 0.0], [0.0, 0.0]] # filtres à variable d'état : [passe-bas, passe-bande]
+	for i in b.size():
+		var t := float(i) / RATE
+		var n := randf_range(-1.0, 1.0)
+		low += 0.01 * (n - low)
+		var s := low * 3.0
+		for k in 2:
+			# Hurlement du vent : la fréquence glisse (420 → 900 → 520 Hz, et une quinte au-dessus), un peu tremblée.
+			var f := (420.0 + 480.0 * sin(PI * minf(t / 0.7, 1.0)) * (1.0 - 0.25 * t)) * (1.0 + 0.5 * k)
+			f *= 1.0 + 0.04 * sin(TAU * 5.5 * t + k)
+			var g := 2.0 * sin(PI * f / RATE)
+			var st: Array = bands[k]
+			var bp: float = st[1]
+			var lp: float = float(st[0]) + g * bp
+			var hp := n - lp - 0.12 * bp # résonance forte : sifflement
+			bp += g * hp
+			bands[k] = [lp, bp]
+			s += bp * (0.35 if k == 0 else 0.18)
+		var env := smoothstep(0.0, 0.28, t) * (1.0 - smoothstep(0.45, dur, t))
+		b[i] = s * env * (0.85 + 0.15 * sin(TAU * 2.2 * t))
 	return b
 
 

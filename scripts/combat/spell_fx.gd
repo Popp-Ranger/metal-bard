@@ -52,6 +52,12 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			ArcBolt.spawn(level, data["from"], data["to"], 0.1 + 0.025 * stack, 0.25, data.get("color", Color(0.55, 0.85, 1.0)))
 			# Volume réduit de 70 % (×0,3 ≈ -10,5 dB) : le riff couvrait tout le reste.
 			_sound(level, "riff", -13.5 + stack * 0.2, data["from"], remote, 0.0)
+		"riff_black":
+			if model != null:
+				model.strum()
+			var notes := int(data.get("stack", 1))
+			MistTrail.spawn(level, data["from"], data["to"], 0.1 + 0.02 * notes, data.get("color", Color(0.62, 0.3, 1.0)))
+			_sound(level, "mist_wind", -9.0 + notes * 0.2, data["from"], remote, 0.05)
 		"bolt":
 			ArcBolt.spawn(level, data["from"], data["to"], float(data.get("width", 0.12)), float(data.get("life", 0.3)),
 				data.get("color", Color(0.55, 0.85, 1.0)))

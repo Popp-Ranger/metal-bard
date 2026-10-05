@@ -487,7 +487,7 @@ func cast_riff() -> void:
 		return
 	var target := _riff_target()
 	if target == null:
-		Events.notify("Aucune cible à portée pour le Riff électrique", Events.COLOR_BAD)
+		Events.notify("Aucune cible à portée pour le %s" % riff_name(), Events.COLOR_BAD)
 		return
 	if not GameState.spend_mana(Balance.RIFF_COST):
 		_no_mana()
@@ -511,6 +511,11 @@ func _riff_finished(hits: int, total: int) -> void:
 		Events.notify("Fausse note ! Riff interrompu (%d note%s) : recharge triplée." % [notes, "s" if notes > 1 else ""], Events.COLOR_BAD)
 
 
+## Nom du sort de la touche 1 : Riff électrique, ou Riff black metal avec la Batguitare.
+static func riff_name() -> String:
+	return "Riff black metal" if GameState.black_metal_riff() else "Riff électrique"
+
+
 ## Nombre de notes du Riff électrique (Overdrive : 2 de plus).
 func riff_notes() -> int:
 	return Balance.RIFF_NOTES + (2 if GameState.has_talent("overdrive") else 0)
@@ -524,7 +529,10 @@ func _on_solo_note_hit(mode: String, hits: int) -> void:
 	if next != null:
 		_riff_strike(next, hits + 1)
 	else:
-		Sfx.play("riff", -13.5) # plus personne à portée : le riff résonne quand même
+		if GameState.black_metal_riff():
+			Sfx.play("mist_wind", -9.0) # plus personne à portée : le vent brumeux souffle quand même
+		else:
+			Sfx.play("riff", -13.5) # plus personne à portée : le riff résonne quand même
 
 
 ## Éclair du riff sur `target` (note n° `note`), depuis la guitare ou depuis l'ennemi précédent.
@@ -535,13 +543,20 @@ func _riff_strike(target: Enemy, note: int) -> void:
 		from = last.global_position + Vector3(0, 0.9, 0)
 	_riff_chain.append(target)
 	var k := clampf(float(note - 1) / float(maxi(1, riff_notes() - 1)), 0.0, 1.0)
-	var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
-	# Éclair et son riff electrique.wav, visibles et audibles par tous les joueurs.
-	SpellFx.cast(self, "riff", {"from": from, "to": target.global_position + Vector3(0, 0.9, 0), "stack": note, "color": color})
+	var black := GameState.black_metal_riff()
+	var to := target.global_position + Vector3(0, 0.9, 0)
+	if black:
+		# Batguitare : trait brumeux violet (de plus en plus sombre et épais) et vent brumeux, vus et entendus par tous.
+		var mist := Color(0.62, 0.3, 1.0).lerp(Color(0.42, 0.08, 0.6), k)
+		SpellFx.cast(self, "riff_black", {"from": from, "to": to, "stack": note, "color": mist})
+	else:
+		var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
+		# Éclair et son riff electrique.wav, visibles et audibles par tous les joueurs.
+		SpellFx.cast(self, "riff", {"from": from, "to": to, "stack": note, "color": color})
 	var dmg := Dice.roll(1, 10, GameState.mod("CHA"))
 	if GameState.has_talent("overdrive"):
 		dmg = roundi(dmg * 1.25)
-	hit_enemy(target, dmg, 0.4, "shock", global_position, true)
+	hit_enemy(target, dmg, 0.4, "sound" if black else "shock", global_position, true)
 	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
 		target.slow(0.6, 2.0)
 
