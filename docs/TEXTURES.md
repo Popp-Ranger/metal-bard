@@ -16,7 +16,7 @@ matière dans `CHOIX`, relancer le script, puis rouvrir le projet dans Godot (ou
 |---|---|---|
 | `pierre_moussue` | Stylized_02_Stone_Ground | sol des Catacombes (et tuile « Sol (dalles) » de l'éditeur de donjon) |
 | `blocs_pierre` | Stylized_StoneTiles_02 | murs des Catacombes, pierre du décor de la taverne (cheminée...), chapelle et auberge de l'intro |
-| `roche_lave` | Stylized_LavaRock_02 | sol des Cryptes (fissures qui rougeoient à peine) |
+| `dallage` | Stylized_16_Stone_Floor | sol des Cryptes |
 | `coulee_lave` | Stylized_LavaRock_01 | croûte qui dérive sur les ruisseaux de lave |
 | `roche` | Stone_01 | murs et bords de lave des Cryptes, rochers du parvis du temple |
 | `damier` | Stylized_CeramicTilingFloor_02 | sol du Temple du Dragon (damier de 1 m) |

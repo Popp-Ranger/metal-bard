@@ -20,7 +20,7 @@ static func wall_color(theme: String) -> Color:
 
 ## Textures des murs et des sols par thème (assets/textures) : [nom, mètres couverts par une répétition].
 const WALL_TEXTURES := {"catacombes": ["blocs_pierre", 3.0], "crypte": ["roche", 2.5], "temple": ["pierre_claire", 3.0]}
-const FLOOR_TEXTURES := {"catacombes": ["pierre_moussue", 4.0], "crypte": ["roche_lave", 6.0], "temple": ["damier", 4.0]}
+const FLOOR_TEXTURES := {"catacombes": ["pierre_moussue", 4.0], "crypte": ["dallage", 4.0], "temple": ["damier", 4.0]}
 
 
 ## Matériau des murs du thème : texture de maçonnerie et découpe autour du héros.
@@ -33,7 +33,7 @@ static func wall_material(theme: String) -> ShaderMaterial:
 ## (vertex color) le nuance.
 static func floor_material(theme: String) -> StandardMaterial3D:
 	var t: Array = FLOOR_TEXTURES.get(theme, FLOOR_TEXTURES["catacombes"])
-	var m := Visuals.textured(str(t[0]), float(t[1]), Color.WHITE, 0.9, 0.35 if theme == "crypte" else 0.0).duplicate() as StandardMaterial3D
+	var m := Visuals.textured(str(t[0]), float(t[1]), Color.WHITE, 0.9).duplicate() as StandardMaterial3D
 	m.vertex_color_use_as_albedo = true
 	return m
 

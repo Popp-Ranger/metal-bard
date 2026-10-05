@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://du2s56da5bwrj"
-path="res://.godot/imported/roche_lave_couleur.jpg-a153df243ca2678623b4b2e9b895fa74.ctex"
+uid="uid://5s3atf7bj14o"
+path="res://.godot/imported/dallage_normal.jpg-9c29a467d84a876fb051663fc06aaf11.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/roche_lave/roche_lave_couleur.jpg"
-dest_files=["res://.godot/imported/roche_lave_couleur.jpg-a153df243ca2678623b4b2e9b895fa74.ctex"]
+source_file="res://assets/textures/dallage/dallage_normal.jpg"
+dest_files=["res://.godot/imported/dallage_normal.jpg-9c29a467d84a876fb051663fc06aaf11.ctex"]
 
 [params]
 

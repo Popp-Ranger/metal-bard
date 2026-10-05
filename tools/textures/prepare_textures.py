@@ -3,7 +3,8 @@
 # écrites en JPEG dans assets/textures/<nom>/.
 #
 # Usage (les zips décompressés dans un dossier SOURCE, hors du projet) :
-#   blender --background --factory-startup --python tools/textures/prepare_textures.py -- <SOURCE>
+#   blender --background --factory-startup --python tools/textures/prepare_textures.py -- <SOURCE> [nom...]
+# (sans nom : toutes les textures)
 import bpy, glob, os, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -14,7 +15,7 @@ SIZE = 1024
 CHOIX = {
     "pierre_moussue": "Stylized_02_Stone_Ground",       # sol des Catacombes
     "blocs_pierre": "Stylized_StoneTiles_02",           # murs des Catacombes
-    "roche_lave": "Stylized_LavaRock_02",               # sol des Cryptes (fissures rougeoyantes)
+    "dallage": "Stylized_16_Stone_Floor",               # sol des Cryptes
     "coulee_lave": "Stylized_LavaRock_01",              # ruisseaux de lave
     "roche": "Stone_01",                                # murs des Cryptes (basalte)
     "damier": "Stylized_CeramicTilingFloor_02",         # sol du Temple du Dragon
@@ -49,8 +50,11 @@ def convert(path, out):
 
 
 def main():
-    src = sys.argv[sys.argv.index("--") + 1]
+    args = sys.argv[sys.argv.index("--") + 1:]
+    src, only = args[0], args[1:]
     for nom, mat in CHOIX.items():
+        if only and nom not in only:
+            continue
         d = os.path.join(OUT, nom)
         os.makedirs(d, exist_ok=True)
         maps = {"couleur": find(src, mat, ["basecolor"]), "normal": find(src, mat, ["normalogl", "normalOgl"]),
