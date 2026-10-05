@@ -26,6 +26,12 @@ CHOIX = {
     "briques": "Stylized_Rounded_Bricks_02",            # murs de la taverne
     "herbe_terre": "Stylized_HandpaintedGrassAndDirt_01",  # cimetière
     "terre": "Stylized_HandpaintedDirt_01",             # tombes ouvertes, tas de terre
+    "herbe": "Stylized_15_Grass",                       # prairie au pied de la montagne
+    "falaise": "Stone_04",                              # falaises de la montagne et du col
+    "terre_grotte": "Stylized_DirtGround_01",           # sol des grottes des gobelins
+    "roche_grotte": "Stone_05",                         # parois des grottes
+    "neige": "Stylized_09_Snow02",                      # col de la montagne, labyrinthe
+    "glace": "Stylized_18_Ice",                         # murs du Labyrinthe du Destin
 }
 
 

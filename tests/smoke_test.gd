@@ -22,6 +22,7 @@ func _ready() -> void:
 	await _test_loot_and_gear()
 	await _test_crypt()
 	await _test_chapter_two()
+	await _test_chapter_three()
 	await _test_level_editor()
 	await _test_quest_flow()
 	await _test_new_features()
@@ -1817,3 +1818,150 @@ func _test_chapter_two() -> void:
 	dg.queue_free()
 	await _frames(3)
 	GameState.new_game()
+
+
+func _test_chapter_three() -> void:
+	print("[Chapitre 3 : le Labyrinthe du Destin]")
+	GameState.new_game()
+	# Back Jlack renvoie le héros dans son époque ; la quête d'Ozz se débloque.
+	GameState.set_quest_state("pick_destin", QuestDB.State.OBJECTIVE_DONE)
+	var bj_actions: Array[String] = []
+	for ch: Array in DialogueDB.get_dialogue("backjlack")["choices"]:
+		bj_actions.append(str(ch[1]))
+	_check(bj_actions.has("turn_in:pick_destin+story:retour_epoque"), "Back Jlack reprend la partition et renvoie le héros dans son époque")
+	GameState.turn_in_quest("pick_destin")
+	_check(GameState.quest_state("labyrinthe_destin") == QuestDB.State.AVAILABLE, "après la partition : la quête d'Ozz se débloque")
+	var ozz := DialogueDB.get_dialogue("zarathos")
+	var text := ""
+	for l: Array in ozz["lines"]:
+		text += str(l[1]) + " "
+	var ozz_actions: Array[String] = []
+	for ch: Array in ozz["choices"]:
+		ozz_actions.append(str(ch[1]))
+	_check(ozz_actions.has("accept:labyrinthe_destin+portal") and text.contains("Labyrinthe du Destin") and text.contains("MINOTAURE")
+		and text.contains("Bigfoot") and text.contains("troll des cavernes") and text.contains("précipices"),
+		"Ozz connaît le « pic » : le Labyrinthe du Destin, en haut d'une montagne, gardé par le Minotaure")
+	GameState.run_dialogue_action("accept:labyrinthe_destin+portal")
+	_check(GameState.active_quest == "labyrinthe_destin" and bool(GameState.flags.get("portal_open", false)) and Expedition.current_stage() == 0
+		and QuestDB.objective_text("labyrinthe_destin").contains("prairie"), "quête acceptée : Ozz ouvre un portail vers la prairie")
+	# Le labyrinthe : un vrai labyrinthe (culs-de-sac), l'arène du boss au bout, une seule entrée.
+	var maze := DungeonGenerator.new()
+	var maze_ok := true
+	for s in 10:
+		maze.generate_maze(500 + s, Expedition.MAZE_SIZE, Expedition.MAZE_SIZE, 6)
+		maze_ok = maze_ok and maze.is_start_connected_to_boss() and maze.room_openings(maze.boss_room).size() == 1 \
+			and maze.maze_dead_ends(Expedition.MAZE_SIZE, Expedition.MAZE_SIZE) >= 10 and maze.rooms.size() >= 6
+	_check(maze_ok, "Labyrinthe du Destin : vrai labyrinthe (culs-de-sac), arène du boss au bout, une seule entrée (10 graines)")
+	# Les cinq niveaux de l'expédition.
+	var expected := [["prairie", ""], ["montagne", "Bigfoot"], ["grotte", "CaveTroll"], ["col", "IceElemental"], ["labyrinthe", "Minotaur"]]
+	var flags := ["destin_prairie", "destin_bigfoot", "destin_troll", "destin_col"]
+	for s in 5:
+		GameState.dungeon_seed = 2000 + s
+		GameState.dungeon_state = {}
+		var ex: Node = load("res://scenes/expedition.tscn").instantiate()
+		add_child(ex)
+		await _frames(5)
+		var boss: Enemy = ex.get("stage_boss")
+		var kinds := {}
+		for c in ex.get_children():
+			if c is Enemy and c != boss:
+				kinds[(c as Enemy).get_script().get_global_name()] = true
+		var theme := str(ex.get("theme"))
+		var boss_name := "" if boss == null else str(boss.get_script().get_global_name())
+		var ok: bool = theme == expected[s][0] and boss_name == expected[s][1] and (boss == null or boss.is_boss)
+		match theme:
+			"prairie":
+				var exit: Portal = ex.get("_stage_exit")
+				ok = ok and kinds.has("Goblin") and exit != null and exit.prompt.contains("Flancs de la Montagne")
+			"montagne", "grotte":
+				ok = ok and kinds.has("Goblin") and kinds.has("RockElemental")
+			"col":
+				ok = ok and kinds.has("IceElemental") and not (ex.get("_wall_mmi") as Node3D).visible and not (ex.get("_under") as Node3D).visible \
+					and (boss as IceElemental).colossal
+			"labyrinthe":
+				ok = ok and kinds.has("IceElemental") and kinds.has("RockElemental")
+		_check(ok, "expédition %d/5 : %s (%s), boss %s, ennemis %s" % [s + 1, Expedition.stage_name(s), theme, boss_name, kinds.keys()])
+		if s == 1:
+			# Boss vaincu : un portail d'Ozz mène au niveau suivant.
+			boss.take_damage(99999, boss.global_position + Vector3(0.1, 0, 0))
+			await get_tree().create_timer(1.8).timeout
+			var next: Portal = ex.get("_stage_exit")
+			_check(next != null and next.prompt.contains("Grottes des Gobelins") and next.target_scene == Router.EXPEDITION,
+				"le Bigfoot vaincu : un portail d'Ozz vers les grottes des gobelins")
+			next.on_enter.call()
+			_check(bool(GameState.flags.get("destin_bigfoot", false)) and GameState.dungeon_state.is_empty() and Expedition.current_stage() == 2,
+				"portail pris : niveau suivant (nouveau donjon)")
+		if s == 2:
+			# Le troll se régénère quand on ne le frappe plus.
+			var troll := boss as CaveTroll
+			troll._aggro()
+			troll.take_damage(roundi(troll.max_hp * 0.3), troll.global_position + Vector3(0.1, 0, 0))
+			var hurt := troll.hp
+			troll._since_hit = 3.0
+			troll._update_regen(2.0)
+			_check(troll.hp > hurt, "le troll des cavernes se régénère s'il n'est pas frappé (%d → %d PV)" % [hurt, troll.hp])
+		if s == 4:
+			await _test_minotaur_duel(ex)
+		ex.queue_free()
+		await _frames(3)
+		if s < 4:
+			GameState.flags[flags[s]] = true
+	GameState.new_game()
+
+
+## Le Minotaure : à 5 % de ses PV, duel de guitare (80 %) ; perdu, il reprend des forces ; gagné, il tombe.
+func _test_minotaur_duel(ex: Node) -> void:
+	var m: Minotaur = ex.get("minotaur")
+	var hero := ex.get("hero") as Hero
+	var hud := (ex as Level).hud
+	m._aggro()
+	m.take_damage(99999, m.global_position + Vector3(0.1, 0, 0))
+	await _frames(2)
+	var hp_duel := m.hp
+	m.take_damage(500, m.global_position + Vector3(0.1, 0, 0))
+	_check(m.dueling and hp_duel == m.duel_threshold() and m.hp == hp_duel and m.is_alive() and hero.casting_solo and hud.dialogue.visible,
+		"à 5 % de ses PV, le Minotaure sort sa guitare et impose un duel (intouchable pendant le duel)")
+	hud.dialogue.close()
+	ex.call("_on_story_action", "duel")
+	Events.dialogue_closed.emit()
+	await _frames(2)
+	var solo := hud.solo
+	var chart := SoloMinigame.chart_of(SoloMinigame.DUEL_CHART_PATH)
+	_check(solo._active and solo.mode == "duel" and solo._clip_source == "res://audio/riffs/edge_of_the_cliff.mp3"
+		and solo._notes.size() == (chart["notes"] as Array).size() and solo._notes.size() >= 60 and hero.planted,
+		"duel : le solo « Edge of the Cliff » en entier, %d notes calées sur le morceau" % solo._notes.size())
+	solo._active = false
+	solo.visible = false
+	GameState.hp = GameState.max_hp()
+	var hp0 := GameState.hp
+	ex.call("_on_duel_finished", "duel", 70, 94)
+	await _frames(2)
+	_check(not m.dueling and m.is_alive() and m.hp >= roundi(m.max_hp * Minotaur.DUEL_LOSS_HEAL) and GameState.hp < hp0 and not hero.planted,
+		"duel perdu (74 %) : le Minotaure ricane, foudroie le héros et reprend 35 % de ses PV")
+	m.take_damage(99999, m.global_position + Vector3(0.1, 0, 0))
+	await _frames(2)
+	_check(m.dueling, "nouveau duel à 5 %")
+	hud.dialogue.close()
+	ex.call("_on_duel_finished", "duel", 80, 94)
+	await _frames(5)
+	var has_pick := false
+	for l: Dictionary in m.loot:
+		has_pick = has_pick or str(l.get("item", "")) == "pick_du_destin"
+	_check(not m.is_alive() and has_pick, "duel gagné (85 %) : le Minotaure tombe, le Pick du Destin sur son corps")
+	m.loot_all()
+	await _frames(3)
+	var ozz_portal := false
+	for c in ex.get_children():
+		if c is Portal and (c as Portal).prompt.contains("portail d'Ozz"):
+			ozz_portal = true
+	_check(GameState.quest_items.has("pick_du_destin") and GameState.quest_state("labyrinthe_destin") == QuestDB.State.OBJECTIVE_DONE and ozz_portal,
+		"Pick du Destin ramassé : objectif accompli, portail d'Ozz vers la taverne")
+	# Avec le pick, la partition ne foudroie plus.
+	GameState.hp = 10
+	var inv := InventoryWindow.new()
+	add_child(inv)
+	inv._play_partition()
+	_check(GameState.hp == 10, "avec le Pick du Destin, jouer la partition ne foudroie plus")
+	inv.queue_free()
+	GameState.run_dialogue_action("turn_in:labyrinthe_destin")
+	_check(GameState.quest_state("labyrinthe_destin") == QuestDB.State.TURNED_IN, "Ozz voit le Pick du Destin : quête terminée")

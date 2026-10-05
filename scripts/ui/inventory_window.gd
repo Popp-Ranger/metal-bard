@@ -188,6 +188,11 @@ func _play_partition() -> void:
 	var hero := get_tree().get_first_node_in_group("hero") as Hero
 	if hero == null:
 		return
+	if GameState.quest_items.has("pick_du_destin"):
+		# Avec le Pick du Destin, la partition ne foudroie plus... mais le Riff Ultime est réservé à Mèhn-Strïm.
+		Sfx.play("note_0", -6.0, 0.0)
+		Events.notify("Le Pick du Destin vibre entre vos doigts : la partition s'illumine... Le Riff Ultime attendra Mèhn-Strïm.", Events.COLOR_GOLD)
+		return
 	var top := hero.global_position + Vector3(0.6, 18.0, -0.6)
 	ArcBolt.spawn(hero.get_parent(), top, hero.global_position + Vector3(0, 1.0, 0), 0.45, 0.5, Color(0.8, 0.85, 1.0))
 	Sfx.play("solo_thunder", 0.0)

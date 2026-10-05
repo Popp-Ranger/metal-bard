@@ -11,7 +11,7 @@ const QUESTS := {
 		"giver": "gerald",
 		"summary": "Des squelettes ont enlevé Plumeau, le bébé hibours adoré de Gérald le fromager.",
 		"objective": "Traverser le portail d'Ozz, prendre la clé au chef des squelettes et délivrer Plumeau de Gloubah, le Roi Grenouille.",
-		"objective_talk_mage": "Demander à Ozz, le vieux mage, d'ouvrir un portail.",
+		"objective_talk_mage": "Demander à Ozz, le grand mage, d'ouvrir un portail.",
 		"objective_done": "Rendre Plumeau à Gérald, à la Chèvre Fringante.",
 		"requires": "",
 		"dungeon": {
@@ -39,6 +39,25 @@ const QUESTS := {
 		"requires": "plumeau",
 		"dungeon": {"name": "Temple du Dragon", "theme": "temple", "rooms": 9, "enemy_level": 3, "boss_key": false},
 		"reward": {"xp": 1200, "gold": 150},
+	},
+	# Chapitre 3 : Ozz connaît le « pic »... le Labyrinthe du Destin, en haut d'une montagne. Expédition en cinq
+	# niveaux (scripts/world/expedition.gd), chacun débloqué par le précédent.
+	"labyrinthe_destin": {
+		"title": "Le Labyrinthe du Destin",
+		"giver": "zarathos",
+		"summary": "Le Pick du Destin repose au cœur du Labyrinthe du Destin, au sommet d'une montagne, gardé par le Minotaure.",
+		"stages": [
+			["destin_prairie", "Traverser la prairie au pied de la montagne."],
+			["destin_bigfoot", "Escalader les flancs de la montagne et vaincre le Bigfoot."],
+			["destin_troll", "Traverser les grottes des gobelins et vaincre le troll des cavernes."],
+			["destin_col", "Franchir le col de la montagne (gare aux précipices) et vaincre l'élémentaire de glace colossal."],
+		],
+		"objective": "Trouver le Pick du Destin au cœur du Labyrinthe du Destin, gardé par le Minotaure.",
+		"objective_talk_mage": "Demander à Ozz d'ouvrir un portail vers la montagne.",
+		"objective_done": "Rapporter le Pick du Destin à Ozz, à la Chèvre Fringante.",
+		"requires": "pick_destin",
+		"dungeon": {"name": "Le Labyrinthe du Destin", "scene": "res://scenes/expedition.tscn", "enemy_level": 4},
+		"reward": {"xp": 2500, "gold": 300},
 	},
 }
 

@@ -15,12 +15,22 @@ static func wall_color(theme: String) -> Color:
 			return Color(0.62, 0.46, 0.42) # basalte brun-rouge
 		"temple":
 			return Color(0.95, 0.92, 0.88)
+		"prairie", "montagne", "col":
+			return Color(0.72, 0.68, 0.64) # falaises
+		"grotte":
+			return Color(0.55, 0.5, 0.44)
+		"labyrinthe":
+			return Color(0.7, 0.8, 0.9) # glace
 	return Color(0.62, 0.62, 0.66)
 
 
 ## Textures des murs et des sols par thème (assets/textures) : [nom, mètres couverts par une répétition].
-const WALL_TEXTURES := {"catacombes": ["blocs_pierre", 3.0], "crypte": ["roche", 2.5], "temple": ["pierre_claire", 3.0]}
-const FLOOR_TEXTURES := {"catacombes": ["pierre_moussue", 4.0], "crypte": ["dallage", 4.0], "temple": ["damier", 4.0]}
+const WALL_TEXTURES := {"catacombes": ["blocs_pierre", 3.0], "crypte": ["roche", 2.5], "temple": ["pierre_claire", 3.0],
+	"prairie": ["falaise", 4.0], "montagne": ["falaise", 4.0], "grotte": ["roche_grotte", 3.0], "col": ["falaise", 4.0],
+	"labyrinthe": ["glace", 3.0]}
+const FLOOR_TEXTURES := {"catacombes": ["pierre_moussue", 4.0], "crypte": ["dallage", 4.0], "temple": ["damier", 4.0],
+	"prairie": ["herbe", 4.0], "montagne": ["pierre_moussue", 4.0], "grotte": ["terre_grotte", 4.0], "col": ["neige", 6.0],
+	"labyrinthe": ["neige", 6.0]}
 
 
 ## Matériau des murs du thème : texture de maçonnerie et découpe autour du héros.

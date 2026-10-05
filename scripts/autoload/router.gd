@@ -10,6 +10,8 @@ const DUNGEON := "res://scenes/dungeon.tscn"
 const CRYPT := "res://scenes/crypt.tscn"
 ## Temple du Dragon : l'autre univers de Back Jlack (marches interminables, parvis, épreuve).
 const TEMPLE := "res://scenes/temple.tscn"
+## Chapitre 3 : l'expédition vers le Labyrinthe du Destin (prairie, montagne, grottes, col, labyrinthe).
+const EXPEDITION := "res://scenes/expedition.tscn"
 
 var _fade: ColorRect
 var _busy := false

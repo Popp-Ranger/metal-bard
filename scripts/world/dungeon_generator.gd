@@ -15,6 +15,9 @@ const FLOOR := 1
 
 const CORRIDOR_WIDTH := 3 # en cases (3 × 2 m = 6 m)
 
+## Largeur des couloirs (en cases) : CORRIDOR_WIDTH, ou plus étroite (sentiers du col de la montagne).
+var corridor_width := CORRIDOR_WIDTH
+
 var width := 100
 var height := 100
 var grid := PackedByteArray()
@@ -101,7 +104,7 @@ func _carve_rect(r: Rect2i) -> void:
 			set_cell(x, y, FLOOR)
 
 
-## Couloir en L, large de CORRIDOR_WIDTH cases.
+## Couloir en L, large de corridor_width cases.
 func _carve_corridor(a: Vector2i, b: Vector2i) -> void:
 	var horizontal_first := rng.randf() < 0.5
 	var corner := Vector2i(b.x, a.y) if horizontal_first else Vector2i(a.x, b.y)
@@ -113,8 +116,8 @@ func _carve_line(a: Vector2i, b: Vector2i) -> void:
 	var p := a
 	var step := Vector2i(signi(b.x - a.x), signi(b.y - a.y))
 	while true:
-		for oy in CORRIDOR_WIDTH:
-			for ox in CORRIDOR_WIDTH:
+		for oy in corridor_width:
+			for ox in corridor_width:
 				set_cell(p.x + ox, p.y + oy, FLOOR)
 		if p == b:
 			break
@@ -319,3 +322,121 @@ func generate_sealed(seed_value: int, room_count: int, max_door_cells: int) -> i
 			break
 		seed_value = seed_value % 999983 + 7919
 	return seed_value
+
+
+# --- Labyrinthe ------------------------------------------------------------------------------
+
+## Pas d'une case de labyrinthe (en cases de la grille) : allée de MAZE_PATH cases, mur d'une case.
+const MAZE_PATH := 2
+const MAZE_STEP := MAZE_PATH + 1
+## Arène du boss : un bloc de MAZE_ARENA × MAZE_ARENA cases de labyrinthe, dans le coin opposé au départ.
+const MAZE_ARENA := 5
+
+
+## Coin haut-gauche (dans la grille) de la case de labyrinthe (mx, my).
+func maze_origin(mx: int, my: int) -> Vector2i:
+	return Vector2i(2 + mx * MAZE_STEP, 2 + my * MAZE_STEP)
+
+
+## Vrai labyrinthe (parfait : un seul chemin entre deux points, des culs-de-sac partout) de `cols` × `rows` cases,
+## allées de 4 m et murs de 2 m, creusé par exploration en profondeur. Salle 0 : l'arène du boss, dans le coin
+## opposé au départ, où l'on n'entre que par une seule ouverture. Salle 1 : la salle de départ (2 × 2 cases,
+## dans le premier coin). Puis `chambers` petites salles (2 × 2 cases) semées dans le labyrinthe, où rôdent les
+## ennemis (elles ouvrent quelques boucles, sans enlever les culs-de-sac).
+func generate_maze(seed_value: int, cols: int = 14, rows: int = 14, chambers: int = 6) -> void:
+	rng.seed = seed_value
+	width = 4 + cols * MAZE_STEP
+	height = 4 + rows * MAZE_STEP
+	grid.resize(width * height)
+	grid.fill(EMPTY)
+	rooms.clear()
+	ambush_rooms.clear()
+	var arena_from := Vector2i(cols - MAZE_ARENA, rows - MAZE_ARENA)
+	var in_arena := func(c: Vector2i) -> bool: return c.x >= arena_from.x and c.y >= arena_from.y
+	var visited := {}
+	var stack: Array[Vector2i] = [Vector2i.ZERO]
+	visited[Vector2i.ZERO] = true
+	_carve_maze_cell(Vector2i.ZERO)
+	var dirs: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP]
+	while not stack.is_empty():
+		var cur: Vector2i = stack[-1]
+		var options: Array[Vector2i] = []
+		for d in dirs:
+			var n := cur + d
+			if n.x >= 0 and n.y >= 0 and n.x < cols and n.y < rows and not visited.has(n) and not in_arena.call(n):
+				options.append(n)
+		if options.is_empty():
+			stack.pop_back()
+			continue
+		var next: Vector2i = options[rng.randi() % options.size()]
+		visited[next] = true
+		_carve_maze_cell(next)
+		_carve_maze_link(cur, next)
+		stack.append(next)
+	# Arène du boss, ouverte d'un seul côté (face au labyrinthe, sur son flanc ouest).
+	var a := maze_origin(arena_from.x, arena_from.y)
+	var arena := Rect2i(a, Vector2i(MAZE_ARENA * MAZE_STEP - 1, MAZE_ARENA * MAZE_STEP - 1))
+	rooms.append(arena)
+	_carve_rect(arena)
+	var door_row := arena_from.y + rng.randi_range(1, MAZE_ARENA - 2)
+	_carve_maze_link(Vector2i(arena_from.x - 1, door_row), Vector2i(arena_from.x, door_row))
+	boss_room = 0
+	# Salle de départ (coin opposé), puis les petites salles semées dans le labyrinthe.
+	rooms.append(_maze_block(Vector2i.ZERO))
+	start_room = 1
+	var taken: Array[Rect2i] = [Rect2i(Vector2i.ZERO, Vector2i(3, 3)), Rect2i(arena_from - Vector2i.ONE, Vector2i(MAZE_ARENA + 1, MAZE_ARENA + 1))]
+	var attempts := 0
+	while rooms.size() < 2 + chambers and attempts < 400:
+		attempts += 1
+		var c := Vector2i(rng.randi_range(0, cols - 2), rng.randi_range(0, rows - 2))
+		var block := Rect2i(c, Vector2i(2, 2))
+		var free := true
+		for t in taken:
+			free = free and not t.grow(1).intersects(block)
+		if not free:
+			continue
+		taken.append(block)
+		rooms.append(_maze_block(c))
+	for i in range(1, rooms.size()):
+		_carve_rect(rooms[i])
+
+
+func _carve_maze_cell(c: Vector2i) -> void:
+	_carve_rect(Rect2i(maze_origin(c.x, c.y), Vector2i(MAZE_PATH, MAZE_PATH)))
+
+
+## Ouvre le mur entre deux cases voisines du labyrinthe.
+func _carve_maze_link(a: Vector2i, b: Vector2i) -> void:
+	var lo := maze_origin(mini(a.x, b.x), mini(a.y, b.y))
+	if a.y == b.y:
+		_carve_rect(Rect2i(lo + Vector2i(MAZE_PATH, 0), Vector2i(1, MAZE_PATH)))
+	else:
+		_carve_rect(Rect2i(lo + Vector2i(0, MAZE_PATH), Vector2i(MAZE_PATH, 1)))
+
+
+## Bloc de 2 × 2 cases de labyrinthe (5 × 5 cases de grille) à partir de la case `c`.
+func _maze_block(c: Vector2i) -> Rect2i:
+	return Rect2i(maze_origin(c.x, c.y), Vector2i(MAZE_STEP + MAZE_PATH, MAZE_STEP + MAZE_PATH))
+
+
+## Nombre de culs-de-sac du labyrinthe (cases de 2 × 2 dont une seule face est ouverte) : de quoi vérifier que c'est
+## un vrai labyrinthe.
+func maze_dead_ends(cols: int, rows: int) -> int:
+	var count := 0
+	for my in rows:
+		for mx in cols:
+			var o := maze_origin(mx, my)
+			if not is_floor(o.x, o.y):
+				continue
+			var open := 0
+			if is_floor(o.x + MAZE_PATH, o.y):
+				open += 1
+			if is_floor(o.x - 1, o.y):
+				open += 1
+			if is_floor(o.x, o.y + MAZE_PATH):
+				open += 1
+			if is_floor(o.x, o.y - 1):
+				open += 1
+			if open == 1:
+				count += 1
+	return count

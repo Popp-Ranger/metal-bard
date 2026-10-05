@@ -2,12 +2,14 @@
 
 Source : les packs « Stylized » fournis par Ulysse, déposés en zips (4K) dans `assets/textures/` (ignorés par git
 et par Godot). Seules les matières retenues sont ramenées en **1024 px** dans `assets/textures/<nom>/` :
-`<nom>_couleur.jpg`, `<nom>_normal.jpg` (convention OpenGL, celle de Godot) et, pour la roche de lave,
+`<nom>_couleur.jpg`, `<nom>_normal.jpg` (convention OpenGL, celle de Godot) et, pour la coulée de lave,
 `<nom>_emission.jpg` (fissures incandescentes).
 
 ```
-blender --background --factory-startup --python tools/textures/prepare_textures.py -- <dossier des zips décompressés>
+blender --background --factory-startup --python tools/textures/prepare_textures.py -- <dossier des zips décompressés> [nom...]
 ```
+
+Sans nom, toutes les textures sont refaites ; sinon, seulement celles nommées.
 
 Le dictionnaire `CHOIX` du script fait le lien nom du jeu → matière du pack. Pour changer une texture : changer la
 matière dans `CHOIX`, relancer le script, puis rouvrir le projet dans Godot (ou `--headless --import`).
@@ -27,6 +29,12 @@ matière dans `CHOIX`, relancer le script, puis rouvrir le projet dans Godot (ou
 | `briques` | Stylized_Rounded_Bricks_02 | murs de la taverne |
 | `herbe_terre` | Stylized_HandpaintedGrassAndDirt_01 | campagne de l'intro |
 | `terre` | Stylized_HandpaintedDirt_01 | bas-côtés, tas de terre et tombes ouvertes |
+| `herbe` | Stylized_15_Grass | prairie au pied de la montagne (chapitre 3) |
+| `falaise` | Stone_04 | falaises de la montagne et du col, rochers et élémentaires de roche |
+| `terre_grotte` | Stylized_DirtGround_01 | sol des grottes des gobelins |
+| `roche_grotte` | Stone_05 | parois et stalagmites des grottes |
+| `neige` | Stylized_09_Snow02 | col de la montagne, labyrinthe, congères |
+| `glace` | Stylized_18_Ice | murs du Labyrinthe du Destin |
 
 ## Dans le jeu
 

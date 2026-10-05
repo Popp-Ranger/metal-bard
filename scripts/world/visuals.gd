@@ -267,6 +267,26 @@ static func make_environment(kind: String) -> WorldEnvironment:
 		env.fog_light_color = Color(0.12, 0.05, 0.08)
 		env.fog_density = 0.002
 		env.fog_sky_affect = 0.0
+	elif kind == "day":
+		# Plein air (prairie, flancs de la montagne) : ciel bleu pâle, brume de vallée au loin.
+		env.background_color = Color(0.52, 0.66, 0.82)
+		env.ambient_light_color = Color(0.75, 0.8, 0.9)
+		env.ambient_light_energy = 0.75
+		env.fog_enabled = true
+		env.fog_light_color = Color(0.62, 0.72, 0.86)
+		env.fog_density = 0.004
+	elif kind == "snow":
+		# Haute montagne (col, labyrinthe de glace) : ciel blanc de neige, brume froide.
+		env.background_color = Color(0.7, 0.76, 0.84)
+		env.ambient_light_color = Color(0.72, 0.8, 0.95)
+		env.ambient_light_energy = 0.6
+		env.fog_enabled = true
+		env.fog_light_color = Color(0.7, 0.76, 0.86)
+		env.fog_density = 0.004
+	elif kind == "cave":
+		# Grottes des gobelins : noir, ambiance terreuse à peine verdâtre.
+		env.ambient_light_color = Color(0.45, 0.48, 0.4)
+		env.ambient_light_energy = 0.48
 	else:
 		env.ambient_light_color = Color(0.55, 0.5, 0.48)
 		env.ambient_light_energy = 0.55

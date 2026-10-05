@@ -256,6 +256,9 @@ func _enter_temple() -> void:
 # --- L'épreuve de Back Jlack ---------------------------------------------------------------
 
 func _on_story_action(action: String) -> void:
+	if action == "retour_epoque":
+		_back_to_our_time()
+		return
 	if action != "epreuve":
 		return
 	await Events.dialogue_closed
@@ -264,6 +267,15 @@ func _on_story_action(action: String) -> void:
 	hero.model.solo_pose(true)
 	Events.notify("L'épreuve : joue le Chant de fer, note pour note. Il faut 80 % de justesse. Touches 1 2 3 4 !", Events.COLOR_GOLD)
 	Events.solo_requested.emit("epreuve", 0) # la partition vient du morceau (data/epreuve_solo.json)
+
+
+## La partition rapportée à Back Jlack : retour à la taverne, dans notre époque (Ozz connaît peut-être le Pick du Destin).
+func _back_to_our_time() -> void:
+	await Events.dialogue_closed
+	GameState.flags["retour_epoque"] = true
+	GameState.location = {"scene": Router.TAVERN}
+	GameState.save_game()
+	Router.go_to(Router.TAVERN)
 
 
 ## Résultat de l'épreuve : au moins 80 % de notes justes pour ouvrir le temple (du premier coup : bénédiction).

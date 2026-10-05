@@ -33,6 +33,10 @@
 		"partition_maudite": {
 			"nom": "Partition maudite du Riff Ultime",
 			"desc": "Arrachée à l'ange déchu. Ne se joue qu'avec le Pick du Destin : sans lui, la foudre frappe celui qui ose. Elle servira contre Mèhn-Strïm."
+		},
+		"pick_du_destin": {
+			"nom": "Pick du Destin",
+			"desc": "Le trésor du Labyrinthe du Destin, que gardait le Minotaure : un médiator d'or noir qui bourdonne tout seul. Avec lui, la partition maudite du Riff Ultime peut enfin se jouer... contre Mèhn-Strïm."
 		}
 	},
 	"reliques": {

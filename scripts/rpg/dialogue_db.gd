@@ -15,6 +15,7 @@ const NPCS := {
 	"sylvaine": {"name": "Sylvaine Luth-d'Argent", "title": "Barde rivale", "color": Color(0.6, 0.9, 0.85)},
 	"katrkar": {"name": "Katrkar", "title": "Aventurier brisé", "color": Color(0.95, 0.65, 0.45)},
 	"backjlack": {"name": "Back Jlack", "title": "Le Sage du Rock", "color": Color(1.0, 0.62, 0.25)},
+	"minotaure": {"name": "Le Minotaure", "title": "Gardien du Labyrinthe du Destin", "color": Color(1.0, 0.55, 0.35)},
 	"client": {"name": "Client", "title": "", "color": Color(0.8, 0.78, 0.72)},
 	"tableau": {"name": "Tableau des quêtes", "title": "", "color": Color(0.8, 0.75, 0.6)},
 }
@@ -72,6 +73,8 @@ static func get_dialogue(id: String) -> Dictionary:
 			return _backjlack_reussite()
 		"backjlack_echec":
 			return _backjlack_echec()
+		"minotaure_duel":
+			return _minotaure_duel()
 	if id.begins_with("client|"):
 		return _client(id.substr(7))
 	return {"lines": [["???", "..."]], "choices": []}
@@ -119,7 +122,7 @@ static func _gerald() -> Dictionary:
 		QuestDB.State.ACTIVE:
 			return {
 				"lines": [
-					[g, "Ozz, le vieux mage près du cercle de runes, vous ouvrira un portail vers les catacombes."],
+					[g, "Ozz, le grand mage près du cercle de runes, vous ouvrira un portail vers les catacombes."],
 					[g, "Faites vite... Plumeau a peur du noir. Et des squelettes. Et des grenouilles."],
 				],
 				"choices": [["« J'y cours. »", "close"]],
@@ -176,6 +179,9 @@ static func _gerald_plea(g: String, refusals: int) -> Dictionary:
 
 
 static func _zarathos() -> Dictionary:
+	var chapter3 := _ozz_labyrinthe()
+	if not chapter3.is_empty():
+		return chapter3
 	var z := npc_name("zarathos")
 	var state := GameState.quest_state("plumeau")
 	if state == QuestDB.State.ACTIVE:
@@ -194,7 +200,7 @@ static func _zarathos() -> Dictionary:
 				[z, "Quand tu l'auras libérée, je t'ouvrirai un portail de retour juste à côté de toi. Comment ? Je suis mage. Je fais des trucs de mage."],
 			],
 			"choices": [
-				["« Ouvre le portail, vieil homme. »", "portal"],
+				["« Ouvre le portail, grand mage. »", "portal"],
 				["« Pas encore. »", "close"],
 			],
 		}
@@ -213,6 +219,77 @@ static func _zarathos() -> Dictionary:
 		],
 		"choices": [["« Entendu. »", "close"]],
 	}
+
+
+## Chapitre 3 : le « pic » du Destin. Vide tant que la quête n'est pas débloquée (après la partition maudite).
+static func _ozz_labyrinthe() -> Dictionary:
+	var z := npc_name("zarathos")
+	var stage := Expedition.stage_name(Expedition.current_stage())
+	match GameState.quest_state("labyrinthe_destin"):
+		QuestDB.State.AVAILABLE:
+			return {
+				"lines": [
+					[hero(), "Ozz ! Toi qui sais tout... As-tu déjà entendu parler du Pick du Destin ?"],
+					[z, "Le pic du Destin ? Évidemment. Tout le monde connaît le pic du Destin."],
+					[z, "Il se trouve dans la montagne du Dest... dans le Labyrinthe du Destin. Pardon. C'est un labyrinthe, en haut d'une montagne. Ça porte à confusion."],
+					[hero(), "Un pick. Un médiator. Pas un sommet."],
+					[z, "...Ah. Eh bien figure-toi que c'est le même endroit. Le trésor de ce labyrinthe, c'est ton médiator."],
+					[z, "Et il est gardé par, ni plus ni moins... LE MINOTAURE."],
+					[NARRATOR, "Un coup de tonnerre retentit au loin. Derrière le comptoir, Grokk laisse tomber une chope."],
+					[z, "Le chemin est long. D'abord la prairie, au pied de la montagne. Puis les flancs, où rôde un Bigfoot qui déteste la musique."],
+					[z, "Ensuite les grottes des gobelins, à l'intérieur de la montagne. Leur chef est un troll des cavernes : il se régénère, alors tape vite et tape fort."],
+					[z, "Puis le col. Pas de murs, juste des précipices. Et un élémentaire de glace grand comme la taverne."],
+					[z, "Et enfin, le Labyrinthe : des élémentaires de glace et de roche à chaque détour. Et au centre... lui."],
+					[z, "Je t'ouvre un portail jusqu'au pied de la montagne, et un autre après chaque étape. Comment ? Je suis le grand mage. Je fais des trucs de grand mage."],
+				],
+				"choices": [
+					["« En route pour le Labyrinthe du Destin ! »", "accept:labyrinthe_destin+portal"],
+					["« Laisse-moi d'abord finir mon thé glacé. »", "close"],
+				],
+			}
+		QuestDB.State.ACTIVE:
+			if GameState.flags.get("portal_open", false):
+				return {
+					"lines": [[z, "Le portail t'attend : %s. Il ne tiendra pas éternellement. Enfin si, mais ma patience non." % stage]],
+					"choices": [["« J'y vais. »", "close"]],
+				}
+			return {
+				"lines": [
+					[z, "Tu reprends l'ascension ? Je te renvoie là où tu t'étais arrêté%s : %s." % [GameState.g("", "e"), stage]],
+					[z, "Et n'oublie pas : au Minotaure, on ne répond pas avec une épée. On répond avec un solo."],
+				],
+				"choices": [["« Ouvre le portail, grand mage. »", "portal"], ["« Pas encore. »", "close"]],
+			}
+		QuestDB.State.OBJECTIVE_DONE:
+			return {
+				"lines": [
+					[z, "Ce bourdonnement... LE PICK DU DESTIN ! Tu as vaincu le Minotaure ?"],
+					[hero(), "En duel de guitare."],
+					[z, "Évidemment. Avec la partition du Riff Ultime et ce pick, Mèhn-Strïm a du souci à se faire."],
+					[z, "Garde-les précieusement. La suite, je la sens venir... et elle sent le soufre."],
+				],
+				"choices": [["Montrer le Pick du Destin à Ozz (terminer la quête)", "turn_in:labyrinthe_destin"]],
+			}
+		QuestDB.State.TURNED_IN:
+			return {
+				"lines": [[z, "Le Pick du Destin et la partition du Riff Ultime... Il ne te manque plus qu'un dragon. (Suite de la légende à venir !)"]],
+				"choices": [["« Rock on, grand mage. »", "close"]],
+			}
+	return {}
+
+
+## Le Minotaure, à 5 % de ses PV : il impose le duel de guitare.
+static func _minotaure_duel() -> Dictionary:
+	var m := npc_name("minotaure")
+	return {
+		"lines": [
+			[m, "ASSEZ ! Tu crois me vaincre à coups de manche, petit%s troubadour ?" % GameState.g("", "e")],
+			[m, "Dans ce labyrinthe, on règle ça à l'ancienne : UN DUEL DE GUITARE."],
+			[m, "Tiens mon solo, note pour note, à 80 % au moins, et le Pick du Destin est à toi. Sinon... je fais de toi un médiator."],
+		],
+		"choices": [["« Branche-toi, la vache. On va voir qui a le plus gros son. »", "story:duel"]],
+	}
+
 
 
 static func _brunhilde() -> Dictionary:
@@ -276,6 +353,7 @@ static func _inconnue() -> Dictionary:
 			return {
 				"lines": [
 					[i, "Tu as la partition. Il te manque le pick. La légende n'est pas finie, barde..."],
+					[i, "Le Pick du Destin... Ozz, le grand mage, a vu passer bien des légendes. Va lui demander."],
 					[i, "Quand le Silence viendra, joue plus fort que lui."],
 				],
 				"choices": [
@@ -320,7 +398,7 @@ static func _backjlack() -> Dictionary:
 					[b, "Le pick n'était pas dans ce temple... Mais avec cette partition, Mèhn-Strïm a du souci à se faire. Garde-la précieusement."],
 					[b, "Repose tes doigts, %s. La suite de la légende s'écrira bientôt." % GameState.g("petit", "petite")],
 				],
-				"choices": [["« Rock on. » (terminer la quête)", "turn_in:pick_destin"]],
+				"choices": [["« Rock on. » (terminer la quête et rentrer à votre époque)", "turn_in:pick_destin+story:retour_epoque"]],
 			}
 		QuestDB.State.TURNED_IN:
 			return {
@@ -492,7 +570,7 @@ const CLIENT_LINES := [
 	"Santé, barde ! Joue-nous quelque chose qui fait trembler les chopes !",
 	"La bière de Grokk, c'est la meilleure. Ne lui dis pas que j'ai dit ça, il augmenterait les prix.",
 	"On dit que les squelettes volent les cloches des temples. Qui vole une cloche, sérieusement ?",
-	"J'ai vu un portail violet s'ouvrir tout seul près du vieux mage. J'ai renversé ma soupe.",
+	"J'ai vu un portail violet s'ouvrir tout seul près du grand mage. J'ai renversé ma soupe.",
 	"Ne t'assieds pas à la table près de la cheminée : Borin y a laissé ses bottes.",
 	"Tu as essayé les mannequins au sous-sol ? Moi, j'ai perdu contre l'un d'eux.",
 	"Il paraît que les chambres de l'étage sont hantées. Enfin, surtout la n°4.",

@@ -257,6 +257,13 @@
 - [x] Barre de sorts dans un cadre de fer à crânes, pointes et chaînes ; cases de fer
 - [x] Panneaux et boutons des menus en fer noirci (rendus dans Blender, art/hud/build_hud.py) — voir docs/HUD.md
 
+## ✅ v0.1.47 — Chapitre 3 : le Labyrinthe du Destin
+- [x] Back Jlack renvoie le héros dans son époque avec la partition ; Ozz, le grand mage, connaît le « pic » du Destin : un labyrinthe en haut d'une montagne, gardé par le Minotaure (quête « labyrinthe_destin »)
+- [x] Expédition en cinq niveaux générés (scenes/expedition.tscn) : prairie au pied de la montagne, flancs (boss : le Bigfoot), grottes des gobelins (boss : le troll des cavernes, qui se régénère), col sans murs au-dessus des précipices (boss : l'élémentaire de glace colossal), et un vrai labyrinthe de glace (DungeonGenerator.generate_maze)
+- [x] Nouveaux ennemis : gobelins (gourdin, coutelas ou lance), élémentaires de roche et de glace
+- [x] Le Minotaure : charge, fendoir, et à 5 % de PV un duel de guitare sur « Edge of the Cliff » (94 notes détectées, 80 % requis) ; le Pick du Destin sur son corps
+- [x] Nouvelles textures : herbe, falaise, terre et roche des grottes, neige, glace
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

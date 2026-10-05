@@ -72,10 +72,13 @@ func _ready() -> void:
 		spawn.y = 0.0
 	GameState.flags.erase("from_crypt")
 	spawn_hero(spawn)
+	if GameState.flags.get("retour_epoque", false):
+		GameState.flags.erase("retour_epoque")
+		Events.notify("De retour dans votre époque, la partition maudite sous le bras. Reste à trouver le Pick du Destin... Ozz, le grand mage, en a peut-être entendu parler.", DialogueDB.npc_color("zarathos"))
 	if GameState.flags.get("intro_arrival", false):
 		GameState.flags.erase("intro_arrival")
 		_arrival_scene()
-	if GameState.flags.get("portal_open", false) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE:
+	if GameState.flags.get("portal_open", false) and GameState.quest_state(_portal_quest()) == QuestDB.State.ACTIVE:
 		_open_portal()
 	Events.portal_opened.connect(_open_portal)
 	Events.story_action.connect(_on_story_action)
@@ -385,11 +388,28 @@ func _open_portal() -> void:
 		return
 	_portal = Portal.new()
 	_portal.position = _rune_circle
-	_portal.prompt = "Entrer dans les Catacombes Suintantes"
-	_portal.target_scene = Router.DUNGEON
+	_portal.prompt = _portal_prompt()
+	_portal.target_scene = _quest_scene()
 	_portal.on_enter = _on_enter_dungeon
 	add_child(_portal)
 	Events.camera_shake.emit(0.15, 0.5)
+
+
+## Quête dont le portail d'Ozz mène au donjon : celle en cours (Plumeau par défaut).
+func _portal_quest() -> String:
+	return GameState.active_quest if not GameState.active_quest.is_empty() else "plumeau"
+
+
+## Scène du donjon de la quête en cours : les Catacombes, ou l'expédition du chapitre 3 (QuestDB, dungeon.scene).
+func _quest_scene() -> String:
+	var cfg: Dictionary = QuestDB.get_quest(_portal_quest()).get("dungeon", {})
+	return str(cfg.get("scene", Router.DUNGEON))
+
+
+func _portal_prompt() -> String:
+	if _quest_scene() == Router.EXPEDITION:
+		return "Portail d'Ozz : %s" % Expedition.stage_name(Expedition.current_stage())
+	return "Entrer dans les Catacombes Suintantes"
 
 
 ## Portail à XP : de nouvelles Cryptes, tirées au hasard (même graine pour toute la coop).
@@ -632,7 +652,9 @@ func _open_blue_portal() -> void:
 	blue_portal.blue = true
 	blue_portal.position = _blue_portal_pos
 	blue_portal.prompt = "Portail bleu : retourner dans les catacombes"
-	blue_portal.target_scene = Router.DUNGEON
+	if _quest_scene() == Router.EXPEDITION:
+		blue_portal.prompt = "Portail bleu : retourner dans l'expédition (%s)" % Expedition.stage_name(Expedition.current_stage())
+	blue_portal.target_scene = _quest_scene()
 	blue_portal.on_enter = _on_enter_blue_portal
 	add_child(blue_portal)
 

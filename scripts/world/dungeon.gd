@@ -19,6 +19,8 @@ var _cage_interact: Interactable
 var _has_key := false
 var _cage_open := false
 var _wall_material: ShaderMaterial
+## Blocs de mur visibles (un par case de mur) ; leurs collisions sont à part.
+var _wall_mmi: MultiMeshInstance3D
 var _rng := RandomNumberGenerator.new()
 ## État persistant (référence vers GameState.dungeon_state).
 var _state := {}
@@ -66,9 +68,7 @@ func _ready() -> void:
 		_load_map(map_path)
 		seed_value = 1 # décor (os, sang...) toujours tiré de la même façon
 	else:
-		# La salle du boss est fermée à clé : on garde la première graine où toutes les autres
-		# salles restent accessibles sans la traverser.
-		seed_value = gen.generate_sealed(seed_value, int(cfg.get("rooms", 10)), DOOR_MAX_CELLS)
+		seed_value = _generate(seed_value, cfg)
 	_store_seed(seed_value)
 	_rng.seed = seed_value
 
@@ -82,7 +82,7 @@ func _ready() -> void:
 	else:
 		_state = {"dead": [], "doors": [], "rooms": [], "chests": []}
 		GameState.reset_run()
-	setup_level("dungeon", str(cfg.get("name", "Donjon")))
+	setup_level(_environment_kind(), str(cfg.get("name", "Donjon")))
 	hud.show_kill_counter()
 	_build_floor()
 	_build_walls()
@@ -115,6 +115,17 @@ func _ready() -> void:
 	Events.quest_item_added.connect(_on_quest_item_added)
 	Sfx.play_playlist("res://audio/music/donjons", -8.0) # musiques des donjons, au hasard
 	_arrival_notice()
+
+
+## Génère le plan du donjon et renvoie la graine retenue. La salle du boss est fermée à clé : on garde la première
+## graine où toutes les autres salles restent accessibles sans la traverser.
+func _generate(seed_value: int, cfg: Dictionary) -> int:
+	return gen.generate_sealed(seed_value, int(cfg.get("rooms", 10)), DOOR_MAX_CELLS)
+
+
+## Ambiance lumineuse (Visuals.make_environment).
+func _environment_kind() -> String:
+	return "dungeon"
 
 
 ## Réglages du donjon (nom, thème, salles, niveau des ennemis...) : ceux de la quête en cours (QuestDB).
@@ -273,11 +284,11 @@ func _build_walls() -> void:
 		col.shape = shape
 		col.position = p
 		body.add_child(col)
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
+	_wall_mmi = MultiMeshInstance3D.new()
+	_wall_mmi.multimesh = mm
 	_wall_material = DungeonThemes.wall_material(theme)
-	mmi.material_override = _wall_material
-	add_child(mmi)
+	_wall_mmi.material_override = _wall_material
+	add_child(_wall_mmi)
 
 
 func _decorate() -> void:

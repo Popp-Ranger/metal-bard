@@ -15,7 +15,7 @@
 
 ## 1. Pitch
 
-Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Chèvre Fringante**, il accepte des quêtes, traverse les portails du vieux mage Ozz et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
+Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Chèvre Fringante**, il accepte des quêtes, traverse les portails d'Ozz, le grand mage, et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
 
 ## 2. Piliers de conception
 
@@ -54,6 +54,8 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 | **Catacombes Suintantes** | Donjon 1 (implémenté) | Pierre humide, mousse, flaques de bave verte, torches |
 | **Cryptes de la Cathédrale** | Portail à XP (sous-sol de la taverne, implémenté) | Sous-sol d'une cathédrale, basalte rougeoyant, ruisseaux de lave en fusion (ponts de pierre) ; régénérées à chaque passage |
 | **Temple du Dragon** | Chapitre 2, autre univers (implémenté) | Marches interminables sous l'orage, parvis, façade à tête de dragon ; dedans : vitraux, damier de marbre, nef à la fontaine de sang |
+| **La montagne du Destin** | Chapitre 3 (implémenté) | Prairie au pied de la montagne, flancs rocheux, grottes des gobelins, col enneigé au-dessus des précipices |
+| **Le Labyrinthe du Destin** | Chapitre 3 (implémenté) | Labyrinthe de murs de glace au sommet de la montagne ; au centre, l'arène du Minotaure |
 | Le Beffroi Muet | Donjon 2 | Cloches arrachées, vent, corbeaux squelettes |
 | La Fosse aux Tambours | Donjon 3 | Forge souterraine, rythmes tribaux inversés |
 | L'Opéra Englouti | Donjon final | Salle de concert noyée, orgue d'os, Morne |
@@ -63,7 +65,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 - **Gérald Pissenlit** — petit fromager « de la Comt... du coin », pieds nus fort bien épilés, éleveur de hibours (pour le lait). Donneur de la première quête ; si on refuse, il revient à la charge jusqu'à offrir du fromage d'hibours.
 - **Plumeau** — bébé hibours adoré de Gérald, mascotte ; suit le héros après le sauvetage et apparaît ensuite dans la taverne.
 - **Grokk Chope-de-Fer** — tavernier orc de la Chèvre Fringante (réputée pour le meilleur brie de tous les comtés) : potions, chambre, rachat de reliques, rumeurs.
-- **Ozz** — vieux mage des portails, transport vers les donjons.
+- **Ozz** — le grand mage des portails (rockeur en perfecto et lunettes violettes), transport vers les donjons.
 - **L'Inconnue encapuchonnée** — fil rouge narratif, annonce Morne.
 - **Borin Barbe-de-Bière** — nain ivre, répliques aléatoires.
 - **Sylvaine Luth-d'Argent** — barde elfe rivale ; futur duel de solos.
@@ -160,6 +162,13 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 | **Diablotin** | 9 (+3/niv.) | 12 | +4, 1d6+1 (hachette) | Petit démon rouge cornu, ailes de chauve-souris : vole droit sur le héros (0,45 × sa vitesse), détecte à 6 m |
 | **Démon cornu** | 32 (+9/niv.) | 14 | +5, 2d6+2 (grande hache) | Colosse de 2,4 m aux cornes de bélier et sabots ; le **Gardien des Cryptes** (30 % plus grand) garde la sortie des Cryptes |
 | **L'Ange déchu** (boss) | 260 (+40/niv.) | 14 | +6, 2d8+2 (guitare) | Boss du Temple du Dragon : riff infernal (la foudre tombe sur trois cercles), phase 2 sous 50 % (trois diablotins), garde la partition maudite |
+| **Gobelin** | 10 (+3/niv.) | 12 | +4, 1d6+1 | Petit et vert, rapide (0,32 × la vitesse du héros), détecte à 5 m ; gourdin, coutelas ou lance (plus d'allonge) |
+| **Élémentaire de roche** | 30 (+8/niv.) | 15 | +5, 2d6+2 | Rochers empilés liés par du magma ; très lent, coriace |
+| **Élémentaire de glace** | 20 (+6/niv.) | 13 | +5, 1d8+2 | Cristaux de glace flottants, rapide (0,28) |
+| **Le Bigfoot** (boss) | 210 (+32/niv.) | 13 | +6, 2d8+3 | Flancs de la montagne : lancer de rocher (cercle au sol), martèlement (onde de 4 m), rage sous 50 % |
+| **Le Troll des cavernes** (boss) | 260 (+35/niv.) | 14 | +6, 2d10+3 | Grottes : écrasement à la massue, régénération (1,5 % PV/s sans coup reçu depuis 3 s), appelle 4 gobelins à 50 % |
+| **L'Élémentaire de glace colossal** (boss) | 230 (+35/niv.) | 15 | +6, 2d8+3 | Col : pics de glace (trois cercles), blizzard sous 50 % (deux élémentaires de glace) |
+| **Le Minotaure** (boss) | 340 (+45/niv.) | 15 | +7, 2d10+4 | Labyrinthe : fendoir, charge (traînée de cercles) ; à 5 % de PV, **duel de guitare** (voir 10.4) |
 | *Prévus* : squelette archer, banshee (hurlement qui coupe la régénération de dB), golem de silence (immunisé au son), chef d'orchestre liche | | | | |
 
 Machine à états des ennemis : **Errance → Poursuite (≤ 4 m) → Attaque (au contact) → Sonné (après un gros recul) → Mort**. Ils abandonnent la poursuite au-delà de 9 m et réagissent immédiatement s'ils sont touchés.
@@ -201,9 +210,21 @@ Le portail démoniaque du sous-sol de la taverne plonge dans les **Cryptes de la
 4. **L'épreuve** : jouer le solo du sage, **« Chant de fer »** (`audio/riffs/chant_de_fer.mp3`, 24,7 s), **en entier** : une note du mini-jeu sur chacune des 78 notes du morceau (détectées dans l'enregistrement par `tools/audio/detect_notes.py` → `data/epreuve_solo.json`, la corde suit la hauteur de la note) ; il faut **80 %** de notes justes au moins. Échec : « reviens quand tu seras à la hauteur ». Réussite du premier coup : **+10 % de dégâts pendant 20 min**. La porte du temple s'ouvre dans un coup de tonnerre, des éclairs tombent du ciel ; Back Jlack demande de retrouver le **Pick du Destin** (un médiator, quoi) qui permettrait de jouer le riff ultime.
 5. **Temple du Dragon** (donjon généré, thème « temple ») : allée centrale de la nef, **fontaine immense** (trois fois la taille du héros) : un ange déchu à la guitare infernale d'où jaillit du **sang**. Passé la fontaine, **une dizaine de démons rouges ailés** fondent sur le héros, hachettes levées ; vaincus, un **éclair** frappe dans un coup de tonnerre. Puis des salles à vitraux, démons et squelettes.
 6. **Boss : l'ange déchu** et sa guitare. Il laisse la **partition maudite du Riff Ultime**, qui ne se joue qu'avec le Pick du Destin (sinon la foudre frappe : bouton « Jouer » dans l'inventaire). Elle servira plus tard contre Mèhn-Strïm.
-7. **Back Jlack**, sur le parvis : 1200 XP, 150 médiators. Le Pick du Destin reste à trouver...
+7. **Back Jlack**, sur le parvis : 1200 XP, 150 médiators. Le Pick du Destin reste à trouver... Back Jlack renvoie le héros dans son époque, à la taverne.
 
-### 10.4 Quêtes suivantes (à produire)
+### 10.4 Quête 3 — « Le Labyrinthe du Destin » (implémentée)
+1. **Retour dans notre époque** : la partition en poche, Back Jlack renvoie le héros à la Chèvre Fringante. Reste à trouver le Pick du Destin.
+2. **Ozz, le grand mage**, connaît le « pic » du Destin : il est dans la montagne du Dest... dans le **Labyrinthe du Destin**, un labyrinthe en haut d'une montagne, dont le trésor (le pick, justement) est gardé par, ni plus ni moins, **LE MINOTAURE**. Il ouvre un portail jusqu'au pied de la montagne, puis un autre après chaque étape.
+3. **L'expédition** (`scenes/expedition.tscn`), cinq niveaux générés qui se suivent ; chacun reste tel quel tant qu'il n'est pas terminé (portail bleu T, retour à la taverne : on reprend au même niveau) :
+   1. **La prairie au pied de la montagne** : haies, arbres, fleurs ; gobelins et quelques élémentaires de roche. Au bout, une bande de gobelins garde le sentier.
+   2. **Les flancs de la montagne** : falaises, sapins, congères ; gobelins et élémentaires de roche. **Boss : le Bigfoot.**
+   3. **Les grottes des gobelins**, à l'intérieur de la montagne : campements (feux, tentes), champignons lumineux, cristaux. **Boss : le troll des cavernes.**
+   4. **Le col de la montagne** : **pas de murs, des précipices** (sentiers étroits au-dessus du vide, la vallée dans la brume, drapeaux de prière, neige au vent) ; élémentaires de glace et de roche. **Boss : l'élémentaire de glace colossal.**
+   5. **Le Labyrinthe du Destin** : un **vrai labyrinthe** de glace (allées de 4 m, culs-de-sac, petites salles où rôdent les élémentaires de glace et de roche, aventuriers pris dans la glace), généré à chaque passage ; au bout, l'arène du Minotaure.
+4. **Le Minotaure** : à **5 % de ses PV**, il jette sa hache, sort sa guitare et impose un **duel de guitare** : le solo « Edge of the Cliff » (`audio/riffs/edge_of_the_cliff.mp3`), une note du mini-jeu sur chacune des 94 notes détectées (`data/duel_minotaure.json`), **80 %** de notes justes au moins. Gagné : il s'incline et tombe, le **Pick du Destin** sur son corps. Perdu : il foudroie le héros d'un accord (25 % des PV, jamais mortel), reprend 35 % de ses PV, et le combat reprend (nouveau duel à 5 %).
+5. Le pick ramassé, un portail d'Ozz ramène à la taverne ; **Ozz** : 2 500 XP, 300 médiators. Avec le pick, la partition maudite ne foudroie plus... mais le Riff Ultime attendra Mèhn-Strïm.
+
+### 10.5 Quêtes suivantes (à produire)
 | Quête | Donneur | Donjon | Boss | Mécanique nouvelle |
 |---|---|---|---|---|
 | La Cloche Muette | Le prêtre du village | Beffroi Muet | Le Sonneur Décharné | Zones de silence où les sorts sont impossibles |

@@ -34,8 +34,9 @@ var _end_t := 0.0
 ## "foudre" (Solo de la Foudre, 5 notes), "endiable" (Solo endiablé) ou "ballade" (Ballade
 ## réparatrice : le vrai solo de la musique de la taverne) ou "riff" (Riff électrique : une seule note à
 ## 90 BPM, la 1re jouée en lançant le sort) ou "epreuve" (épreuve de Back Jlack : le solo du sage « Chant de fer »
-## en entier, une note sur chacune de ses notes, voir data/epreuve_solo.json ; il faut 80 %).
-## Tous sauf le Solo de la Foudre et l'épreuve s'arrêtent à la première fausse note.
+## en entier, une note sur chacune de ses notes, voir data/epreuve_solo.json ; il faut 80 %) ou "duel" (duel contre le
+## Minotaure, même principe sur « Edge of the Cliff », data/duel_minotaure.json ; 80 % aussi).
+## Tous sauf le Solo de la Foudre, l'épreuve et le duel s'arrêtent à la première fausse note.
 var mode := "foudre"
 ## Extrait musical de la Ballade : lancé quand _t atteint _clip_at, à partir de _clip_offset.
 var _clip_source := ""
@@ -60,11 +61,11 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 	_notes.clear()
 	var t := LEAD_TIME
 	var last_lane := -1
-	if mode == "ballade" or mode == "epreuve":
+	if mode in CHARTED:
 		# Ballade (le solo de la musique de la taverne) et épreuve de Back Jlack (le solo du sage en entier) :
 		# une note par note du morceau, détectées dans l'enregistrement (tools/audio/detect_notes.py).
 		note_count = 0
-		var chart := chart_of(BALLADE_CHART_PATH if mode == "ballade" else EPREUVE_CHART_PATH)
+		var chart := chart_of(str(CHARTED[mode]))
 		for n: Dictionary in chart.get("notes", []):
 			_notes.append({"lane": int(n["lane"]), "time": LEAD_TIME + float(n["t"]), "judged": false, "hit": false})
 		t = LEAD_TIME + float(chart.get("duration", 10.0))
@@ -138,7 +139,7 @@ func _process(delta: float) -> void:
 			n["judged"] = true
 			_set_feedback("RATÉ", Color(1.0, 0.35, 0.3))
 			Sfx.play("dud", -10.0)
-			if mode != "foudre" and mode != "epreuve":
+			if mode not in ["foudre", "epreuve", "duel"]:
 				_finish() # fausse note : la transe se brise / la ballade s'interrompt
 				return
 	if _t >= _end_t and _all_judged():
@@ -224,8 +225,8 @@ func _draw() -> void:
 	var panel := Rect2(origin, size)
 	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
-	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "riff": "RIFF", "epreuve": "L'ÉPREUVE DE BACK JLACK"}
-	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "90 BPM", "epreuve": "80 % requis"}
+	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "riff": "RIFF", "epreuve": "L'ÉPREUVE DE BACK JLACK", "duel": "DUEL : LE MINOTAURE"}
+	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "90 BPM", "epreuve": "80 % requis", "duel": "80 % requis"}
 	var riff := 1 if mode == "riff" else 0 # la 1re note du riff est partie avec le sort
 	draw_string(font, origin + Vector2(0, 42), str(titles.get(mode, "SOLO")), HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
 	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits + riff, _notes.size() + riff, str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
@@ -268,6 +269,10 @@ func _draw() -> void:
 
 const BALLADE_CHART_PATH := "res://data/ballade_solo.json"
 const EPREUVE_CHART_PATH := "res://data/epreuve_solo.json"
+## Duel contre le Minotaure (Labyrinthe du Destin) : « Edge of the Cliff », audio/riffs/edge_of_the_cliff.mp3.
+const DUEL_CHART_PATH := "res://data/duel_minotaure.json"
+## Solos joués sur un vrai morceau, une note du mini-jeu par note détectée (mode -> partition).
+const CHARTED := {"ballade": BALLADE_CHART_PATH, "epreuve": EPREUVE_CHART_PATH, "duel": DUEL_CHART_PATH}
 ## Le Chant de fer joué 20 % plus fort que les autres solos (amplitude × 1,2, soit +1,6 dB).
 const EPREUVE_GAIN_DB := 1.58
 static var _chart_cache := {}
