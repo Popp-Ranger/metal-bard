@@ -111,9 +111,9 @@ Concerne les héros personnalisés (création de personnage, coop), les clients 
 
 **Repos des PNJ (v0.1.30).** Les PNJ à corps procédural (clients, Gérald...) se reposent avec `pnjPose`
 (style « pnj_corps », clip `idle_pnj` de `assets/animations/squelettes.glb`, mode `clips` du script) ;
-Zarathos aussi (`idle` de son glb) ; Grokk le tavernier avec `Orc Idle`. Dans `retarget_mixamo.py`, un PNJ
+Ozz aussi (`idle` de son glb) ; Grokk le tavernier avec `Orc Idle`. Dans `retarget_mixamo.py`, un PNJ
 importé peut prendre un clip source sous un autre nom (`CHARACTERS`, ex. `{"idle": "idle_orc", ...}`).
-Gérald, Zarathos et l'Inconnue, autrefois des silhouettes figées, sont désormais des corps articulés
+Gérald, Ozz et l'Inconnue, autrefois des silhouettes figées, sont désormais des corps articulés
 en costume (`Npc.COSTUMES` et `_dress`) : chapeau de paille et salopette, robe, chapeau pointu et
 bâton tenu en main, long manteau et capuche.
 

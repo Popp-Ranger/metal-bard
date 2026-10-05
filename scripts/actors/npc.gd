@@ -2,7 +2,7 @@ class_name Npc
 extends Node3D
 ## Personnage non joueur. [E] (ou clic) pour lui parler (voir DialogueDB).
 ## Apparence : un modèle généré avec l'outil de création de personnage (HeroModel, `look`) ; les PNJ
-## à costume (Gérald, Zarathos, l'Inconnue) y ajoutent leurs accessoires (voir COSTUMES et _dress).
+## à costume (Gérald, Ozz, l'Inconnue) y ajoutent leurs accessoires (voir COSTUMES et _dress).
 ## Tous ont la posture et la démarche de Riffald (voir LocoAnimator).
 ## Peut marcher sur le maillage de navigation, s'asseoir, et afficher un point
 ## d'exclamation / d'interrogation vert s'il donne une quête.
@@ -24,10 +24,10 @@ const COSTUMES := {
 }
 const DEFAULT_COSTUME := {"sex": "m", "race": "humain", "beard": 0, "hair": 1, "hair_color": 1,
 	"outfit": {"plain": true, "top": Color(0.4, 0.4, 0.4), "legs": Color(0.2, 0.2, 0.2)}}
-## PNJ au modèle 3D importé (art/pnj, CharacterSkin) : Zarathos (mage) et le tavernier orc ; les autres
+## PNJ au modèle 3D importé (art/pnj, CharacterSkin) : Ozz (mage) et le tavernier orc ; les autres
 ## sont générés (HeroModel). Sans le modèle, on revient au costume.
 const SKINS := {"zarathos": "mage", "brunhilde": "tavernier"}
-## Bâton de Zarathos : point empoigné (repère du torse), le bâton passe dans le poing.
+## Bâton d'Ozz : point empoigné (repère du torse), le bâton passe dans le poing.
 const STAFF_GRIP := Vector3(0.27, 0.18, 0.25)
 
 var npc_id := ""
@@ -42,7 +42,7 @@ var seated := false
 ## Apparence façon création de personnage (RaceDB) ; vide = modèle dédié.
 var look := {}
 var walk_speed := 1.4
-## Errance autour du point de départ (Zarathos fait les cent pas près de son portail).
+## Errance autour du point de départ (Ozz fait les cent pas près de son portail).
 var wander_radius := 0.0
 var _home := Vector3.ZERO
 var _home_yaw := 0.0
@@ -292,7 +292,7 @@ func _dress() -> void:
 				Visuals.sphere(m._head, 0.022, Vector3(0.05 * s, 0.22, 0.225), eyes)
 
 
-# --- Errance (Zarathos) ------------------------------------------------------------
+# --- Errance (Ozz) ------------------------------------------------------------
 
 func _update_wander(delta: float) -> void:
 	if wander_radius <= 0.0 or walker == null or walker.walking:

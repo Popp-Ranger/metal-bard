@@ -66,7 +66,7 @@ func _ready() -> void:
 		if GameState.flags.has("last_death_gold_lost"):
 			var lost: int = GameState.flags.get("last_death_gold_lost", 0)
 			GameState.flags.erase("last_death_gold_lost")
-			Events.notify("Zarathos vous a ramené inconscient à la taverne... (-%d médiators)" % lost, Events.COLOR_BAD)
+			Events.notify("Ozz vous a ramené inconscient à la taverne... (-%d médiators)" % lost, Events.COLOR_BAD)
 	if GameState.flags.get("from_crypt", false) and demon_portal != null:
 		spawn = demon_portal.global_transform * Vector3(0.0, 0.0, 2.6) # sortie du portail démoniaque
 		spawn.y = 0.0

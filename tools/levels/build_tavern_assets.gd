@@ -274,7 +274,7 @@ func _ground(g: Node3D) -> void:
 	_m(g, TavernMarker.Kind.CERCLE_RUNES, Vector3(10.5, 0, -1.0))
 	_m(g, TavernMarker.Kind.PORTAIL_BLEU, Vector3(6.9, 0, -1.6))
 	_m(g, TavernMarker.Kind.PNJ, Vector3(1.0, 0, -9.1), 0.0, {"name": "Tavernier", "npc": 0})
-	_m(g, TavernMarker.Kind.PNJ, Vector3(12.8, 0, 1.8), -120.0, {"name": "Zarathos", "npc": 1})
+	_m(g, TavernMarker.Kind.PNJ, Vector3(12.8, 0, 1.8), -120.0, {"name": "Ozz", "npc": 1})
 	_m(g, TavernMarker.Kind.PNJ, Vector3(-13.5, 0, -9.3), 45.0, {"name": "Inconnue", "npc": 2})
 	_m(g, TavernMarker.Kind.PNJ, Vector3(-6.5, 0, 7.5), 80.0, {"name": "Gerald", "npc": 3})
 	_stairs["Escalier_vers_etage"] = "Arrivee_etage"
@@ -290,7 +290,7 @@ func _upstairs(u: Node3D) -> void:
 		{"name": "Escalier_etage_vers_salle", "text": "Descendre à la salle commune"})
 	_m(u, TavernMarker.Kind.ARRIVEE, o + Vector3(10.0, 0, 0.5), 0.0, {"name": "Arrivee_etage", "text": "L'étage — Chambres"})
 	_stairs["Escalier_etage_vers_salle"] = "Arrivee_depuis_etage"
-	var names := ["Chambre 1 — Zarathos", "Chambre 2 — la vôtre", "Chambre 3 — occupée", "Chambre 4 — hantée ?"]
+	var names := ["Chambre 1 — Ozz", "Chambre 2 — la vôtre", "Chambre 3 — occupée", "Chambre 4 — hantée ?"]
 	for i in 4:
 		var cx := -9.0 + i * 6.0
 		var c := o + Vector3(cx, 0, -6.0)

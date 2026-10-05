@@ -703,10 +703,10 @@ func _test_new_features() -> void:
 	for c in tavern.get_children():
 		if c is Npc and (c as Npc).npc_id == "zarathos":
 			zarathos = c
-	_check(zarathos != null and zarathos.wander_radius > 0.0, "Zarathos fait les cent pas près de son portail")
+	_check(zarathos != null and zarathos.wander_radius > 0.0, "Ozz fait les cent pas près de son portail")
 	_check(walked_animated and walker_p.seated and not walker_p.model._loco_on,
 		"le client marche comme Riffald (clips Mixamo), puis se rassoit (pose procédurale)")
-	# PNJ : modèles 3D importés (Zarathos le mage, Grokk le tavernier orc), les autres articulés (HeroModel)
+	# PNJ : modèles 3D importés (Ozz le mage, Grokk le tavernier orc), les autres articulés (HeroModel)
 	# avec la posture et la démarche de Riffald.
 	var npc_models := true
 	var animated_npcs := 0
@@ -724,7 +724,7 @@ func _test_new_features() -> void:
 	_check(npc_models and animated_npcs >= 2 and mage != null and keeper != null and mage.lengths.has("walk")
 		and keeper.skeleton.get_bone_count() == 17 and DialogueDB.npc_name("brunhilde").begins_with("Grokk")
 		and is_equal_approx(keeper.scale.y, 1.25) and keeper.height > 2.5,
-		"PNJ : Zarathos et Grokk le tavernier orc (agrandi de 25 %%) avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout (repos pnjPose)" % animated_npcs)
+		"PNJ : Ozz et Grokk le tavernier orc (agrandi de 25 %%) avec leurs modèles 3D (17 os, clips Mixamo), %d autres debout (repos pnjPose)" % animated_npcs)
 	var pnj_idle := ""
 	for c in tavern.get_children():
 		var n := c as Npc
@@ -1380,7 +1380,7 @@ func _test_town_portal() -> void:
 	var bp: Portal = tavern.get("blue_portal")
 	var t_hero := get_tree().get_first_node_in_group("hero") as Hero
 	_check(bp != null and bp.blue and t_hero.global_position.distance_to(bp.global_position) < 2.5,
-		"taverne : arrivée devant un portail bleu, à côté de celui de Zarathos")
+		"taverne : arrivée devant un portail bleu, à côté de celui d'Ozz")
 	# Plumeau posé dans un tonneau (comme à son retour) : il en sort et suit le héros sans rester coincé.
 	var barrel := Vector3.INF
 	for m in tavern.find_children("Tonneau*", "", true, false):
@@ -1536,7 +1536,7 @@ func _test_remote_spell_fx() -> void:
 
 
 func _test_loot_and_gear() -> void:
-	print("[Butin sur les corps, barres de vie, Gérald, Zarathos]")
+	print("[Butin sur les corps, barres de vie, Gérald, Ozz]")
 	GameState.new_game()
 	var skel := Skeleton.new()
 	add_child(skel)
@@ -1603,12 +1603,12 @@ func _test_loot_and_gear() -> void:
 		delays.append(float(tavern_script.call("plea_delay")))
 	GameState.flags.erase("gerald_refus")
 	_check(delays == ([3.0, 2.0, 1.0, 1.0] as Array[float]), "Gérald revient au bout de 3 s, puis 2 s, puis 1 s")
-	# Zarathos : nouveau modèle (Mage V2), animé.
+	# Ozz : nouveau modèle (Mage V2), animé.
 	var mage := CharacterSkin.create("mage")
 	add_child(mage)
 	await _frames(2)
 	_check(mage != null and mage.skeleton.get_bone_count() == 17 and mage.lengths.has("idle") and mage.lengths.has("walk")
-		and is_equal_approx(mage.height, 1.85), "Zarathos : modèle Mage V2 (17 os, repos et marche), 1,85 m")
+		and is_equal_approx(mage.height, 1.85), "Ozz : modèle Mage V2 (17 os, repos et marche), 1,85 m")
 	mage.queue_free()
 	# Coup de guitare : 20 % plus rapide.
 	_check(is_equal_approx(Balance.MELEE_COOLDOWN, 0.54) and is_equal_approx(float(HeroAnimator.ONE_SHOTS["smash"]), 0.5)

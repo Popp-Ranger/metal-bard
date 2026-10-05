@@ -24,7 +24,7 @@ TEX_OTHER = 1024
 # Personnages : dossier source, nom, hauteur totale du modèle (m, chapeau compris) et articulations
 # relevées sur les vues de face et de profil (x, y, z ; .L = côté +X, gauche du personnage).
 CHARS = {
-    # Zarathos : « Mage V2 » (4 oct. 2026), rockeur en perfecto et lunettes violettes ; remplace le sorcier
+    # Ozz : « Mage V2 » (4 oct. 2026), rockeur en perfecto et lunettes violettes ; remplace le sorcier
     # au chapeau pointu (Mage/V1).
     "mage": {"dir": os.path.join("Mage", "V2"), "name": "Mage", "height": 1.85, "joints": {
         "hips": (0.0, -0.01, 0.98), "spine": (0.0, 0.0, 1.15), "chest": (0.0, 0.02, 1.32),

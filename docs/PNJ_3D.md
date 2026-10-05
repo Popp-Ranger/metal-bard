@@ -5,7 +5,7 @@ Modèles fournis par Ulysse (générés par IA, sans squelette) :
 
 | Modèle | Personnage du jeu | Taille | Clips |
 |---|---|---|---|
-| Mage V2 (rockeur en perfecto, lunettes violettes ; remplace le sorcier au chapeau pointu le 4 oct. 2026) | Zarathos le Grisonnant | 1,85 m | repos, marche, course |
+| Mage V2 (rockeur en perfecto, lunettes violettes ; remplace le sorcier au chapeau pointu le 4 oct. 2026) | Ozz | 1,85 m | repos, marche, course |
 | Tavernier (orc au tablier) | **Grokk Chope-de-Fer**, le tavernier (remplace Brunhilde) | 2,05 m (×1,25 en jeu : 2,56 m) | repos, marche, course |
 | Squelette paysan | tous les squelettes ennemis (soldats, capitaines, chef) | 1,75 m | repos et course de zombie, coup d'épée, sursaut, mort |
 | Gloubah (crapaud debout couronné, Ennemis/Gloubah) | **Gloubah**, le Roi Grenouille (boss des Catacombes) | 1,84 m (×1,5 en jeu : 2,76 m) | repos d'orc, marche, course, coup de patte (+ langue), sursaut, mort, victoire |
@@ -45,5 +45,5 @@ peau de loup et clé du chef.
   (dialogues, sauvegardes) ; son nom est dans `DialogueDB.NPCS`.
 - Squelettes : `Skeleton` (coup d'épée = clip « Great Sword Slash » étiré sur l'élan de l'attaque).
 
-Limites : pas de doigts animés ; les PNJ importés ne tournent pas la tête vers le héros ; Zarathos n'a
+Limites : pas de doigts animés ; les PNJ importés ne tournent pas la tête vers le héros ; Ozz n'a
 plus son bâton (le modèle a les mains libres).

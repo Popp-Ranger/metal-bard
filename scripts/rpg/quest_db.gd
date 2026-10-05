@@ -10,8 +10,8 @@ const QUESTS := {
 		"title": "Le Petit Plumeau",
 		"giver": "gerald",
 		"summary": "Des squelettes ont enlevé Plumeau, le bébé hibours adoré de Gérald le fromager.",
-		"objective": "Traverser le portail de Zarathos, prendre la clé au chef des squelettes et délivrer Plumeau de Gloubah, le Roi Grenouille.",
-		"objective_talk_mage": "Demander à Zarathos, le vieux mage, d'ouvrir un portail.",
+		"objective": "Traverser le portail d'Ozz, prendre la clé au chef des squelettes et délivrer Plumeau de Gloubah, le Roi Grenouille.",
+		"objective_talk_mage": "Demander à Ozz, le vieux mage, d'ouvrir un portail.",
 		"objective_done": "Rendre Plumeau à Gérald, à la Chèvre Fringante.",
 		"requires": "",
 		"dungeon": {

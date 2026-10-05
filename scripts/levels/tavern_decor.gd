@@ -279,7 +279,7 @@ static func torch(p: Node3D) -> void:
 	Visuals.flicker_light(p, Vector3(0, 0.3, 0.8), Color(1.0, 0.6, 0.3), 2.8, 11.0)
 
 
-## Cercle de runes de Zarathos (là où s'ouvre le portail vers le donjon).
+## Cercle de runes d'Ozz (là où s'ouvre le portail vers le donjon).
 static func rune_circle(p: Node3D) -> void:
 	Visuals.torus(p, 1.5, 1.65, Vector3(0, 0.02, 0), Visuals.glow_mat(Color(0.45, 0.25, 0.85), 1.2))
 	Visuals.torus(p, 1.1, 1.16, Vector3(0, 0.02, 0), Visuals.glow_mat(Color(0.45, 0.25, 0.85), 0.8))

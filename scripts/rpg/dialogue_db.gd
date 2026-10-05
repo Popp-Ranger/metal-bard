@@ -9,7 +9,7 @@ extends RefCounted
 const NPCS := {
 	"gerald": {"name": "Gérald Pissenlit", "title": "Fromager du coin", "color": Color(0.85, 0.75, 0.45)},
 	"brunhilde": {"name": "Grokk Chope-de-Fer", "title": "Tavernier orc", "color": Color(0.95, 0.55, 0.35)},
-	"zarathos": {"name": "Zarathos le Grisonnant", "title": "Mage des portails", "color": Color(0.7, 0.6, 1.0)},
+	"zarathos": {"name": "Ozz", "title": "Mage des portails", "color": Color(0.7, 0.6, 1.0)},
 	"inconnue": {"name": "L'Inconnue encapuchonnée", "title": "???", "color": Color(0.75, 0.3, 0.35)},
 	"borin": {"name": "Borin Barbe-de-Bière", "title": "Client (très) détendu", "color": Color(0.9, 0.7, 0.4)},
 	"sylvaine": {"name": "Sylvaine Luth-d'Argent", "title": "Barde rivale", "color": Color(0.6, 0.9, 0.85)},
@@ -119,7 +119,7 @@ static func _gerald() -> Dictionary:
 		QuestDB.State.ACTIVE:
 			return {
 				"lines": [
-					[g, "Zarathos, le vieux mage près du cercle de runes, vous ouvrira un portail vers les catacombes."],
+					[g, "Ozz, le vieux mage près du cercle de runes, vous ouvrira un portail vers les catacombes."],
 					[g, "Faites vite... Plumeau a peur du noir. Et des squelettes. Et des grenouilles."],
 				],
 				"choices": [["« J'y cours. »", "close"]],
@@ -208,7 +208,7 @@ static func _zarathos() -> Dictionary:
 		}
 	return {
 		"lines": [
-			[z, "Je suis Zarathos. J'ouvre des portails. Je ferme aussi les portails, mais c'est moins spectaculaire."],
+			[z, "Je suis Ozz. J'ouvre des portails. Je ferme aussi les portails, mais c'est moins spectaculaire."],
 			[z, "Reviens me voir quand quelqu'un aura besoin de tes... talents bruyants."],
 		],
 		"choices": [["« Entendu. »", "close"]],

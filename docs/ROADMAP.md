@@ -2,9 +2,9 @@
 
 ## ✅ v0.1 — Prototype jouable (actuel)
 - [x] Taverne-hub complète : tables, chaises, comptoir, bouteilles, fenêtres au clair de lune, lanternes, cheminée, escalier
-- [x] 6 PNJ avec dialogues à choix (Gérald, Brunhilde, Zarathos, l'Inconnue, Borin, Sylvaine) + tableau des quêtes
+- [x] 6 PNJ avec dialogues à choix (Gérald, Brunhilde, Ozz, l'Inconnue, Borin, Sylvaine) + tableau des quêtes
 - [x] Boutique (potions) et repos
-- [x] Portail de Zarathos → donjon séparé du hub
+- [x] Portail d'Ozz → donjon séparé du hub
 - [x] Donjon procédural (graine sauvegardée, salle de départ la plus éloignée du boss)
 - [x] Héros : coup de luth + Riff électrique (5 cibles) + Onde de choc (zone) + Solo de la Foudre (mini-jeu Guitar Hero → pluie d'éclairs)
 - [x] IA squelettes : errance, détection 4 m, vitesse 0,25 × héros, 1 attaque / 2,5 s avec élan
@@ -52,7 +52,7 @@
 - [x] Mini-jeux ratés : recharge ×2,5
 - [x] Médiators comme monnaie ; objets dans `data/items.json`
 - [x] Sous-sol : dB illimités et portail démoniaque à tentacules ; l'Inconnue réinitialise les talents
-- [x] Clients qui déplacent leur chaise, 2 debout au maximum, jurons ; Zarathos fait les cent pas
+- [x] Clients qui déplacent leur chaise, 2 debout au maximum, jurons ; Ozz fait les cent pas
 - [x] Gloubah sur un pentagramme de bave, sang au sol et sur la bouche ; rats (3 PV)
 - [x] Sauvegarder (hors combat) et Charger : 5 emplacements + automatique
 - [x] Coop en ligne par code d'invitation (ENet + UPnP), chacun avec son personnage
@@ -129,7 +129,7 @@
 
 ## ✅ v0.1.19 — Tout le monde bouge comme Riffald
 - [x] Héros personnalisés, clients et PNJ : posture et déplacement de Riffald (mêmes clips Mixamo, recopiés sur le corps procédural)
-- [x] Gérald, Zarathos et l'Inconnue deviennent des corps articulés en costume (Zarathos tient son bâton)
+- [x] Gérald, Ozz et l'Inconnue deviennent des corps articulés en costume (Ozz tient son bâton)
 - [x] Intro : Espace ou Échap passe la cinématique
 
 ## ✅ v0.1.20 — Squelettes articulés
@@ -148,7 +148,7 @@
 - [x] Tables (places des clients), comptoir, escaliers reliés à leur arrivée, lit loué, salle d'entraînement, PNJ ; vérification et test direct (F6)
 
 ## ✅ v0.1.24 — PNJ et squelettes en 3D
-- [x] Zarathos (mage), Grokk le tavernier orc (remplace Brunhilde) et tous les squelettes ennemis : modèles 3D fournis, squelette de Riffald et clips Mixamo (docs/PNJ_3D.md)
+- [x] Ozz (mage), Grokk le tavernier orc (remplace Brunhilde) et tous les squelettes ennemis : modèles 3D fournis, squelette de Riffald et clips Mixamo (docs/PNJ_3D.md)
 - [x] Squelettes : course de zombie, coup d'épée animé, sursaut, mort ; épée, bouclier, casque et peau de loup accrochés aux os
 
 ## ✅ v0.1.25 — Ennemis de face, musiques des donjons
@@ -175,7 +175,7 @@
 
 ## ✅ v0.1.30 — Nouvelles poses de repos
 - [x] Héros (Riffald, Valkyriff, Belzeluth, personnalisés) : repos « heroPose »
-- [x] PNJ (clients, Gérald, Zarathos...) : repos « pnjPose » ; Grokk le tavernier : « Orc Idle »
+- [x] PNJ (clients, Gérald, Ozz...) : repos « pnjPose » ; Grokk le tavernier : « Orc Idle »
 
 ## ✅ v0.1.31 — Portraits de dialogue, alerte de vie basse
 - [x] Guitare plus basse : main droite juste sous la ceinture (Riffald, Valkyriff, Belzeluth), manche plus relevé (35°)
@@ -221,7 +221,7 @@
 - [x] Torches rouges tant qu'on n'est pas passé à moins de 15 m, une torche de chaque côté des portes (sauf le boss)
 - [x] Barres de vie qui se vident de la droite vers la gauche
 - [x] Gérald revient à la charge au bout de 3 s, puis 2 s, puis 1 s
-- [x] Hella, nouvelle héroïne jouable (modèle retravaillé par Ulysse) ; Zarathos prend le modèle Mage V2
+- [x] Hella, nouvelle héroïne jouable (modèle retravaillé par Ulysse) ; Ozz prend le modèle Mage V2
 
 ## ✅ v0.1.40 — Le portail à XP et la Légende de Back Jlack
 - [x] Médiators ramassés automatiquement (ils filent vers le héros)

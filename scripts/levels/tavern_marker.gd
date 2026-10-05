@@ -18,7 +18,7 @@ const NAMES := ["Table ronde", "Chaise", "Comptoir", "Étagère à bouteilles", 
 	"Escalier qui descend", "Arrivée d'escalier", "Zone d'entraînement", "Mannequin", "Mannequin allié",
 	"Portail démoniaque", "PNJ"]
 const NPCS := ["brunhilde", "zarathos", "inconnue", "gerald"]
-const NPC_NAMES := ["Tavernier (Grokk)", "Zarathos", "L'Inconnue", "Gérald"]
+const NPC_NAMES := ["Tavernier (Grokk)", "Ozz", "L'Inconnue", "Gérald"]
 ## Propriétés affichées dans l'Inspecteur selon le type (les autres sont masquées).
 const FIELDS := {
 	Kind.TABLE: ["option"], Kind.COMPTOIR: ["size"], Kind.ETAGERE: ["size"], Kind.TAPIS: ["size", "color"],
@@ -65,7 +65,7 @@ const OPTION_HINTS := {Kind.TABLE: "Place libre pour le fauteuil roulant de Katr
 		_refresh()
 ## Escalier : arrivée (un marqueur « Arrivée d'escalier »).
 @export var destination: NodePath
-@export_enum("Tavernier (Grokk)", "Zarathos", "L'Inconnue", "Gérald") var npc := 0:
+@export_enum("Tavernier (Grokk)", "Ozz", "L'Inconnue", "Gérald") var npc := 0:
 	set(value):
 		npc = value
 		_refresh()

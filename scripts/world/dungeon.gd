@@ -735,10 +735,10 @@ func _try_open_cage() -> void:
 	Events.notify("Plumeau est libre ! Hou-hou !", Color(0.95, 0.8, 0.5))
 	await get_tree().create_timer(1.2, false).timeout
 	_spawn_victory_portal()
-	Events.notify("Un portail s'ouvre juste à côté de vous. Comment ? C'est Zarathos : il est mage, il fait des trucs de mage.", Events.COLOR_MAGIC)
+	Events.notify("Un portail s'ouvre juste à côté de vous. Comment ? C'est Ozz : il est mage, il fait des trucs de mage.", Events.COLOR_MAGIC)
 
 
-## Le portail de Zarathos s'ouvre à côté du héros (s'il est sur un sol praticable, sinon au centre de la salle).
+## Le portail d'Ozz s'ouvre à côté du héros (s'il est sur un sol praticable, sinon au centre de la salle).
 func _spawn_victory_portal() -> void:
 	var portal := Portal.new()
 	var p := cell_to_world(gen.center(gen.boss_room)) + Vector3(2.0, 0, 2.0)
@@ -747,7 +747,7 @@ func _spawn_victory_portal() -> void:
 		if is_walkable(beside):
 			p = Vector3(beside.x, 0.0, beside.z)
 	portal.position = p
-	portal.prompt = "Retourner à la taverne (portail de Zarathos)"
+	portal.prompt = "Retourner à la taverne (portail d'Ozz)"
 	portal.on_enter = _end_dungeon.bind("Catacombes nettoyées !", true)
 	add_child(portal)
 
@@ -773,7 +773,7 @@ func _surrender() -> void:
 	Sfx.play("croak", 0.0, 0.0)
 	Events.notify("Gloubah : « CROÂ-HA-HA ! Un nouveau bibelot pour ma collection ! »", Color(0.6, 0.95, 0.5))
 	await get_tree().create_timer(4.0, false).timeout
-	Events.notify("Zarathos : « Tss... je te sors de là. Reviens quand tu auras plus de cran. »", Events.COLOR_MAGIC)
+	Events.notify("Ozz : « Tss... je te sors de là. Reviens quand tu auras plus de cran. »", Events.COLOR_MAGIC)
 	await get_tree().create_timer(2.0, false).timeout
 	_end_dungeon("Capturé par Gloubah...", false)
 
@@ -1225,7 +1225,7 @@ func _portal_cast_particles() -> CPUParticles3D:
 
 
 ## Ouvre le portail bleu vers la taverne ; un second portail apparaît à côté de celui de
-## Zarathos, qui ramène exactement ici (le donjon reste tel quel jusqu'à ce qu'on le finisse).
+## Ozz, qui ramène exactement ici (le donjon reste tel quel jusqu'à ce qu'on le finisse).
 func _open_town_portal_now() -> void:
 	if not persistent:
 		# Cryptes : le portail bleu ramène à la taverne, et les cryptes se régénéreront.

@@ -127,14 +127,14 @@ l'Inspecteur (seuls ceux qui servent s'affichent). Tourner un objet : son devant
 | `ecriteau` | *Text*, *Color* | texte flottant |
 | `tableau_des_quetes` | | on y lit les quêtes |
 | `arrivee_du_heros` | | où apparaît le héros (un seul) |
-| `cercle_de_runes` | | portail de Zarathos vers le donjon ; on y revient du donjon (un seul) |
+| `cercle_de_runes` | | portail d'Ozz vers le donjon ; on y revient du donjon (un seul) |
 | `portail_bleu` | | portail bleu de retour au donjon (un seul) |
 | `portes_entree` | | portes verrouillées (laisser une ouverture de 4 cases dans le muret) |
 | `escalier_qui_monte`, `escalier_qui_descend` | *Text* : invite ; *Destination* : une `arrivee_escalier` ; *Variant* : nombre de marches | on change de zone avec un fondu |
 | `arrivee_escalier` | *Text* : nom du lieu affiché à l'arrivée | |
 | `zone_entrainement` | *Size* | dedans, sorts et décibels illimités |
 | `mannequin`, `mannequin_allie`, `portail_demoniaque` | | salle d'entraînement |
-| `pnj` | *Npc* : Brunhilde, Zarathos, l'Inconnue, Gérald (chacun une fois) | |
+| `pnj` | *Npc* : Brunhilde, Ozz, l'Inconnue, Gérald (chacun une fois) | |
 
 Pour relier un escalier : sélectionner l'escalier, puis dans l'Inspecteur cliquer sur *Destination*
 → **Assigner** et choisir l'arrivée dans la liste.

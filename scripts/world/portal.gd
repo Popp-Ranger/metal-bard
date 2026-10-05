@@ -1,6 +1,6 @@
 class_name Portal
 extends Node3D
-## Portail magique de Zarathos. Interagir avec [E] pour le traverser.
+## Portail magique d'Ozz. Interagir avec [E] pour le traverser.
 
 var interact_radius := 2.4
 var target_scene := ""

@@ -15,7 +15,7 @@
 
 ## 1. Pitch
 
-Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Chèvre Fringante**, il accepte des quêtes, traverse les portails du vieux mage Zarathos et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
+Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte avec sa **guitare électrique Flying V** les légions de morts-vivants de **Morne, la Liche du Silence**, qui veut réduire le monde au mutisme en volant tout ce qui fait du bruit. Depuis la taverne du **Chèvre Fringante**, il accepte des quêtes, traverse les portails du vieux mage Ozz et plonge dans des donjons générés procéduralement où chaque sort est un morceau de metal.
 
 ## 2. Piliers de conception
 
@@ -31,7 +31,7 @@ Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte ave
          ┌──────────────────────── TAVERNE (hub) ────────────────────────┐
          │  PNJ • quêtes • boutique • repos • fiche de perso • sauvegarde │
          └───────────────┬───────────────────────────────▲───────────────┘
-                         │ Zarathos ouvre un portail     │ portail de retour
+                         │ Ozz ouvre un portail     │ portail de retour
                          ▼                               │
    DONJON PROCÉDURAL : salles → squelettes → butin → capitaine → BOSS → sauvetage
                          │
@@ -63,7 +63,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 - **Gérald Pissenlit** — petit fromager « de la Comt... du coin », pieds nus fort bien épilés, éleveur de hibours (pour le lait). Donneur de la première quête ; si on refuse, il revient à la charge jusqu'à offrir du fromage d'hibours.
 - **Plumeau** — bébé hibours adoré de Gérald, mascotte ; suit le héros après le sauvetage et apparaît ensuite dans la taverne.
 - **Grokk Chope-de-Fer** — tavernier orc de la Chèvre Fringante (réputée pour le meilleur brie de tous les comtés) : potions, chambre, rachat de reliques, rumeurs.
-- **Zarathos le Grisonnant** — vieux mage des portails, transport vers les donjons.
+- **Ozz** — vieux mage des portails, transport vers les donjons.
 - **L'Inconnue encapuchonnée** — fil rouge narratif, annonce Morne.
 - **Borin Barbe-de-Bière** — nain ivre, répliques aléatoires.
 - **Sylvaine Luth-d'Argent** — barde elfe rivale ; futur duel de solos.
@@ -185,10 +185,10 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 ### 10.1 Quête 1 — « Le Petit Plumeau » (implémentée)
 0. **Intro** : une nuit de Lune de Sang (encore un truc cliché de métalleux). Au sortir de la messe noire, le héros voit que les morts se sont ENCORE échappés du cimetière ; il fait mine de rien et file boire un thé glacé à la goyave à la Chèvre Fringante.
 1. **Taverne** : attablé devant son thé et un plateau de fromages, le héros voit arriver Gérald, le fromager du coin : son hibours Plumeau a été enlevé par des squelettes. Il promet 50 médiators et le portrait de son arrière-arrière-arrière-grand-mère. *[Accepter / Refuser]* — à chaque refus il revient (« Et maintenant, tu veux bien ? », « Et maintenant ? », « Et là ? », « Allééééé… », « Je te donnerai du fromage d'hibours ! ») ; le fromage, offert une fois, donne +20 % de PV max pendant 20 min.
-2. **Zarathos** ouvre un portail sur le cercle de runes.
+2. **Ozz** ouvre un portail sur le cercle de runes.
 3. **Catacombes Suintantes** (faites main dans l'éditeur) : squelettes, rats, capitaines ; le **chef des squelettes** porte la clé de la salle du boss.
 4. **Salle du boss** : Gloubah, le Roi Grenouille, garde Plumeau en cage (dialogue : combat, reddition ou amitié).
-5. Victoire : la cage s'ouvre, Plumeau suit le héros ; le portail de Zarathos s'ouvre juste à côté du héros (c'est un mage, il fait des trucs de mage).
+5. Victoire : la cage s'ouvre, Plumeau suit le héros ; le portail d'Ozz s'ouvre juste à côté du héros (c'est un mage, il fait des trucs de mage).
 6. **Taverne** : rendre la quête → 300 XP, 50 médiators, Portrait de l'aïeule (+1 SAG, +1 CHA). Plumeau reste dans la taverne. L'Inconnue révèle que Gloubah servait Morne.
 
 ### 10.2 Portail à XP — les Cryptes de la Cathédrale (implémenté)
@@ -236,7 +236,7 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 
 ## 13. Multijoueur (jusqu'à 6) — conception
 - **Modèle** : serveur autoritaire (un joueur héberge), API haut niveau de Godot (`MultiplayerAPI`, `MultiplayerSpawner`, `MultiplayerSynchronizer`) sur ENet ; Steam (GodotSteam) pour le matchmaking.
-- **La taverne devient un lobby** : les joueurs s'y retrouvent, chacun avec son personnage ; le portail de Zarathos embarque tout le groupe.
+- **La taverne devient un lobby** : les joueurs s'y retrouvent, chacun avec son personnage ; le portail d'Ozz embarque tout le groupe.
 - **Classes du groupe** (un rôle par musicien) : Barde-guitariste (dégâts à distance), **Batteur-guerrier** (tank, rythme), **Bassiste-paladin** (soutien, auras de basse), **Chanteur-clerc** (soins par hymnes), **Claviériste-sorcier** (contrôle), **Cornemuseur-rôdeur** (pièges, DoT). Synergie : jouer en rythme entre joueurs déclenche des « accords de groupe ».
 - **Mise à l'échelle** : PV des ennemis × (1 + 0,6 × (joueurs − 1)), butin instancié par joueur.
 - **Déjà préparé dans le code** : les ennemis ciblent le héros via un groupe (`"hero"`) et non une référence unique ; les états de jeu passent par un bus de signaux ; l'état persistant est centralisé dans `GameState` (à répliquer côté serveur).
