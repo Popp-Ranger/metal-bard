@@ -13,15 +13,15 @@ blender --background --factory-startup --python art/hud/build_hud.py -- [element
 
 | Élément | Rôle |
 |---|---|
-| `main_vie` (+ `_masque`) | main du signe des cornes, en pierre, runes et chaînes ; cœur de verre dans la paume = **réservoir de vie** (bas à gauche) |
-| `enceinte_db` (+ `_masque`) | baffle de scène clouté, tweeters et haut-parleur orangés ; cuve de verre = **réservoir de décibels** (bas à droite) |
-| `barre_sorts` | cadre de la barre de sorts : crâne cornu au centre, crânes aux bouts, pointes, chaînes pendantes |
+| `main_vie` (+ `_masque`) | main du signe des cornes toute en verre fumé = **réservoir de vie** (bas à gauche) ; runes, bagues, chaînes et bracelet à pointes par-dessus |
+| `enceinte_db` (+ `_masque`) | baffle de scène tout en verre fumé = **réservoir de décibels** (bas à droite) ; coins, cerclages, boutons et pointes de métal |
+| `barre_sorts` | cadre de la barre de sorts : crânes des squelettes ennemis (tête découpée dans art/pnj/squelette.blend), cornu au centre, pointes, chaînes pendantes |
 | `case` | cadre de fer d'une case de sort |
 | `cadre` | panneau des menus, découpé en 9 parties (coins de 48 px) |
 | `bouton` | bouton des menus, découpé en 9 parties (bords de 18 px) |
 
-Le **masque** d'un réservoir est blanc là où se voit le liquide, transparent ailleurs (ce qui passe devant, comme
-le cerclage de fer, le cache).
+Le **masque** d'un réservoir est la silhouette du récipient (pièces de verre réunies et remaillées en une seule
+coque) ; le jeu dessine le liquide dans cette silhouette, puis l'image de verre par-dessus.
 
 ## Dans le jeu
 

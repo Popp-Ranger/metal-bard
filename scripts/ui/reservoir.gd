@@ -1,8 +1,9 @@
 class_name Reservoir
 extends Control
-## Réservoir du HUD : une image rendue dans Blender (la main cornue pour la vie, l'enceinte pour les décibels, voir
-## art/hud/build_hud.py) dont le creux se remplit d'un liquide animé (shaders/reservoir.gdshader), au niveau de
-## `ratio`. En dessous, une plaque de fer porte le texte (« VIE 85 % · 38 / 45 »).
+## Réservoir du HUD : un récipient de verre fumé rendu dans Blender (la main cornue pour la vie, l'enceinte pour les
+## décibels, voir art/hud/build_hud.py), rempli d'un liquide animé (shaders/reservoir.gdshader) au niveau de `ratio`.
+## Le liquide est dessiné d'abord, dans la silhouette du récipient (son masque), puis l'image de verre par-dessus : on
+## le voit à travers le verre, et les chaînes, bagues et pointes de fer passent devant. En dessous, une plaque de fer porte le texte (« VIE 85 % · 38 / 45 »).
 
 const SHADER := preload("res://shaders/reservoir.gdshader")
 
@@ -26,7 +27,6 @@ static func create(image: String, size_px: Vector2, deep: Color, bright: Color, 
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	art.size = size_px
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	r.add_child(art)
 	r._liquid = TextureRect.new()
 	var mask := load("res://assets/ui/%s_masque.png" % image) as Texture2D
 	r._liquid.texture = mask
@@ -44,6 +44,7 @@ static func create(image: String, size_px: Vector2, deep: Color, bright: Color, 
 	r._mat.set_shader_parameter("bottom", span.y)
 	r._liquid.material = r._mat
 	r.add_child(r._liquid)
+	r.add_child(art) # le verre par-dessus le liquide
 	var plate := PanelContainer.new()
 	plate.add_theme_stylebox_override("panel", UiStyle.plate())
 	plate.position = Vector2(-10, size_px.y - 4)

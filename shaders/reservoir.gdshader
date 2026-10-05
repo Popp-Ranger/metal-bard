@@ -41,7 +41,7 @@ void fragment() {
 	col = mix(col, foam_color.rgb, foam * 0.8);
 	col = mix(col, vec3(1.0), flash * 0.6);
 	// Au-dessus du niveau : un reflet de verre à peine visible.
-	float glass = (1.0 - below) * 0.12 * (1.0 - smoothstep(0.0, 0.3, abs(UV.x - 0.42)));
+	float glass = 0.0; // le verre lui-même est dans l'image, dessinée par-dessus
 	float a = m * below;
 	float g = m * glass;
 	COLOR = vec4(mix(vec3(1.0), col, a / max(a + g, 0.0001)), clamp(a + g, 0.0, 1.0));
