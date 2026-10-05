@@ -27,6 +27,8 @@ const DEFAULT_COSTUME := {"sex": "m", "race": "humain", "beard": 0, "hair": 1, "
 ## PNJ au modèle 3D importé (art/pnj, CharacterSkin) : Ozz (mage), le tavernier orc et Back Jlack (sage) ; les autres
 ## sont générés (HeroModel). Sans le modèle, on revient au costume.
 const SKINS := {"zarathos": "mage", "brunhilde": "tavernier", "backjlack": "sage"}
+## Basse de Back Jlack (Imagerie/Guitares/3D/back jlack.glb, art/guitare/prepare_guitares.py).
+const BACKJLACK_GUITAR := "res://assets/models/guitare/guitare_backjlack.glb"
 ## Bâton d'Ozz : point empoigné (repère du torse), le bâton passe dans le poing.
 const STAFF_GRIP := Vector3(0.27, 0.18, 0.25)
 
@@ -80,6 +82,8 @@ func _ready() -> void:
 		skin = CharacterSkin.create(str(SKINS[npc_id]))
 	if skin != null:
 		_body.add_child(skin)
+		if npc_id == "backjlack":
+			skin.sling_guitar(BACKJLACK_GUITAR) # sa basse, dans le dos
 	else:
 		if look.is_empty():
 			look = COSTUMES.get(npc_id, DEFAULT_COSTUME)

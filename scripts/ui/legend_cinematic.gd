@@ -95,6 +95,7 @@ func _build_world() -> void:
 	if _skin != null:
 		_model = _skin
 		_vp.add_child(_skin)
+		_skin.sling_guitar(Npc.BACKJLACK_GUITAR) # sa basse dans le dos (le manche dépasse de l'épaule)
 		_skin.step(0.016, false, 0.0)
 		_face = _skin.face_point()
 	else:

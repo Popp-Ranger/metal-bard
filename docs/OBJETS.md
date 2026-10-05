@@ -100,7 +100,7 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
 
 - **Batguitare de l'Ange déchu** (`batguitare`) : la guitare de l'ange déchu, qui en joue pendant le combat ; elle
   reste sur son corps (Temple du Dragon). Modèle fourni par Ulysse (`Imagerie/Guitares/3D/batguitare.glb`), préparé
-  par `art/guitare/prepare_batguitare.py` (300 000 → 24 000 faces) dans le même repère que la guitare des héros
+  par `art/guitare/prepare_guitares.py` (300 000 → 24 000 faces) dans le même repère que la guitare des héros
   (origine à la jonction manche / corps, sillet à 0,385 m) → `assets/models/guitare/batguitare.glb`.
 - Équipée, elle remplace la Flying V dans les mains du héros (`GameState.guitar_model()`, `HeroModel.set_guitar_model`) ;
   retirée, il reprend la Flying V.

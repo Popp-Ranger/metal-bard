@@ -59,6 +59,15 @@ CHARS = {
         "shoulder.R": (-0.32, 0.10, 1.12), "elbow.R": (-0.44, 0.06, 0.93), "wrist.R": (-0.47, 0.03, 0.75),
         "hip.L": (0.18, 0.04, 0.64), "knee.L": (0.20, 0.04, 0.42), "ankle.L": (0.22, 0.06, 0.14),
         "hip.R": (-0.18, 0.04, 0.64), "knee.R": (-0.19, 0.04, 0.42), "ankle.R": (-0.22, 0.06, 0.14)}},
+    # Troll des cavernes (boss des grottes, chapitre 3) : Ennemis/Troll (6 oct. 2026). Préparé à 2,2 m ; le jeu
+    # l'agrandit à 3,2 m (CharacterSkin.SCALES).
+    "troll": {"dir": os.path.join("Ennemis", "Troll"), "file": "troll3D.glb", "name": "Troll", "height": 2.2, "joints": {
+        "hips": (0.0, 0.05, 1.05), "spine": (0.0, 0.07, 1.29), "chest": (0.0, 0.05, 1.50),
+        "neck": (0.0, -0.13, 1.65), "head": (0.0, -0.22, 1.69), "head_top": (0.0, -0.2, 2.2),
+        "shoulder.L": (0.48, 0.19, 1.61), "elbow.L": (0.70, 0.13, 1.18), "wrist.L": (0.69, 0.05, 0.91),
+        "shoulder.R": (-0.48, 0.19, 1.61), "elbow.R": (-0.70, 0.13, 1.18), "wrist.R": (-0.69, 0.05, 0.91),
+        "hip.L": (0.24, 0.05, 0.97), "knee.L": (0.27, 0.05, 0.54), "ankle.L": (0.30, 0.13, 0.19),
+        "hip.R": (-0.24, 0.05, 0.97), "knee.R": (-0.27, 0.05, 0.54), "ankle.R": (-0.30, 0.13, 0.19)}},
     # Gobelin des montagnes (chapitre 3) : Ennemis/Gobelin (5 oct. 2026).
     "gobelin": {"dir": os.path.join("Ennemis", "Gobelin"), "file": "gobelin3D.glb", "name": "Gobelin", "height": 1.15, "joints": {
         "hips": (0.0, 0.03, 0.505), "spine": (0.0, 0.04, 0.60), "chest": (0.0, 0.04, 0.70),
@@ -299,6 +308,12 @@ def _candidates(co, j):
     """Os candidats d'un vertex. Chapeau et barbe suivent la tête ; une robe longue (mage) ne suit
     les jambes qu'en dessous du genou et reste sinon sur le bassin, pour ne pas se déchirer entre
     les cuisses."""
+    if ARGS[1] == "troll" and abs(co.x) > 0.24 and co.z > 1.35:
+        # Tête enfoncée entre d'énormes épaules : le haut des deltoïdes dépasse l'os de la tête. Il suit le buste et
+        # le bras de son côté, pas la tête.
+        return ["chest", "upper_arm." + ("L" if co.x > 0 else "R")]
+    if ARGS[1] == "troll" and co.z > 1.35 and co.y > -0.02:
+        return ["chest", "neck"]  # la bosse du dos, derrière la tête
     if co.z > j["head"].z + 0.02:
         return ["head"]
     if ARGS[1] == "demon":

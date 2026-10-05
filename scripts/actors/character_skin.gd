@@ -15,11 +15,12 @@ const MODELS := {
 	"hibours": "res://assets/models/pnj/hibours.glb",
 	"sage": "res://assets/models/pnj/sage.glb",
 	"gobelin": "res://assets/models/pnj/gobelin.glb",
+	"troll": "res://assets/models/pnj/troll.glb",
 }
 ## Hauteur des modèles (m, chapeau compris) : étiquettes, barres de vie.
-const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75, "gloubah": 1.84, "hibours": 1.2, "sage": 1.65, "gobelin": 1.15}
+const HEIGHTS := {"mage": 1.85, "tavernier": 2.05, "squelette": 1.75, "gloubah": 1.84, "hibours": 1.2, "sage": 1.65, "gobelin": 1.15, "troll": 2.2}
 ## Agrandissement en jeu (le tavernier orc domine son comptoir) : hauteur et foulée suivent.
-const SCALES := {"tavernier": 1.25, "gloubah": 1.5} # Gloubah : 50 % plus grand que les héros
+const SCALES := {"tavernier": 1.25, "gloubah": 1.5, "troll": 3.2 / 2.2} # Gloubah : 50 % plus grand que les héros
 ## Hauteur du visage au-dessus de l'os de la tête (m, avant agrandissement) : portrait du dialogue. Gloubah a les yeux
 ## haut perchés au-dessus de sa grosse tête.
 const FACE_OFFSETS := {"gloubah": 0.17, "sage": 0.12} # Back Jlack : grosse tête, os de la tête bas
@@ -178,3 +179,19 @@ func place(node: Node3D, bone: String, model_basis: Basis, along: float, offset:
 	var rest := skeleton.get_bone_global_rest(skeleton.find_bone(bone))
 	var rot := rest.basis.orthonormalized()
 	node.transform = Transform3D(rot.inverse() * model_basis, Vector3(0, along, 0) + rot.inverse() * offset)
+
+
+## Guitare (modèle importé, repère des guitares : manche vers +Y, face vers +Z, origine à la jonction manche / corps)
+## portée dans le dos, en travers : manche vers le haut, au-dessus de l'épaule gauche, cordes vers l'arrière.
+## `offset` : jonction du manche par rapport à l'os du buste (repère du modèle).
+func sling_guitar(path: String, offset: Vector3 = Vector3(-0.04, 0.04, -0.3)) -> Node3D:
+	if not ResourceLoader.exists(path):
+		return null
+	var g := Node3D.new()
+	g.name = "Guitare"
+	g.add_child((load(path) as PackedScene).instantiate())
+	var y := Vector3(0.45, 1.0, 0.0).normalized()
+	var z := Vector3(0.0, 0.0, -1.0)
+	place(g, "chest", Basis(y.cross(z), y, z), 0.0, offset)
+	attach("chest", g)
+	return g

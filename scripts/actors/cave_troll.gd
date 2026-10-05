@@ -1,19 +1,17 @@
 class_name CaveTroll
 extends Enemy
-## Le troll des cavernes, boss des grottes des gobelins : 3,2 m de peau grise et verdâtre couverte de verrues et de
-## mousse, long nez, défenses, pagne et une massue faite d'un tronc d'arbre. Capacités :
+## Le troll des cavernes, boss des grottes des gobelins : le modèle 3D fourni par Ulysse (art/pnj « troll », peau
+## bleu-vert, pantalon rapiécé), agrandi à 3,2 m, animé (repos d'orc, marche, course, coup, sursaut, mort, victoire),
+## avec une massue faite d'un tronc d'arbre dans la main droite. Capacités :
 ##   • Coup de massue (au contact) et Écrasement (toutes les ~7 s) : un cercle devant lui, puis la massue s'abat ;
 ##   • Régénération : s'il n'a pas été touché depuis 3 s, il récupère 1,5 % de ses PV par seconde (il faut le harceler) ;
 ##   • À 50 % PV : il appelle ses gobelins à la rescousse (quatre d'un coup).
 
 var spawn_minion: Callable # Callable(pos: Vector3) fourni par le niveau
 
-var _torso: Node3D
-var _arm_l: Node3D
-var _arm_r: Node3D
-var _hip_l: Node3D
-var _hip_r: Node3D
-var _slam := 0.0
+var skin: CharacterSkin
+## Moment de l'impact dans le clip « slash » (fraction de sa durée).
+const STRIKE_AT := 0.55
 var _smash_timer := 5.0
 var _busy := false
 var _called := false
@@ -45,65 +43,17 @@ func _configure() -> void:
 
 
 func _build_model() -> void:
-	var skin := own_mat(Color(0.38, 0.42, 0.34), 0.8)
-	var dark := own_mat(Color(0.25, 0.28, 0.22), 0.85)
-	var moss := own_mat(Color(0.22, 0.35, 0.12), 0.95)
-	var hide := own_mat(Color(0.3, 0.2, 0.12), 0.9)
-	var tusk := Visuals.mat(Color(0.88, 0.84, 0.7), 0.5)
-	var eye := Visuals.glow_mat(Color(1.0, 0.6, 0.15), 2.5)
-	for side: float in [-1.0, 1.0]:
-		var hip := Node3D.new()
-		hip.position = Vector3(0.32 * side, 1.1, 0)
-		model.add_child(hip)
-		Visuals.capsule(hip, 0.26, 0.7, Vector3(0, -0.3, 0), skin)
-		Visuals.capsule(hip, 0.22, 0.6, Vector3(0, -0.78, 0.02), dark)
-		Visuals.box(hip, Vector3(0.34, 0.14, 0.48), Vector3(0, -1.06, 0.1), dark)
-		if side < 0.0:
-			_hip_l = hip
-		else:
-			_hip_r = hip
-	_torso = Node3D.new()
-	_torso.position = Vector3(0, 1.1, 0)
-	_torso.rotation.x = 0.2
-	model.add_child(_torso)
-	Visuals.cylinder(_torso, 0.55, 0.62, 0.4, Vector3(0, 0.05, 0), hide, Vector3.ZERO, 10) # pagne
-	Visuals.sphere(_torso, 0.62, Vector3(0, 0.55, 0.05), skin, Vector3(1.05, 0.95, 1.0)) # bedaine
-	Visuals.sphere(_torso, 0.62, Vector3(0, 1.15, -0.05), skin, Vector3(1.3, 0.9, 0.9)) # épaules
-	for k in 7:
-		Visuals.sphere(_torso, randf_range(0.08, 0.16), Vector3(randf_range(-0.6, 0.6), randf_range(0.9, 1.4), randf_range(-0.45, -0.1)), moss)
-	for k in 6:
-		Visuals.sphere(_torso, 0.05, Vector3(randf_range(-0.4, 0.4), randf_range(0.4, 1.0), 0.6), dark) # verrues
-	var head := Node3D.new()
-	head.position = Vector3(0, 1.62, 0.32)
-	_torso.add_child(head)
-	Visuals.sphere(head, 0.3, Vector3.ZERO, skin, Vector3(1.0, 0.9, 1.05))
-	Visuals.cylinder(head, 0.04, 0.11, 0.4, Vector3(0, -0.02, 0.38), skin, Vector3(70, 0, 0), 8) # long nez
-	Visuals.sphere(head, 0.07, Vector3(0, -0.12, 0.55), skin)
-	Visuals.box(head, Vector3(0.4, 0.14, 0.24), Vector3(0, -0.2, 0.14), dark) # mâchoire
-	for side: float in [-1.0, 1.0]:
-		Visuals.sphere(head, 0.04, Vector3(0.11 * side, 0.07, 0.26), eye)
-		Visuals.cylinder(head, 0.0, 0.05, 0.22, Vector3(0.14 * side, -0.08, 0.27), tusk, Vector3(-15, 0, -10 * side), 6)
-		Visuals.cylinder(head, 0.0, 0.06, 0.3, Vector3(0.3 * side, 0.04, 0.0), skin, Vector3(0, 0, -100 * side), 5) # oreilles
-	for side: float in [-1.0, 1.0]:
-		var arm := Node3D.new()
-		arm.position = Vector3(0.85 * side, 1.25, 0)
-		_torso.add_child(arm)
-		Visuals.sphere(arm, 0.28, Vector3.ZERO, skin)
-		Visuals.capsule(arm, 0.19, 0.7, Vector3(0.04 * side, -0.4, 0), skin)
-		Visuals.capsule(arm, 0.17, 0.65, Vector3(0.06 * side, -0.95, 0.08), dark)
-		Visuals.sphere(arm, 0.19, Vector3(0.07 * side, -1.3, 0.12), skin)
-		if side < 0.0:
-			_arm_l = arm
-		else:
-			_arm_r = arm
-	# Massue : un tronc d'arbre noueux, plus gros au bout.
+	skin = CharacterSkin.create("troll")
+	model.add_child(skin)
+	_flash_mats.append_array(skin.flash_materials)
+	# Massue : un tronc d'arbre noueux dans la main droite (vers l'avant au bout du poing, à la pose de repos).
 	var club := Node3D.new()
-	club.position = Vector3(0.07, -1.3, 0.12)
-	_arm_r.add_child(club)
+	skin.place(club, "hand.R", Basis.IDENTITY, 0.08, Vector3.ZERO)
 	var wood := Visuals.mat(Color(0.28, 0.18, 0.1), 0.9)
-	Visuals.cylinder(club, 0.26, 0.1, 1.8, Vector3(0, 0.0, 0.75), wood, Vector3(90, 0, 0), 8)
+	Visuals.cylinder(club, 0.2, 0.08, 1.4, Vector3(0, 0.0, 0.55), wood, Vector3(90, 0, 0), 8)
 	for k in 4:
-		Visuals.sphere(club, 0.1, Vector3(randf_range(-0.2, 0.2), randf_range(-0.2, 0.2), 1.2 + k * 0.12), wood)
+		Visuals.sphere(club, 0.08, Vector3(randf_range(-0.15, 0.15), randf_range(-0.15, 0.15), 0.9 + k * 0.1), wood)
+	skin.attach("hand.R", club)
 	var glow := OmniLight3D.new()
 	glow.light_color = Color(1.0, 0.75, 0.4)
 	glow.light_energy = 1.2
@@ -126,21 +76,19 @@ func _build_model() -> void:
 	model.add_child(_regen_fx)
 
 
-func _animate(_delta: float, moving: bool) -> void:
-	var stride := sin(_anim_t * 3.2) if moving else 0.0
-	_hip_l.rotation.x = stride * 0.4
-	_hip_r.rotation.x = -stride * 0.4
-	_torso.rotation.z = stride * 0.07
-	_torso.position.y = 1.1 + absf(stride) * 0.06
-	_arm_l.rotation.x = -stride * 0.4
-	_arm_r.rotation.x = lerpf(stride * 0.3, -2.7, _slam)
+func _animate(delta: float, _moving: bool) -> void:
+	skin.step(delta, _speed_now > 0.05, _speed_now)
 
 
+## Coup de massue : le clip « slash » étiré pour que l'impact tombe à la fin de l'élan.
 func _attack_anim(windup: float) -> void:
-	var tw := create_tween()
-	tw.tween_property(self, "_slam", 1.0, windup * 0.85).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(self, "_slam", -0.3, 0.12)
-	tw.tween_property(self, "_slam", 0.0, 0.45)
+	skin.action("slash", windup / STRIKE_AT)
+
+
+func _flash() -> void:
+	if skin != null:
+		skin.hurt()
+	super()
 
 
 func _aggro() -> void:
@@ -192,10 +140,7 @@ func _smash() -> void:
 	_busy = true
 	_smash_timer = 7.0
 	var front := global_position + Vector3(sin(model.rotation.y), 0, cos(model.rotation.y)) * 2.4
-	var tw := create_tween()
-	tw.tween_property(self, "_slam", 1.0, 1.0).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(self, "_slam", -0.4, 0.12)
-	tw.tween_property(self, "_slam", 0.0, 0.5)
+	skin.action("slash", 1.1 / STRIKE_AT) # la massue s'abat au moment de l'impact
 	await BossMoves.strike(self, front, 2.4, 1.1, Vector3i(3, 8, 3 + level), "rock")
 	_busy = false
 
@@ -203,6 +148,7 @@ func _smash() -> void:
 func _call_goblins() -> void:
 	_called = true
 	Sfx.play("croak", 0.0, 0.2)
+	skin.action("victory", 1.4) # il beugle, bras levés
 	Events.notify("Le troll beugle : « GOBELINS ! À MOI ! » Des pas précipités résonnent dans la grotte...", Events.COLOR_BAD)
 	if spawn_minion.is_valid():
 		for k in 4:
@@ -225,7 +171,5 @@ func _die() -> void:
 func _death_anim() -> void:
 	Sfx.play("boom", 0.0)
 	Events.camera_shake.emit(0.5, 1.0)
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(model, "rotation:x", -PI * 0.5, 1.0).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(model, "position:y", 0.3, 1.0)
+	skin.die()
 	_corpse(3.0)
