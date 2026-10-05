@@ -245,6 +245,9 @@
 - [x] Portail bleu (T) : 3 s d'incantation (barre à l'écran), interrompue si le héros bouge, est touché ou entre en combat ; un seul portail par joueur (y compris dans les Cryptes)
 - [x] Riff électrique à 90 BPM
 
+## ✅ v0.1.44 — Options d'affichage
+- [x] Options > Affichage : fenêtré ou plein écran, résolution (les courantes jusqu'à celle de l'écran), fluidité 60 / 90 / 120 / 140 images/s ; sauvegardées dans settings.cfg et appliquées au lancement (autoload Display)
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

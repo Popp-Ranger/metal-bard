@@ -24,6 +24,7 @@ func _ready() -> void:
 	await _test_town_portal()
 	await _test_click_move()
 	await _test_remote_spell_fx()
+	await _test_display()
 	if _failures == 0:
 		print("SMOKE TEST : OK")
 	else:
@@ -32,6 +33,26 @@ func _ready() -> void:
 	Sfx._ambience.stream = null
 	await get_tree().create_timer(0.2).timeout # laisse le serveur audio libérer la musique
 	get_tree().quit(1 if _failures > 0 else 0)
+
+
+## Options > Affichage : mode, résolution, images par seconde (sans toucher au fichier de réglages).
+func _test_display() -> void:
+	print("[Affichage]")
+	var menu := OptionsMenu.new()
+	add_child(menu)
+	await _frames(1)
+	var res := Display.resolutions()
+	_check(menu.mode_button.item_count == 2 and menu.fps_button.item_count == 4 and res.has(Vector2i(1920, 1080))
+		and menu.resolution_button.item_count == res.size(),
+		"options d'affichage : fenêtré / plein écran, %d résolutions, 60 / 90 / 120 / 140 images/s" % res.size())
+	menu.fps_button.select(2)
+	menu.fps_button.item_selected.emit(2)
+	var at_120 := Engine.max_fps == 120 and Engine.physics_ticks_per_second == 120
+	menu.fps_button.select(0)
+	menu.fps_button.item_selected.emit(0)
+	_check(at_120 and Engine.max_fps == 60 and Engine.physics_ticks_per_second == 60,
+		"fluidité : le jeu tourne à 120 images/s quand on le choisit (puis revient à 60)")
+	menu.queue_free()
 
 
 func _check(cond: bool, what: String) -> void:
@@ -233,7 +254,10 @@ func _test_quest_flow() -> void:
 		if hp_after < hp_before:
 			break
 	_check(hp_after < hp_before, "l'Accordage de cordes inflige des dégâts en chaîne")
-	_check(is_equal_approx(Balance.TUNING_COOLDOWN, 10.0) and absf(float(hero.cooldowns["tuning"]) - 10.0 * GameState.cooldown_multiplier()) < 0.1,
+	# (la recharge a déjà un peu décompté pendant les deux images : un à-coup de chargement ne doit pas faire échouer)
+	var tuning_cd := float(hero.cooldowns["tuning"])
+	var tuning_full := 10.0 * GameState.cooldown_multiplier()
+	_check(is_equal_approx(Balance.TUNING_COOLDOWN, 10.0) and tuning_cd <= tuning_full + 0.01 and tuning_cd > tuning_full - 1.0,
 		"Accordage de cordes : recharge de 10 s")
 	var banging := 0
 	for attempt in 5:
