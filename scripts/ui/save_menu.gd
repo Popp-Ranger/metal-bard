@@ -25,10 +25,7 @@ func _ready() -> void:
 	offset_right = 380
 	offset_top = -250
 	offset_bottom = 250
-	var style := UiStyle.box(Color(0.07, 0.055, 0.055, 1.0), UiStyle.BORDER, 3)
-	style.shadow_size = 2000
-	style.shadow_color = Color(0, 0, 0, 0.7)
-	style.set_content_margin_all(20)
+	var style := UiStyle.frame(true, 30) # cadre de fer, voile sombre derrière
 	add_theme_stylebox_override("panel", style)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)

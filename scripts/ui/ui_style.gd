@@ -1,6 +1,7 @@
 class_name UiStyle
 extends RefCounted
-## Styles d'interface partagés : parchemin sombre, bordures de fer, police à empattements.
+## Styles d'interface partagés : cadres et boutons de fer noirci rendus dans Blender (assets/ui, art/hud/build_hud.py),
+## police à empattements.
 
 const BONE := Color(0.93, 0.87, 0.72)
 const DIM := Color(0.65, 0.6, 0.52)
@@ -30,14 +31,41 @@ static func theme() -> Theme:
 	_theme.set_color("font_hover_color", "Button", Color(1.0, 0.85, 0.5))
 	_theme.set_color("font_disabled_color", "Button", Color(0.4, 0.37, 0.33))
 	_theme.set_color("default_color", "RichTextLabel", BONE)
-	_theme.set_stylebox("normal", "Button", box(Color(0.12, 0.09, 0.08, 0.95), BORDER, 2))
-	_theme.set_stylebox("hover", "Button", box(Color(0.22, 0.12, 0.09, 0.95), Color(0.8, 0.55, 0.25), 2))
-	_theme.set_stylebox("pressed", "Button", box(Color(0.3, 0.1, 0.07, 0.95), Color(1.0, 0.6, 0.3), 2))
-	_theme.set_stylebox("disabled", "Button", box(Color(0.08, 0.07, 0.07, 0.8), Color(0.25, 0.22, 0.2), 2))
+	_theme.set_stylebox("normal", "Button", button_box(Color.WHITE))
+	_theme.set_stylebox("hover", "Button", button_box(Color(1.5, 1.0, 0.7))) # lueur de forge
+	_theme.set_stylebox("pressed", "Button", button_box(Color(1.8, 0.8, 0.5)))
+	_theme.set_stylebox("disabled", "Button", button_box(Color(0.55, 0.55, 0.55)))
 	_theme.set_stylebox("focus", "Button", box(Color(0, 0, 0, 0), Color(0.9, 0.7, 0.4), 1))
-	_theme.set_stylebox("panel", "PanelContainer", box(PANEL_BG, BORDER, 2))
-	_theme.set_stylebox("panel", "Panel", box(PANEL_BG, BORDER, 2))
+	for kind: String in ["OptionButton"]:
+		_theme.set_stylebox("normal", kind, button_box(Color.WHITE))
+		_theme.set_stylebox("hover", kind, button_box(Color(1.5, 1.0, 0.7)))
+		_theme.set_stylebox("pressed", kind, button_box(Color(1.8, 0.8, 0.5)))
+	_theme.set_stylebox("panel", "PanelContainer", frame())
+	_theme.set_stylebox("panel", "Panel", frame())
 	return _theme
+
+
+## Cadre de fer des panneaux (coins à rivets) ; `dim` : voile sombre sur tout l'écran derrière (fenêtres modales).
+static func frame(dim: bool = false, content: float = 22.0) -> IronFrame:
+	var f := IronFrame.make(load("res://assets/ui/cadre.png"), 48.0, content)
+	f.dim = dim
+	return f
+
+
+## Bouton de fer biseauté (teinte : survol, appui, désactivé).
+static func button_box(tint: Color) -> IronFrame:
+	var f := IronFrame.make(load("res://assets/ui/bouton.png"), 18.0, 10.0, tint)
+	f.content_margin_left = 22.0
+	f.content_margin_right = 22.0
+	return f
+
+
+## Plaque de fer sous les réservoirs du HUD (texte des PV et des décibels).
+static func plate() -> IronFrame:
+	var f := IronFrame.make(load("res://assets/ui/bouton.png"), 18.0, 4.0)
+	f.content_margin_left = 14.0
+	f.content_margin_right = 14.0
+	return f
 
 
 static func box(bg: Color, border: Color, border_width: int = 2, radius: int = 3) -> StyleBoxFlat:

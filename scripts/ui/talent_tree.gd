@@ -20,8 +20,7 @@ func _ready() -> void:
 	offset_right = 640
 	offset_top = -390
 	offset_bottom = 380
-	var style := UiStyle.box(Color(0.05, 0.04, 0.045, 0.97), UiStyle.BORDER, 3)
-	style.set_content_margin_all(16)
+	var style := UiStyle.frame(false, 26)
 	add_theme_stylebox_override("panel", style)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)

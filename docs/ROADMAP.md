@@ -252,6 +252,11 @@
 - [x] Gloubah, le Roi Grenouille : nouveau modèle 3D (crapaud debout couronné), 50 % plus grand que les héros (2,76 m), animé (repos, marche, coup de patte avec la langue, sursaut, mort) ; yeux luisants et langue accrochés à sa tête
 - [x] Plumeau : nouveau modèle 3D de bébé hibours (1,2 m), qui marche et court en suivant le héros
 
+## ✅ v0.1.46 — Nouveau HUD et menus de fer
+- [x] Réservoir de vie : petite main cornue en pierre (bas à gauche), cœur de verre qui se remplit de liquide rouge animé ; réservoir de décibels : petite enceinte cloutée (bas à droite), cuve de liquide violet
+- [x] Barre de sorts dans un cadre de fer à crânes, pointes et chaînes ; cases de fer
+- [x] Panneaux et boutons des menus en fer noirci (rendus dans Blender, art/hud/build_hud.py) — voir docs/HUD.md
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

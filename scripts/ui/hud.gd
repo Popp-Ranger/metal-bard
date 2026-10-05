@@ -1,6 +1,7 @@
 class_name Hud
 extends CanvasLayer
-## Interface en jeu : barres (PV / décibels / XP), barre de compétences avec recharges,
+## Interface en jeu : réservoirs de vie (la main cornue, en bas à gauche) et de décibels (l'enceinte, en bas à droite),
+## barre d'XP, barre de compétences dans son cadre de fer (art/hud/build_hud.py) avec recharges,
 ## suivi de quête, messages, invite d'interaction, barre de vie du boss,
 ## et les fenêtres (dialogue, solo, fiche, pause, mort).
 
@@ -27,10 +28,9 @@ var save_menu: SaveMenu
 var coop_menu: CoopMenu
 
 var _root: Control
-var _hp_bar: ProgressBar
-var _hp_label: Label
-var _mana_bar: ProgressBar
-var _mana_label: Label
+## Réservoirs : la vie (main cornue) et les décibels (enceinte).
+var life: Reservoir
+var decibels: Reservoir
 var _xp_bar: ProgressBar
 var _level_label: Label
 var _gold_label: Label
@@ -163,55 +163,90 @@ func _build_status() -> void:
 	head.add_child(_level_label)
 	_gold_label = UiStyle.label("0 médiators", 18, Events.COLOR_GOLD)
 	head.add_child(_gold_label)
-	_hp_bar = UiStyle.bar(Color(0.65, 0.08, 0.06), Vector2(300, 22))
-	vb.add_child(_hp_bar)
-	_hp_label = UiStyle.label("", 14)
-	_hp_label.set_anchors_preset(Control.PRESET_CENTER)
-	_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hp_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_hp_bar.add_child(_hp_label)
-	_mana_bar = UiStyle.bar(Color(0.35, 0.2, 0.75), Vector2(300, 16))
-	vb.add_child(_mana_bar)
-	_mana_label = UiStyle.label("", 12)
-	_mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_mana_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_mana_bar.add_child(_mana_label)
-	_xp_bar = UiStyle.bar(Color(0.8, 0.6, 0.15), Vector2(300, 6))
+	_xp_bar = UiStyle.bar(Color(0.8, 0.6, 0.15), Vector2(300, 8))
 	vb.add_child(_xp_bar)
+	# Réservoirs : la main cornue (vie) en bas à gauche, l'enceinte (décibels) en bas à droite.
+	life = Reservoir.create("main_vie", LIFE_SIZE, Color(0.28, 0.0, 0.02), Color(1.0, 0.12, 0.06), Color(1.0, 0.62, 0.45))
+	_corner(life, false)
+	decibels = Reservoir.create("enceinte_db", DB_SIZE, Color(0.16, 0.02, 0.3), Color(0.72, 0.25, 1.0), Color(0.95, 0.75, 1.0))
+	_corner(decibels, true)
+
+
+const LIFE_SIZE := Vector2(150, 200) # main_vie.png (420 × 560) réduite
+const DB_SIZE := Vector2(143, 200) # enceinte_db.png (400 × 560) réduite
+## Cadre de la barre de sorts (barre_sorts.png, 1050 × 210) réduit à 95 % ; son ouverture, où se posent les cases.
+const BAR_SIZE := Vector2(998, 200)
+const BAR_WINDOW_CENTER := Vector2(499, 111)
+const SLOT := 72.0
+const BOTTOM_MARGIN := 30.0
+
+
+## Pose un réservoir dans un coin bas de l'écran (`right` : à droite).
+func _corner(r: Reservoir, right: bool) -> void:
+	r.anchor_top = 1.0
+	r.anchor_bottom = 1.0
+	r.anchor_left = 1.0 if right else 0.0
+	r.anchor_right = r.anchor_left
+	var w := r.custom_minimum_size.x
+	r.offset_left = -w - 24.0 if right else 24.0
+	r.offset_right = r.offset_left + w
+	r.offset_top = -r.custom_minimum_size.y - BOTTOM_MARGIN + 6.0
+	r.offset_bottom = r.offset_top + r.custom_minimum_size.y
+	_root.add_child(r)
 
 
 func _build_skills() -> void:
+	var frame := TextureRect.new()
+	frame.texture = load("res://assets/ui/barre_sorts.png")
+	frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	frame.anchor_left = 0.5
+	frame.anchor_right = 0.5
+	frame.anchor_top = 1.0
+	frame.anchor_bottom = 1.0
+	frame.offset_left = -BAR_SIZE.x * 0.5
+	frame.offset_right = BAR_SIZE.x * 0.5
+	frame.offset_top = -BAR_SIZE.y - BOTTOM_MARGIN
+	frame.offset_bottom = -BOTTOM_MARGIN
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(frame)
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 8)
-	bar.anchor_left = 0.5
-	bar.anchor_right = 0.5
-	bar.anchor_top = 1.0
-	bar.anchor_bottom = 1.0
-	bar.offset_left = -(SKILLS.size() * 96) * 0.5
-	bar.offset_top = -134
+	bar.add_theme_constant_override("separation", 6)
+	var width := SKILLS.size() * SLOT + (SKILLS.size() - 1) * 6.0
+	bar.position = BAR_WINDOW_CENTER - Vector2(width, SLOT) * 0.5
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(bar)
+	frame.add_child(bar)
 	for s: Dictionary in SKILLS:
 		var panel := Panel.new()
-		panel.custom_minimum_size = Vector2(84, 84)
+		panel.custom_minimum_size = Vector2(SLOT, SLOT)
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var c: Color = s["color"]
-		panel.add_theme_stylebox_override("panel", UiStyle.box(Color(0.07, 0.05, 0.05, 0.92), c.darkened(0.3), 2))
+		var bg := UiStyle.box(Color(0.06, 0.045, 0.045, 0.95), c.darkened(0.45), 1, 2)
+		bg.shadow_size = 0
+		panel.add_theme_stylebox_override("panel", bg)
 		bar.add_child(panel)
-		var name_label := UiStyle.label(str(s["name"]), 13, c)
+		var rim := TextureRect.new() # cadre de fer de la case, par-dessus
+		rim.texture = load("res://assets/ui/case.png")
+		rim.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rim.size = Vector2(SLOT, SLOT)
+		rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rim.z_index = 1
+		panel.add_child(rim)
+		var name_label := UiStyle.label(str(s["name"]), 11, c)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		name_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		name_label.offset_top = 18
-		name_label.offset_bottom = -4
+		name_label.offset_top = 12
+		name_label.offset_bottom = -12
 		panel.add_child(name_label)
-		var key := UiStyle.label(Controls.key_label(str(s["action"])), 13, UiStyle.BONE)
-		key.position = Vector2(6, 2)
+		var key := UiStyle.label(Controls.key_label(str(s["action"])), 12, UiStyle.BONE)
+		key.position = Vector2(8, 4)
+		key.z_index = 2
 		panel.add_child(key)
-		var extra := UiStyle.label("", 12, Color(0.7, 0.6, 1.0))
+		var extra := UiStyle.label("", 11, Color(0.8, 0.6, 1.0))
 		extra.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		extra.position = Vector2(30, 3)
-		extra.size = Vector2(48, 16)
+		extra.position = Vector2(8, SLOT - 21) # coût (ou nombre de potions) en bas à droite
+		extra.size = Vector2(SLOT - 16, 16)
+		extra.z_index = 2
 		var cost: float = s["cost"]
 		if cost > 0.0:
 			extra.text = "%d dB" % roundi(cost)
@@ -219,7 +254,7 @@ func _build_skills() -> void:
 		var overlay := ColorRect.new()
 		overlay.color = Color(0, 0, 0, 0.65)
 		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		overlay.size = Vector2(84, 0)
+		overlay.size = Vector2(SLOT, 0)
 		panel.add_child(overlay)
 		_slots[s["id"]] = {"overlay": overlay, "panel": panel, "remaining": 0.0, "duration": 1.0, "extra": extra, "cost": cost, "name": name_label}
 	_on_potions(GameState.potions)
@@ -242,7 +277,7 @@ func _build_skills() -> void:
 	_prompt.anchor_bottom = 1.0
 	_prompt.offset_left = -400
 	_prompt.offset_right = 400
-	_prompt.offset_top = -168
+	_prompt.offset_top = -BAR_SIZE.y - BOTTOM_MARGIN - 34
 	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_prompt)
 
@@ -251,7 +286,7 @@ func _build_quest_tracker() -> void:
 	var panel := PanelContainer.new()
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
-	panel.offset_left = -360
+	panel.offset_left = -384 # 320 px de texte + les marges du cadre de fer
 	panel.offset_right = -16
 	panel.offset_top = 16
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -291,7 +326,7 @@ func _build_cast_bar() -> void:
 	cast_box.anchor_bottom = 1.0
 	cast_box.offset_left = -160
 	cast_box.offset_right = 160
-	cast_box.offset_top = -205
+	cast_box.offset_top = -BAR_SIZE.y - BOTTOM_MARGIN - 84
 	cast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(cast_box)
 	_cast_label = UiStyle.label("", 16, Color(0.6, 0.85, 1.0))
@@ -456,17 +491,14 @@ func show_area_name(text: String) -> void:
 
 
 func _on_hp(hp: int, max_hp: int) -> void:
-	_hp_bar.max_value = max_hp
-	_hp_bar.value = hp
-	_hp_label.text = "%d / %d PV" % [hp, max_hp]
+	var text := "VIE %d %%  ·  %d / %d" % [roundi(100.0 * hp / maxf(1.0, max_hp)), hp, max_hp]
 	if GameState.shield > 0:
-		_hp_label.text += "  (+%d bouclier)" % GameState.shield
+		text += "  +%d" % GameState.shield
+	life.set_value(hp, max_hp, text)
 
 
 func _on_mana(mana: float, max_mana: float) -> void:
-	_mana_bar.max_value = max_mana
-	_mana_bar.value = mana
-	_mana_label.text = "%d / %d dB" % [roundi(mana), roundi(max_mana)]
+	decibels.set_value(mana, max_mana, "dB %d %%  ·  %d / %d" % [roundi(100.0 * mana / maxf(1.0, max_mana)), roundi(mana), roundi(max_mana)])
 
 
 func _on_xp(xp: int, next_xp: int, level: int) -> void:

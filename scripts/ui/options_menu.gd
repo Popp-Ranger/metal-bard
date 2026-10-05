@@ -25,10 +25,7 @@ func _ready() -> void:
 	offset_right = 260
 	offset_top = -255
 	offset_bottom = 255
-	var style := UiStyle.box(Color(0.07, 0.055, 0.055, 1.0), UiStyle.BORDER, 3)
-	style.shadow_size = 2000 # voile sombre sur tout l'écran derrière le panneau
-	style.shadow_color = Color(0, 0, 0, 0.7)
-	style.set_content_margin_all(22)
+	var style := UiStyle.frame(true, 32) # cadre de fer, voile sombre derrière
 	add_theme_stylebox_override("panel", style)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var vb := VBoxContainer.new()

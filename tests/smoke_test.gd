@@ -53,6 +53,14 @@ func _test_display() -> void:
 	_check(at_120 and Engine.max_fps == 60 and Engine.physics_ticks_per_second == 60,
 		"fluidité : le jeu tourne à 120 images/s quand on le choisit (puis revient à 60)")
 	menu.queue_free()
+	# HUD : la main cornue (vie) et l'enceinte (décibels) se remplissent selon les valeurs.
+	var life := Reservoir.create("main_vie", Vector2(150, 200), Color.DARK_RED, Color.RED, Color.WHITE)
+	add_child(life)
+	life.set_value(30, 50, "VIE 60 %")
+	var span := Reservoir._mask_span(load("res://assets/ui/enceinte_db_masque.png"))
+	_check(is_equal_approx(life.ratio, 0.6) and life._label.text == "VIE 60 %" and span.x > 0.1 and span.y > span.x + 0.1,
+		"HUD : réservoir de vie (main cornue) à 60 %, cuve de l'enceinte repérée dans son masque")
+	life.queue_free()
 
 
 func _check(cond: bool, what: String) -> void:
