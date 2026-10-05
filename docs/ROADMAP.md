@@ -275,6 +275,16 @@
 - [x] Riff black metal : avec la Batguitare, le Riff électrique devient un trait brumeux violet accompagné d'un vent brumeux
 - [x] Back Jlack porte sa basse dans le dos (modèle d'Ulysse) ; Troll des cavernes : modèle 3D d'Ulysse, animé
 - [x] Xplode : guitare du Gardien des Cryptes (une fois ; revendue 1 médiator, elle retombe), son riff devient FIREBALL (boule de feu crépitante)
+- [x] FIREBALL faite avec les textures de feu d'Ulysse (flammes, halo, cœur en Voronoi)
+
+## ✅ v0.1.50 — Minotaure, correctifs du 6 octobre
+- [x] Le Minotaure : modèle 3D d'Ulysse (Ennemis/Minotaure), riggé et animé, hache à double tranchant, guitare et headbang pendant le duel
+- [x] Coopération : seul le joueur qui lance le dialogue joue le mini-jeu de l'histoire (épreuve de Back Jlack, duel du Minotaure : celui qui l'a fait tomber à 5 %) ; les autres le regardent en direct (notes, touches jouées, morceau) ; le résultat vaut pour tout le groupe
+- [x] Accordage de cordes : il prend le mini-jeu et le son du Riff électrique, et passe sur la touche 1 ; le Riff électrique (FIREBALL, Riff black metal) passe au clic droit, sans mini-jeu, recharge d'1 s
+- [x] Réserve de dB réduite de 25 %
+- [x] Xplode : effet lumineux orange sur les cordes
+- [x] Inventaire : le héros au centre de l'écran, de la tête aux pieds avec sa guitare équipée ; cliquer-glisser le fait pivoter
+- [x] Cinématique de Back Jlack : la musique se tait ; Solo de la Foudre : la musique continue, baissée de 20 %
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
@@ -296,6 +306,7 @@
 - [x] Hébergement / connexion ENet par code d'invitation, chacun avec son personnage (v0.1.5)
 - [x] Synchronisation des héros et des ennemis ; coups des clients validés par l'hôte (v0.1.5)
 - [x] Effets visuels et sons des sorts des autres joueurs (v0.1.13)
+- [x] Mini-jeux de l'histoire joués par un seul joueur, regardés en direct par les autres (v0.1.50)
 - [ ] Dialogues, coffres, portes et portail bleu partagés
 - [ ] Relais en ligne (sans ouverture de port), lobby dans la taverne
 - [ ] 2 nouvelles classes (Batteur-guerrier, Chanteur-clerc)

@@ -23,6 +23,7 @@ func _ready() -> void:
 	await _test_crypt()
 	await _test_chapter_two()
 	await _test_chapter_three()
+	await _test_fixes_october()
 	await _test_level_editor()
 	await _test_quest_flow()
 	await _test_new_features()
@@ -254,24 +255,28 @@ func _test_quest_flow() -> void:
 	var hp_before := 0
 	for e in targets:
 		hp_before += e.hp
-	# Les sorts touchent 8 fois sur 10 : on relance l'Accordage si les 3 cibles l'ont esquivé.
+	# Riff électrique (clic droit) : un éclair, sans mini-jeu, recharge d'1 s. Les sorts touchent 8 fois sur 10 : on
+	# relance si la cible l'a esquivé.
 	var hp_after := hp_before
-	for attempt in 5:
-		hero.cooldowns["tuning"] = 0.0
+	for attempt in 8:
+		hero.cooldowns["riff"] = 0.0
 		GameState.mana = GameState.max_mana()
-		hero.cast_tuning()
+		hero.cast_riff()
 		await _frames(2)
 		hp_after = 0
 		for e in targets:
 			hp_after += maxi(e.hp, 0)
 		if hp_after < hp_before:
 			break
-	_check(hp_after < hp_before, "l'Accordage de cordes inflige des dégâts en chaîne")
+	_check(hp_after < hp_before and not hero.casting_tuning and not (dungeon as Level).hud.solo._active,
+		"Riff électrique : un éclair sur l'ennemi visé, sans mini-jeu")
 	# (la recharge a déjà un peu décompté pendant les deux images : un à-coup de chargement ne doit pas faire échouer)
-	var tuning_cd := float(hero.cooldowns["tuning"])
-	var tuning_full := 10.0 * GameState.cooldown_multiplier()
-	_check(is_equal_approx(Balance.TUNING_COOLDOWN, 10.0) and tuning_cd <= tuning_full + 0.01 and tuning_cd > tuning_full - 1.0,
-		"Accordage de cordes : recharge de 10 s")
+	var riff_cd := float(hero.cooldowns["riff"])
+	var riff_full := Balance.RIFF_COOLDOWN * GameState.cooldown_multiplier()
+	_check(is_equal_approx(Balance.RIFF_COOLDOWN, 1.0) and riff_cd <= riff_full + 0.01 and riff_cd > riff_full - 0.5,
+		"Riff électrique (FIREBALL, Riff black metal) : recharge d'1 s")
+	_check(Controls.key_label("spell_riff") == "Clic D" and Controls.key_label("spell_tuning") == "1",
+		"touches échangées : Riff électrique au clic droit, Accordage de cordes sur la touche 1")
 	var banging := 0
 	for attempt in 5:
 		hero.cooldowns["wave"] = 0.0
@@ -306,7 +311,8 @@ func _test_quest_flow() -> void:
 			sure_hits += 1
 	_check(is_equal_approx(GameState.spell_hit_chance(), 0.8) and spell_hits > 210 and spell_hits < 270 and sure_hits == 300,
 		"sorts : 80 %% de chances de toucher (%d / 300), mini-jeux toujours (%d / 300)" % [spell_hits, sure_hits])
-	# Riff électrique : mini-jeu, la même note à 90 BPM ; l'éclair saute d'un ennemi au suivant.
+	# Accordage de cordes (touche 1) : le mini-jeu de l'ancien Riff électrique, la même note à 90 BPM ; l'arc rebondit
+	# d'un ennemi au suivant (une note par cible).
 	var solo_game := (dungeon as Level).hud.solo
 	for i in targets.size():
 		targets[i].hp = 9999
@@ -315,15 +321,15 @@ func _test_quest_flow() -> void:
 	hero.aim_point = targets[0].global_position
 	GameState.mana = GameState.max_mana()
 	GameState.hp = GameState.max_hp() # les squelettes réveillés ne doivent pas tuer le héros pendant le test
-	hero.cooldowns["riff"] = 0.0
-	hero.cast_riff()
+	hero.cooldowns["tuning"] = 0.0
+	hero.cast_tuning()
 	await _frames(1)
-	var riff_beat := 60.0 / Balance.RIFF_BPM
-	var regular := solo_game._notes.size() == Balance.RIFF_NOTES - 1
+	var beat := 60.0 / Balance.TUNING_BPM
+	var regular := solo_game._notes.size() == Balance.TUNING_MAX_TARGETS - 1
 	for i in solo_game._notes.size():
-		regular = regular and absf(float(solo_game._notes[i]["time"]) - riff_beat * (i + 1)) < 0.001 and int(solo_game._notes[i]["lane"]) == 0
-	_check(hero.casting_riff and solo_game._active and solo_game.mode == "riff" and solo_game._lanes == 1 and regular,
-		"Riff électrique : mini-jeu d'une seule note, 8 notes à 90 BPM (la 1re part avec le sort)")
+		regular = regular and absf(float(solo_game._notes[i]["time"]) - beat * (i + 1)) < 0.001 and int(solo_game._notes[i]["lane"]) == 0
+	_check(hero.casting_tuning and solo_game._active and solo_game.mode == "tuning" and solo_game._lanes == 1 and regular,
+		"Accordage de cordes : mini-jeu d'une seule note, 5 notes à 90 BPM (la 1re part avec le sort)")
 	for i in solo_game._notes.size():
 		var wait := float(solo_game._notes[i]["time"]) - solo_game._t
 		if wait > 0.0:
@@ -332,19 +338,20 @@ func _test_quest_flow() -> void:
 		solo_game._press(0)
 	await _frames(2)
 	var chained := {}
-	for e: Enemy in hero._riff_chain:
+	for e: Enemy in hero._tuning_chain:
 		chained[e] = true
-	_check(not hero.casting_riff and not solo_game._active and hero._riff_chain.size() == Balance.RIFF_NOTES and chained.size() >= 3,
-		"riff parfait : 8 notes, l'éclair se propage aux ennemis suivants (%d touchés ; chaîne %d, notes %d / %d, t %.3f, en cours %s)" % [chained.size(), hero._riff_chain.size(), solo_game._hits, solo_game._notes.size(), solo_game._t, hero.casting_riff])
-	_check(absf(float(hero.cooldowns["riff"]) - Balance.RIFF_COOLDOWN * GameState.cooldown_multiplier()) < 0.05, "Riff électrique : recharge de 3 s")
-	hero.cooldowns["riff"] = 0.0
+	_check(not hero.casting_tuning and not solo_game._active and hero._tuning_chain.size() == Balance.TUNING_MAX_TARGETS and chained.size() >= 3,
+		"accordage parfait : 5 notes, l'arc rebondit sur les ennemis suivants (%d touchés ; chaîne %d, notes %d / %d, t %.3f, en cours %s)" % [chained.size(), hero._tuning_chain.size(), solo_game._hits, solo_game._notes.size(), solo_game._t, hero.casting_tuning])
+	_check(is_equal_approx(Balance.TUNING_COOLDOWN, 10.0) and absf(float(hero.cooldowns["tuning"]) - Balance.TUNING_COOLDOWN * GameState.cooldown_multiplier()) < 0.05,
+		"Accordage de cordes : recharge de 10 s")
+	hero.cooldowns["tuning"] = 0.0
 	GameState.mana = GameState.max_mana()
-	hero.cast_riff()
+	hero.cast_tuning()
 	await _frames(1)
-	solo_game._press(0) # à contretemps : la 2e note n'arrive qu'au bout de 0,375 s
+	solo_game._press(0) # à contretemps : la 2e note n'arrive qu'au bout de 0,667 s
 	await _frames(1)
-	_check(not hero.casting_riff and absf(float(hero.cooldowns["riff"]) - 3.0 * Balance.RIFF_COOLDOWN * GameState.cooldown_multiplier()) < 0.05,
-		"riff : une fausse note l'arrête et triple la recharge")
+	_check(not hero.casting_tuning and absf(float(hero.cooldowns["tuning"]) - 3.0 * Balance.TUNING_COOLDOWN * GameState.cooldown_multiplier()) < 0.05,
+		"accordage : une fausse note l'arrête et triple la recharge")
 	# Coup de guitare : il touche à chaque fois (même contre une CA de 99), 1d6 + FOR.
 	var victim := targets[0]
 	victim.armor_class = 99
@@ -361,7 +368,7 @@ func _test_quest_flow() -> void:
 			landed += 1
 	_check(landed == 4, "coup de guitare : touche à tous les coups (CA 99), 1d6 + FOR (%d / 4)" % landed)
 	_check(Sfx._streams.has("riff") and (Sfx._streams["riff"] as AudioStream).resource_path.ends_with("riff_electrique.wav"),
-		"Riff électrique : son riff electrique.wav")
+		"Accordage de cordes : son riff electrique.wav (l'ancien son du Riff électrique)")
 	_check(Sfx._thunders.size() == 2 and Sfx._streams.has("thunder_0") and Sfx._streams.has("thunder_1"),
 		"éclairs : short_lightning.mp3 et short_thunder.mp3 tirés au hasard")
 	# Proportions et mains : cinq doigts par main, tête ≈ 1/7,5 de la taille.
@@ -1708,6 +1715,7 @@ func _test_crypt() -> void:
 	await _frames(2)
 	var again := DemonBrute.new()
 	again.guardian = true
+	crypt.add_child(again) # (ses médiators tombent dans le niveau)
 	again._drop_loot()
 	var twice := again.loot.filter(func(l: Dictionary) -> bool: return str(l.get("item", "")) == "xplode").size()
 	_check(drops == 1 and GameState.owns("xplode") and twice == 0, "le Gardien des Cryptes laisse la Xplode, une seule fois tant qu'on l'a")
@@ -1725,6 +1733,7 @@ func _test_crypt() -> void:
 	GameState.sell_item("xplode")
 	var third := DemonBrute.new()
 	third.guardian = true
+	crypt.add_child(third)
 	third._drop_loot()
 	var back := third.loot.filter(func(l: Dictionary) -> bool: return str(l.get("item", "")) == "xplode").size()
 	_check(GameState.gold == gold_before + 1 and not GameState.owns("xplode") and back == 1,
@@ -1755,6 +1764,8 @@ func _test_chapter_two() -> void:
 	# Cinématique : visage de Back Jlack en contre-plongée, orage, puis départ vers l'autre univers.
 	var cine := LegendCinematic.play(self)
 	await _frames(3)
+	await get_tree().create_timer(0.8).timeout
+	_check(Sfx._music_held and Sfx.music_paused(), "cinématique de Back Jlack : la musique se tait (seul l'orage gronde)")
 	var face_ok := cine._skin != null and cine._skin.model_id == "sage" and cine._cam.global_position.y < cine._face.y
 	_check(get_tree().paused and face_ok and cine._text.text == str(DialogueDB.LEGEND_LINES[0]) and DialogueDB.LEGEND_LINES[2].contains("Mèhn-Strïm"),
 		"cinématique : Back Jlack en gros plan en contre-plongée, sur fond d'orage")
@@ -1766,6 +1777,8 @@ func _test_chapter_two() -> void:
 	_check(ended[0] and str(DialogueDB.LEGEND_LINES[-1]).contains("vivre"), "fin de la légende : « ...tu vas la vivre ! »")
 	get_tree().paused = false
 	cine.queue_free()
+	await _frames(2)
+	_check(Sfx._music_held == false and not Sfx.music_paused(), "après la cinématique, la musique reprend")
 	GameState.accept_quest("pick_destin")
 	_check(QuestDB.objective_text("pick_destin").contains("épreuve"), "objectif : l'épreuve de Back Jlack")
 	# L'autre univers : marches interminables, parvis, Back Jlack, porte scellée.
@@ -1998,6 +2011,8 @@ func _test_minotaur_duel(ex: Node) -> void:
 	m.take_damage(500, m.global_position + Vector3(0.1, 0, 0))
 	_check(m.dueling and hp_duel == m.duel_threshold() and m.hp == hp_duel and m.is_alive() and hero.casting_solo and hud.dialogue.visible,
 		"à 5 % de ses PV, le Minotaure sort sa guitare et impose un duel (intouchable pendant le duel)")
+	_check(m.skin != null and m.skin.model_id == "minotaure" and absf(m.skin.height - 3.3) < 0.01 and m._guitar.visible and not m._axe.visible,
+		"le Minotaure : modèle 3D d'Ulysse (17 os, animé), 3,3 m ; pour le duel, la hache disparaît, la guitare apparaît")
 	hud.dialogue.close()
 	ex.call("_on_story_action", "duel")
 	Events.dialogue_closed.emit()
@@ -2042,3 +2057,104 @@ func _test_minotaur_duel(ex: Node) -> void:
 	inv.queue_free()
 	GameState.run_dialogue_action("turn_in:labyrinthe_destin")
 	_check(GameState.quest_state("labyrinthe_destin") == QuestDB.State.TURNED_IN, "Ozz voit le Pick du Destin : quête terminée")
+
+
+## Correctifs du 6 octobre 2026 : réserve de dB, musique pendant le Solo de la Foudre, inventaire avec le héros en
+## 3D, cordes de la Xplode, mini-jeux de l'histoire regardés en direct par les autres joueurs, duel du Minotaure en
+## coopération.
+func _test_fixes_october() -> void:
+	print("[Correctifs : dB, musique, inventaire, Xplode, mini-jeux partagés]")
+	GameState.new_game()
+	var raw := Balance.HERO_BASE_MANA + Balance.HERO_MANA_PER_CHA * GameState.mod("CHA") + Balance.HERO_MANA_PER_LEVEL * (GameState.stats.level - 1)
+	_check(is_equal_approx(GameState.max_mana(), roundf(raw * 0.75)), "réserve de dB réduite de 25 %% (%d au lieu de %d)" % [GameState.max_mana(), raw])
+	# Solo de la Foudre : la musique continue, baissée de 20 % ; les autres solos la coupent.
+	Sfx.play_clip(Sfx.SOLO_FOUDRE_FILE, 0.0, -4.0, 0.8)
+	var ducked := Sfx._duck_db
+	var running := not Sfx.music_paused()
+	Sfx.stop_clip()
+	var restored := Sfx._duck_db
+	Sfx.play_clip(Sfx.SOLO_FOUDRE_FILE, 0.0, -4.0)
+	var muted := Sfx.music_paused()
+	Sfx.stop_clip()
+	_check(is_equal_approx(ducked, linear_to_db(0.8)) and running and is_zero_approx(restored) and muted and not Sfx.music_paused(),
+		"Solo de la Foudre : la musique ne s'arrête pas, elle baisse de 20 %% (%.2f dB) ; elle revient ensuite" % ducked)
+	# Inventaire : le héros au centre, de la tête aux pieds, avec sa guitare équipée ; cliquer-glisser le fait pivoter.
+	GameState.add_item("xplode")
+	GameState.equip("xplode")
+	var inv := InventoryWindow.new()
+	add_child(inv)
+	inv.open(false)
+	await _frames(3)
+	var cols := inv.preview.get_parent()
+	var centered := cols != null and cols.get_child_count() == 3 and cols.get_child(1) == inv.preview
+	var h := inv.preview_model.height()
+	var cam := inv._preview_cam
+	var half := tan(deg_to_rad(cam.fov * 0.5)) * cam.position.z
+	var framed := absf(cam.position.y - h * 0.5) < 0.01 and half > h * 0.5 and half < h * 0.75
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	inv._on_preview_input(press)
+	var drag := InputEventMouseMotion.new()
+	drag.relative = Vector2(80, 0)
+	inv._on_preview_input(drag)
+	var turned := inv.preview_model.rotation.y
+	press.pressed = false
+	inv._on_preview_input(press)
+	inv._on_preview_input(drag)
+	_check(centered and framed and inv.preview_model.guitar_model.ends_with("xplode.glb") and absf(turned - 80 * InventoryWindow.DRAG_TURN) < 0.001
+		and is_equal_approx(inv.preview_model.rotation.y, turned),
+		"inventaire : le héros au centre, en entier (%.2f m), avec sa guitare équipée ; cliquer-glisser le fait pivoter" % h)
+	# Xplode : six cordes orange incandescentes.
+	var strings := 0
+	for mi in inv.preview_model.find_children("*", "MeshInstance3D", true, false):
+		var m := (mi as MeshInstance3D).material_override as StandardMaterial3D
+		if m != null and m == inv.preview_model._strings_mat:
+			strings += 1
+	var orange := inv.preview_model._strings_color
+	_check(strings == 6 and orange.r > 0.9 and orange.g < 0.6 and orange.b < 0.2, "Xplode : effet lumineux orange sur les 6 cordes")
+	inv.close()
+	inv.queue_free()
+	GameState.unequip("guitare")
+	# Mini-jeu de l'histoire joué par un autre joueur : on le regarde en direct, sans le jouer.
+	var solo := SoloMinigame.new()
+	add_child(solo)
+	var finished := [0]
+	var count_finish := func(_m: String, _h: int, _t: int) -> void: finished[0] += 1
+	Events.solo_finished.connect(count_finish)
+	Net.minigame_received.emit("start", {"mode": "epreuve"}, 7)
+	await _frames(2)
+	var watching: bool = solo._active and solo.spectating and solo.mode == "epreuve" and solo._notes.size() > 50
+	var key := InputEventAction.new()
+	key.action = "solo_lane_0"
+	key.pressed = true
+	solo._input(key) # nos touches restent à nous
+	Net.minigame_received.emit("press", {"lane": int(solo._notes[0]["lane"]), "note": 0, "perfect": true}, 7)
+	Net.minigame_received.emit("press", {"lane": int(solo._notes[1]["lane"]), "note": 1, "perfect": false}, 7)
+	Net.minigame_received.emit("miss", {"note": 2}, 7)
+	Net.minigame_received.emit("press", {"lane": 0, "note": 3, "perfect": true}, 99) # un autre joueur : ignoré
+	var seen: bool = solo._hits == 2 and bool(solo._notes[0]["hit"]) and bool(solo._notes[2]["judged"]) and not bool(solo._notes[2]["hit"]) \
+		and not bool(solo._notes[3]["judged"])
+	Net.minigame_received.emit("end", {"hits": 2, "total": solo._notes.size()}, 7)
+	await _frames(1)
+	_check(watching and seen and not solo._active and not solo.spectating and finished[0] == 0,
+		"coopération : le mini-jeu du joueur qui a lancé le dialogue se regarde en direct (notes jouées, ratées), sans le jouer")
+	Events.solo_finished.disconnect(count_finish)
+	solo.queue_free()
+	# Duel du Minotaure en coopération : celui qui l'a fait tomber à 5 % joue ; l'hôte applique son résultat.
+	var arena := Node3D.new()
+	add_child(arena)
+	var mino := Minotaur.new()
+	var asked := [0]
+	mino.duel_requested = func() -> void: asked[0] += 1
+	arena.add_child(mino)
+	await _frames(1)
+	mino.start_duel(7) # un autre joueur (identifiant 7) l'a fait tomber à 5 %
+	var others: bool = mino.dueling and mino.duelist == 7 and asked[0] == 0
+	mino._on_story("duel_result", {"enemy": mino.net_id, "won": false}, 7)
+	var resumed: bool = not mino.dueling and mino._axe.visible and not mino._guitar.visible
+	mino.start_duel(1)
+	_check(others and resumed and asked[0] == 1, "duel du Minotaure en coopération : seul le joueur qui l'a fait tomber à 5 % le joue ; l'hôte applique son résultat")
+	arena.queue_free()
+	await _frames(2)
+	GameState.new_game()

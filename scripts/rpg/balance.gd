@@ -11,6 +11,8 @@ const HERO_HP_PER_LEVEL := 7 # PV par niveau (dé de vie du barde : d8 → 5 en 
 const HERO_BASE_MANA := 50.0 # « Décibels » (dB), la ressource des sorts
 const HERO_MANA_PER_CHA := 8.0
 const HERO_MANA_PER_LEVEL := 6.0
+## Réserve de dB réduite de 25 % (6 oct. 2026) : on en avait trop pour lancer les sorts en continu.
+const MANA_RESERVE := 0.75
 const HERO_MANA_REGEN := 4.0 # dB par seconde
 const HERO_BASE_AC := 11 # Armure de cuir cloutée : 11 + mod. DEX
 const MAX_LEVEL := 20
@@ -22,7 +24,7 @@ const XP_TABLE := [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
 	85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000]
 
 # --- Compétences -----------------------------------------------------------
-## Sorts sans mini-jeu (Accordage, Onde de choc, talents) : 8 chances sur 10 de toucher. Riff électrique, Solo de
+## Sorts sans mini-jeu (Riff électrique, Onde de choc, talents) : 8 chances sur 10 de toucher. Accordage, Solo de
 ## la Foudre et les solos des talents (mini-jeux) touchent toujours, comme le coup de guitare.
 const SPELL_HIT_CHANCE := 0.8
 ## Coup de guitare : touche toujours (pas de jet d'attaque), 1d6 + FOR, 20 % plus rapide qu'avant (0,65 s → 0,54 s).
@@ -32,28 +34,27 @@ const MELEE_DICE := 6
 const MELEE_RANGE := 1.9
 const MELEE_KNOCKBACK := 2.5
 
-# Accordage de cordes (clic droit) : arc électrique qui rebondit.
+# Accordage de cordes (touche 1) : mini-jeu (celui de l'ancien Riff électrique, 6 oct. 2026). Une seule note, à 90 BPM :
+# la 1re part en lançant le sort, puis chaque note réussie rejoue le riff et l'arc électrique rebondit sur l'ennemi
+# suivant (une note par cible, 5 cibles). Une fausse note arrête l'accordage et triple la recharge.
 const TUNING_COST := 12.0
 const TUNING_COOLDOWN := 10.0
-const TUNING_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis »
+const TUNING_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis » : 5 notes
 const TUNING_FIRST_RANGE := 11.0
 const TUNING_JUMP_RANGE := 6.0
 const TUNING_FALLOFF := 0.12 # -12 % de dégâts à chaque rebond
+const TUNING_BPM := 90.0
+const TUNING_FAIL_COOLDOWN_MULT := 3.0
 const ZAP_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc électrique
 
-# Riff électrique (touche 1) : mini-jeu. Une seule note, à 90 BPM : la 1re part en lançant le sort, puis
-# chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à 8 notes). Une fausse note
-# arrête le riff et triple la recharge.
 ## Portail bleu de retour à la taverne (touche T) : durée d'incantation (s).
 const TOWN_PORTAL_CAST := 3.0
 
+# Riff électrique (clic droit) : un éclair sur l'ennemi visé, sans mini-jeu (FIREBALL avec la Xplode, Riff black metal
+# avec la Batguitare).
 const RIFF_COST := 6.0
-const RIFF_COOLDOWN := 3.0 # recharge du Riff électrique
-const RIFF_BPM := 90.0
-const RIFF_NOTES := 8
-const RIFF_FAIL_COOLDOWN_MULT := 3.0
-const RIFF_RANGE := 12.0 # portée de la 1re cible
-const RIFF_CHAIN_RANGE := 8.0 # saut d'un ennemi au suivant
+const RIFF_COOLDOWN := 1.0 # recharge du Riff électrique, de FIREBALL et du Riff black metal
+const RIFF_RANGE := 12.0 # portée
 
 const WAVE_COST := 20.0
 const WAVE_COOLDOWN := 4.0

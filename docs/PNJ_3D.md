@@ -13,6 +13,7 @@ Modèles fournis par Ulysse (générés par IA, sans squelette) :
 | Sage (rockeur trapu, barbe grise, gilet clouté, t-shirt tie-dye) | **Back Jlack**, le sage du rock (parvis du Temple du Dragon, cinématique de la légende) (basse dans le dos : Imagerie/Guitares/3D/back jlack.glb, `art/guitare/prepare_guitares.py`) | 1,65 m | repos, marche, course |
 | Gobelin (casque de cuir, épaulière au crâne, Ennemis/Gobelin) | tous les **gobelins** (chapitre 3) ; arme (gourdin, coutelas ou lance) accrochée à la main droite | 1,15 m | repos d'orc, marche, course, coup, sursaut, mort |
 | Troll (peau bleu-vert, pantalon rapiécé, Ennemis/Troll) | **le Troll des cavernes** (boss des grottes, chapitre 3) ; massue en tronc d'arbre dans la main droite | 2,2 m (×1,45 en jeu : 3,2 m) | repos d'orc, marche, course, coup, sursaut, mort, victoire |
+| Minotaure (taureau noir aux yeux rouges, pantalon rouge rapiécé, sabots, Ennemis/Minotaure) | **le Minotaure** (gardien du Labyrinthe du Destin, chapitre 3) ; hache à double tranchant dans la main droite, guitare infernale en travers du ventre pendant le duel | 2,4 m (×1,375 en jeu : 3,3 m) | repos d'orc, marche, course, coups (slash, smash), sursaut, mort, victoire, headbang (duel) |
 
 ## Préparation (Blender, `art/pnj/build_pnj.py`)
 
@@ -23,7 +24,7 @@ blender --background art/pnj/<perso>.blend --python art/pnj/build_pnj.py -- rig 
 blender --background art/pnj/<perso>.blend --python art/riffald/retarget_mixamo.py -- export
 ```
 
-`<perso>` = `mage`, `tavernier`, `squelette`, `gloubah`, `hibours`, `sage`, `gobelin` ou `troll`.
+`<perso>` = `mage`, `tavernier`, `squelette`, `gloubah`, `hibours`, `sage`, `gobelin`, `troll` ou `minotaure`.
 1. **prepare** : tranches ressoudées, 30 000 triangles, mis à la taille du jeu, textures 2K.
 2. **views** : vues de face et de profil quadrillées, pour relever les articulations (dictionnaire `CHARS`).
 3. **rig** : squelette de Riffald (17 os), pondération par distance aux os ; chapeau et barbe suivent la

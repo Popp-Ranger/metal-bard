@@ -144,8 +144,8 @@ func max_hp() -> int:
 
 
 func max_mana() -> float:
-	return Balance.HERO_BASE_MANA + Balance.HERO_MANA_PER_CHA * mod("CHA") \
-		+ Balance.HERO_MANA_PER_LEVEL * (stats.level - 1)
+	return roundf((Balance.HERO_BASE_MANA + Balance.HERO_MANA_PER_CHA * mod("CHA")
+		+ Balance.HERO_MANA_PER_LEVEL * (stats.level - 1)) * Balance.MANA_RESERVE)
 
 
 func armor_class() -> int:

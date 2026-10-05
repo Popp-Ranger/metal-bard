@@ -26,9 +26,9 @@ var _regen_tick := 0.0
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
 var cooldowns := {"attack": 0.0, "dash": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
-## Riff électrique en cours (mini-jeu) et ennemis déjà frappés, dans l'ordre.
-var casting_riff := false
-var _riff_chain: Array[Enemy] = []
+## Accordage de cordes en cours (mini-jeu) et ennemis déjà frappés, dans l'ordre.
+var casting_tuning := false
+var _tuning_chain: Array[Enemy] = []
 var radius := 0.35
 ## Peut-on jouer ici ? Non dans la taverne hors du sous-sol : ni sorts ni coups de guitare,
 ## guitare portée dans le dos (voir Level.spells_allowed_at).
@@ -394,7 +394,7 @@ func _cooldown(skill: String, base: float) -> void:
 
 
 func _ready_skill(skill: String) -> bool:
-	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not casting_riff and not leaping and not captive and not resting \
+	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not casting_tuning and not leaping and not captive and not resting \
 		and not planted and not dashing and not talents_caster.blocks_actions()
 
 
@@ -455,33 +455,106 @@ func melee() -> void:
 	Sfx.play("thud" if hit_any else "swoosh", -4.0 if hit_any else -10.0)
 
 
-## Accordage de cordes (clic droit) : arc électrique qui rebondit sur jusqu'à 5 ennemis.
+## Accordage de cordes (touche 1) : mini-jeu (celui de l'ancien Riff électrique, avec son son). La 1re note part en
+## lançant le sort : un arc électrique frappe l'ennemi visé ; puis la même note revient à 90 BPM : chaque note réussie
+## rejoue le riff et l'arc rebondit sur l'ennemi suivant (jusqu'à 5 cibles, 6 avec Distorsion ; s'il ne reste personne
+## d'autre, il refrappe le même), -12 % de dégâts à chaque rebond. Les notes touchent toujours.
+## Une seule fausse note (ou un appui à contretemps) arrête l'accordage et triple la recharge.
 func cast_tuning() -> void:
 	if not _ready_skill("tuning") or not can_cast():
 		return
-	var targets := _arc_targets()
-	if targets.is_empty():
+	var target := _tuning_target()
+	if target == null:
 		Events.notify("Aucune cible à portée pour l'Accordage de cordes", Events.COLOR_BAD)
 		return
 	if not GameState.spend_mana(Balance.TUNING_COST):
 		_no_mana()
 		return
-	_cooldown("tuning", Balance.TUNING_COOLDOWN)
-	var points := PackedVector3Array([global_position + Vector3(0, 1.1, 0) + facing * 0.4])
-	for e in targets:
-		points.append(e.global_position + Vector3(0, 0.9, 0))
-	SpellFx.cast(self, "tuning", {"points": points}) # arc électrique visible par tous
-	var cha := GameState.mod("CHA")
+	casting_tuning = true
+	_tuning_chain.clear()
+	_tuning_strike(target, 1)
+	Events.solo_requested.emit("tuning", tuning_notes())
+
+
+## Nombre de notes de l'Accordage, la 1re comprise : une par cible (5, 6 avec Distorsion).
+func tuning_notes() -> int:
+	return Balance.TUNING_MAX_TARGETS + (1 if GameState.has_talent("distorsion") else 0)
+
+
+## Fin du mini-jeu de l'Accordage : recharge normale si toutes les notes sont passées, triplée à la moindre fausse note.
+func _tuning_finished(hits: int, total: int) -> void:
+	casting_tuning = false
+	var notes := hits + 1 # la 1re note est partie avec le sort
+	if hits >= total:
+		_cooldown("tuning", Balance.TUNING_COOLDOWN)
+		Events.notify("ACCORDAGE PARFAIT ! %d notes" % notes, Events.COLOR_GOLD)
+		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), "EN RYTHME ×%d !" % notes, Color(0.6, 0.85, 1.0))
+	else:
+		_cooldown("tuning", Balance.TUNING_COOLDOWN * Balance.TUNING_FAIL_COOLDOWN_MULT)
+		Events.notify("Fausse note ! Accordage interrompu (%d note%s) : recharge triplée." % [notes, "s" if notes > 1 else ""], Events.COLOR_BAD)
+
+
+## Note réussie du mini-jeu : l'arc rebondit sur l'ennemi suivant.
+func _on_solo_note_hit(mode: String, hits: int) -> void:
+	if mode != "tuning" or not casting_tuning:
+		return
+	var next := _tuning_next()
+	if next != null:
+		_tuning_strike(next, hits + 1)
+	else:
+		Sfx.play("riff", -13.5) # plus personne à portée : le riff résonne quand même
+
+
+## Arc de l'Accordage sur `target` (note n° `note`), depuis la guitare ou depuis l'ennemi précédent, avec le son
+## riff electrique.wav : vus et entendus par tous les joueurs.
+func _tuning_strike(target: Enemy, note: int) -> void:
+	var last: Enemy = _tuning_chain[-1] if not _tuning_chain.is_empty() else null
+	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
+	if last != null and is_instance_valid(last) and last != target:
+		from = last.global_position + Vector3(0, 0.9, 0)
+	_tuning_chain.append(target)
+	SpellFx.cast(self, "tuning", {"points": PackedVector3Array([from, target.global_position + Vector3(0, 0.9, 0)]), "stack": note})
 	var bonus := 1.15 if GameState.has_talent("distorsion") else 1.0
-	for i in targets.size():
-		var dmg := roundi(Dice.roll(2, 6, cha) * (1.0 - Balance.TUNING_FALLOFF * i) * bonus)
-		hit_enemy(targets[i], dmg, 0.8, "shock")
+	var falloff := maxf(0.4, 1.0 - Balance.TUNING_FALLOFF * (note - 1))
+	var dmg := roundi(Dice.roll(2, 6, GameState.mod("CHA")) * falloff * bonus)
+	hit_enemy(target, dmg, 0.8, "shock", global_position, true)
+	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
+		target.slow(0.6, 2.0)
 
 
-## Riff électrique (touche 1) : mini-jeu. La 1re note part en lançant le sort, sur l'ennemi visé ; puis la même
-## note revient à 90 BPM : chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à
-## 8 notes, 10 avec Overdrive ; s'il ne reste personne d'autre, il refrappe le même). Les notes touchent toujours.
-## Une seule fausse note (ou un appui à contretemps) arrête le riff et triple la recharge.
+## Ennemi suivant de l'Accordage : le plus proche du précédent (à 6 m au plus) qui n'a pas encore été touché, sinon le
+## précédent lui-même (ou, s'il est tombé, l'ennemi le plus proche).
+func _tuning_next() -> Enemy:
+	var last: Enemy = _tuning_chain[-1] if not _tuning_chain.is_empty() else null
+	var origin := last.global_position if last != null and is_instance_valid(last) else global_position
+	var best: Enemy = null
+	var best_d := Balance.TUNING_JUMP_RANGE
+	for e in enemies():
+		var d := _flat_dist(e.global_position, origin)
+		if d < best_d and not _tuning_chain.has(e):
+			best_d = d
+			best = e
+	if best != null:
+		return best
+	if last != null and is_instance_valid(last) and last.is_alive():
+		return last
+	best_d = Balance.TUNING_FIRST_RANGE
+	for e in enemies():
+		var d := _flat_dist(e.global_position, origin)
+		if d < best_d:
+			best_d = d
+			best = e
+	return best
+
+
+## 1re cible de l'Accordage : l'ennemi le plus proche du curseur, à 11 m du héros au plus.
+func _tuning_target() -> Enemy:
+	return _aimed_enemy(Balance.TUNING_FIRST_RANGE)
+
+
+## Riff électrique (clic droit) : un éclair sur l'ennemi visé, recharge d'1 s (plus de mini-jeu : il est passé à
+## l'Accordage de cordes, qui a pris le son du riff ; l'éclair a pris le grésillement de l'Accordage). Selon la guitare
+## équipée : Riff black metal (Batguitare, trait brumeux violet) ou FIREBALL (Xplode, boule de feu).
 func cast_riff() -> void:
 	if not _ready_skill("riff") or not can_cast():
 		return
@@ -492,150 +565,45 @@ func cast_riff() -> void:
 	if not GameState.spend_mana(Balance.RIFF_COST):
 		_no_mana()
 		return
-	casting_riff = true
-	_riff_chain.clear()
-	_riff_strike(target, 1)
-	Events.solo_requested.emit("riff", riff_notes())
-
-
-## Fin du mini-jeu du riff : recharge normale si toutes les notes sont passées, triplée à la moindre fausse note.
-func _riff_finished(hits: int, total: int) -> void:
-	casting_riff = false
-	var notes := hits + 1 # la 1re note est partie avec le sort
-	if hits >= total:
-		_cooldown("riff", Balance.RIFF_COOLDOWN)
-		Events.notify("RIFF PARFAIT ! %d notes" % notes, Events.COLOR_GOLD)
-		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), "EN RYTHME ×%d !" % notes, Color(1.0, 0.8, 0.3))
+	_cooldown("riff", Balance.RIFF_COOLDOWN)
+	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
+	var to := target.global_position + Vector3(0, 0.9, 0)
+	var variant := GameState.riff_variant()
+	if variant == "fireball":
+		# Xplode : une boule de feu crépitante part de la guitare vers l'ennemi, vue et entendue par tous.
+		SpellFx.cast(self, "fireball", {"from": from, "to": to, "stack": 1})
+	elif variant == "black_metal":
+		# Batguitare : trait brumeux violet et vent brumeux, vus et entendus par tous.
+		SpellFx.cast(self, "riff_black", {"from": from, "to": to, "stack": 1, "color": Color(0.62, 0.3, 1.0)})
 	else:
-		_cooldown("riff", Balance.RIFF_COOLDOWN * Balance.RIFF_FAIL_COOLDOWN_MULT)
-		Events.notify("Fausse note ! Riff interrompu (%d note%s) : recharge triplée." % [notes, "s" if notes > 1 else ""], Events.COLOR_BAD)
+		SpellFx.cast(self, "riff", {"from": from, "to": to, "stack": 1, "color": Color(0.55, 0.85, 1.0)})
+	var dmg := Dice.roll(1, 10, GameState.mod("CHA"))
+	if GameState.has_talent("overdrive"):
+		dmg = roundi(dmg * 1.25)
+	hit_enemy(target, dmg, 0.4, str({"black_metal": "sound", "fireball": "fire"}.get(variant, "shock")), global_position)
 
 
-## Nom du sort de la touche 1 : Riff électrique, Riff black metal (Batguitare) ou FIREBALL (Xplode).
+## Nom du sort du clic droit : Riff électrique, Riff black metal (Batguitare) ou FIREBALL (Xplode).
 static func riff_name() -> String:
 	return str(GameState.riff_style()["name"])
 
 
-## Nombre de notes du Riff électrique (Overdrive : 2 de plus).
-func riff_notes() -> int:
-	return Balance.RIFF_NOTES + (2 if GameState.has_talent("overdrive") else 0)
-
-
-## Note réussie du mini-jeu : l'éclair saute sur l'ennemi suivant.
-func _on_solo_note_hit(mode: String, hits: int) -> void:
-	if mode != "riff" or not casting_riff:
-		return
-	var next := _riff_next()
-	if next != null:
-		_riff_strike(next, hits + 1)
-	else:
-		var variant := GameState.riff_variant()
-		if variant == "black_metal":
-			Sfx.play("mist_wind", -9.0) # plus personne à portée : le vent brumeux souffle quand même
-		elif variant == "fireball":
-			Sfx.play("fireball", -8.0)
-		else:
-			Sfx.play("riff", -13.5) # plus personne à portée : le riff résonne quand même
-
-
-## Éclair du riff sur `target` (note n° `note`), depuis la guitare ou depuis l'ennemi précédent.
-func _riff_strike(target: Enemy, note: int) -> void:
-	var last: Enemy = _riff_chain[-1] if not _riff_chain.is_empty() else null
-	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
-	if last != null and is_instance_valid(last) and last != target:
-		from = last.global_position + Vector3(0, 0.9, 0)
-	_riff_chain.append(target)
-	var k := clampf(float(note - 1) / float(maxi(1, riff_notes() - 1)), 0.0, 1.0)
-	var variant := GameState.riff_variant()
-	var to := target.global_position + Vector3(0, 0.9, 0)
-	if variant == "fireball":
-		# Xplode : une boule de feu crépitante part de la guitare vers l'ennemi, vue et entendue par tous.
-		SpellFx.cast(self, "fireball", {"from": global_position + Vector3(0, 1.1, 0) + facing * 0.4, "to": to, "stack": note})
-	elif variant == "black_metal":
-		# Batguitare : trait brumeux violet (de plus en plus sombre et épais) et vent brumeux, vus et entendus par tous.
-		var mist := Color(0.62, 0.3, 1.0).lerp(Color(0.42, 0.08, 0.6), k)
-		SpellFx.cast(self, "riff_black", {"from": from, "to": to, "stack": note, "color": mist})
-	else:
-		var color := Color(0.55, 0.85, 1.0).lerp(Color(1.0, 0.8, 0.3), k)
-		# Éclair et son riff electrique.wav, visibles et audibles par tous les joueurs.
-		SpellFx.cast(self, "riff", {"from": from, "to": to, "stack": note, "color": color})
-	var dmg := Dice.roll(1, 10, GameState.mod("CHA"))
-	if GameState.has_talent("overdrive"):
-		dmg = roundi(dmg * 1.25)
-	hit_enemy(target, dmg, 0.4, str({"black_metal": "sound", "fireball": "fire"}.get(variant, "shock")), global_position, true)
-	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
-		target.slow(0.6, 2.0)
-
-
-## Ennemi suivant du riff : le plus proche du précédent (à 8 m au plus) qui n'a pas encore été touché, sinon le
-## précédent lui-même (ou, s'il est tombé, l'ennemi le plus proche).
-func _riff_next() -> Enemy:
-	var last: Enemy = _riff_chain[-1] if not _riff_chain.is_empty() else null
-	var origin := last.global_position if last != null and is_instance_valid(last) else global_position
-	var best: Enemy = null
-	var best_d := Balance.RIFF_CHAIN_RANGE
-	for e in enemies():
-		var d := _flat_dist(e.global_position, origin)
-		if d < best_d and not _riff_chain.has(e):
-			best_d = d
-			best = e
-	if best != null:
-		return best
-	if last != null and is_instance_valid(last) and last.is_alive():
-		return last
-	best_d = Balance.RIFF_RANGE
-	for e in enemies():
-		var d := _flat_dist(e.global_position, origin)
-		if d < best_d:
-			best_d = d
-			best = e
-	return best
-
-
 func _riff_target() -> Enemy:
+	return _aimed_enemy(Balance.RIFF_RANGE)
+
+
+## L'ennemi le plus proche du curseur, à `reach` m du héros au plus.
+func _aimed_enemy(reach: float) -> Enemy:
 	var best: Enemy = null
 	var best_score := INF
 	for e in enemies():
-		if _flat_dist(e.global_position, global_position) > Balance.RIFF_RANGE:
+		if _flat_dist(e.global_position, global_position) > reach:
 			continue
 		var score := _flat_dist(e.global_position, aim_point)
 		if score < best_score:
 			best_score = score
 			best = e
 	return best
-
-func _arc_targets() -> Array[Enemy]:
-	var all := enemies()
-	var result: Array[Enemy] = []
-	# Première cible : l'ennemi le plus proche du curseur (sinon du héros).
-	var first: Enemy = null
-	var best := INF
-	for e in all:
-		if _flat_dist(e.global_position, global_position) > Balance.TUNING_FIRST_RANGE:
-			continue
-		var score := _flat_dist(e.global_position, aim_point)
-		if score < best:
-			best = score
-			first = e
-	if first == null:
-		return result
-	result.append(first)
-	var max_targets := Balance.TUNING_MAX_TARGETS + (1 if GameState.has_talent("distorsion") else 0)
-	while result.size() < max_targets:
-		var last := result[-1]
-		var next: Enemy = null
-		var nd := Balance.TUNING_JUMP_RANGE
-		for e in all:
-			if result.has(e):
-				continue
-			var d := _flat_dist(e.global_position, last.global_position)
-			if d < nd:
-				nd = d
-				next = e
-		if next == null:
-			break
-		result.append(next)
-	return result
 
 
 ## Sort 2 — Onde de choc sonore : tous les ennemis dans un rayon (jet de sauvegarde CON pour moitié).
@@ -675,8 +643,8 @@ func cast_solo() -> void:
 
 
 func _on_solo_finished(mode: String, hits: int, total: int) -> void:
-	if mode == "riff" and casting_riff:
-		_riff_finished(hits, total)
+	if mode == "tuning" and casting_tuning:
+		_tuning_finished(hits, total)
 		return
 	if mode != "foudre" or not casting_solo:
 		return

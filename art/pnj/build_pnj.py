@@ -68,6 +68,15 @@ CHARS = {
         "shoulder.R": (-0.48, 0.19, 1.61), "elbow.R": (-0.70, 0.13, 1.18), "wrist.R": (-0.69, 0.05, 0.91),
         "hip.L": (0.24, 0.05, 0.97), "knee.L": (0.27, 0.05, 0.54), "ankle.L": (0.30, 0.13, 0.19),
         "hip.R": (-0.24, 0.05, 0.97), "knee.R": (-0.27, 0.05, 0.54), "ankle.R": (-0.30, 0.13, 0.19)}},
+    # Le Minotaure (gardien du Labyrinthe du Destin, chapitre 3) : Ennemis/Minotaure (6 oct. 2026). Préparé à 2,4 m ;
+    # le jeu l'agrandit à 3,3 m (CharacterSkin.SCALES).
+    "minotaure": {"dir": os.path.join("Ennemis", "Minotaure"), "file": "minotaure.glb", "name": "Minotaure", "height": 2.4, "joints": {
+        "hips": (0.0, 0.03, 1.08), "spine": (0.0, 0.04, 1.30), "chest": (0.0, 0.03, 1.52),
+        "neck": (0.0, -0.06, 1.72), "head": (0.0, -0.14, 1.82), "head_top": (0.0, -0.14, 2.4),
+        "shoulder.L": (0.46, 0.13, 1.66), "elbow.L": (0.65, 0.10, 1.26), "wrist.L": (0.67, 0.0, 0.88),
+        "shoulder.R": (-0.46, 0.13, 1.66), "elbow.R": (-0.65, 0.10, 1.26), "wrist.R": (-0.67, 0.0, 0.88),
+        "hip.L": (0.20, 0.03, 1.03), "knee.L": (0.29, 0.03, 0.60), "ankle.L": (0.30, 0.07, 0.17),
+        "hip.R": (-0.20, 0.03, 1.03), "knee.R": (-0.29, 0.03, 0.60), "ankle.R": (-0.30, 0.07, 0.17)}},
     # Gobelin des montagnes (chapitre 3) : Ennemis/Gobelin (5 oct. 2026).
     "gobelin": {"dir": os.path.join("Ennemis", "Gobelin"), "file": "gobelin3D.glb", "name": "Gobelin", "height": 1.15, "joints": {
         "hips": (0.0, 0.03, 0.505), "spine": (0.0, 0.04, 0.60), "chest": (0.0, 0.04, 0.70),
@@ -314,6 +323,11 @@ def _candidates(co, j):
         return ["chest", "upper_arm." + ("L" if co.x > 0 else "R")]
     if ARGS[1] == "troll" and co.z > 1.35 and co.y > -0.02:
         return ["chest", "neck"]  # la bosse du dos, derrière la tête
+    if ARGS[1] == "minotaure" and abs(co.x) > 0.2 and 1.45 < co.z < 1.95 and co.y > -0.12:
+        # Trapèzes et deltoïdes énormes, plus hauts que la mâchoire : buste et bras de leur côté, pas la tête.
+        return ["chest", "upper_arm." + ("L" if co.x > 0 else "R")]
+    if ARGS[1] == "minotaure" and co.z > 1.55 and co.y > 0.05 and abs(co.x) < 0.3:
+        return ["chest", "neck"]  # la bosse et la crinière du dos, derrière la tête
     if co.z > j["head"].z + 0.02:
         return ["head"]
     if ARGS[1] == "demon":

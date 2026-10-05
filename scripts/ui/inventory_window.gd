@@ -4,11 +4,21 @@ extends PanelContainer
 ## potions et médiators. Chez Grokk (« Vendre ou racheter de l'équipement »), il s'ouvre en boutique : chaque
 ## objet du sac se vend quelques médiators selon sa rareté (on ne vend pas ce qu'on porte), et les 10 derniers
 ## vendus peuvent être rachetés au même prix.
+## Au centre de la fenêtre (donc de l'écran), le héros en gros plan, de la tête aux pieds, avec la guitare équipée : un
+## cliqué-glissé le fait pivoter.
 ## Le jeu ne se met pas en pause ; le héros reste immobile tant que la fenêtre est ouverte (InventoryWindow.active).
 
 static var active := false
 var shop := false
 var _content: VBoxContainer
+## Aperçu 3D du héros (son propre petit monde : lumières, caméra).
+var preview: SubViewportContainer
+var preview_model: HeroModel
+var _preview_cam: Camera3D
+var _dragging := false
+const PREVIEW_SIZE := Vector2(360, 540)
+## Rotation du héros par pixel glissé (rad).
+const DRAG_TURN := 0.012
 
 
 func _ready() -> void:
@@ -17,13 +27,14 @@ func _ready() -> void:
 	anchor_right = 0.5
 	anchor_top = 0.5
 	anchor_bottom = 0.5
-	offset_left = -420
-	offset_right = 420
-	offset_top = -290
-	offset_bottom = 290
+	offset_left = -640
+	offset_right = 640
+	offset_top = -335
+	offset_bottom = 335
 	_content = VBoxContainer.new()
 	_content.add_theme_constant_override("separation", 6)
 	add_child(_content)
+	_build_preview()
 	visible = false
 	Events.stats_changed.connect(_refresh)
 	Events.gold_changed.connect(func(_g: int) -> void: _refresh())
@@ -53,11 +64,15 @@ func close() -> void:
 func _exit_tree() -> void:
 	if visible:
 		active = false
+	if preview != null and preview.get_parent() == null:
+		preview.free() # aperçu détaché (boutique) : libéré avec la fenêtre
 
 
 func _refresh() -> void:
 	if not visible:
 		return
+	if preview.get_parent() != null:
+		preview.get_parent().remove_child(preview) # l'aperçu 3D est gardé d'une fois sur l'autre
 	for c in _content.get_children():
 		_content.remove_child(c)
 		c.queue_free()
@@ -87,6 +102,8 @@ func _refresh() -> void:
 			var ok := GameState.gold >= price and not GameState.owns(id)
 			back.add_child(_row(id, "Racheter (%d)" % price, _buy.bind(id), ok))
 	else:
+		columns.add_child(preview) # le héros au centre, entre le sac et son équipement
+		preview_model.set_guitar_model(GameState.guitar_model())
 		var worn := _column(columns, "Équipement porté")
 		if GameState.equipment.is_empty():
 			worn.add_child(UiStyle.label("(rien : équipez un objet du sac)", 15, UiStyle.DIM))
@@ -127,7 +144,7 @@ func _column(parent: Control, title: String) -> VBoxContainer:
 	parent.add_child(col)
 	col.add_child(UiStyle.label(title, 19, Color(1.0, 0.8, 0.45)))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 360)
+	scroll.custom_minimum_size = Vector2(0, 470)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
 	var list := VBoxContainer.new()
@@ -225,3 +242,69 @@ func _buy(id: String) -> void:
 		Events.notify("%s racheté." % ItemDB.get_item(id).get("name", id), Events.COLOR_GOOD)
 	else:
 		Events.notify("Pas assez de médiators.", Events.COLOR_BAD)
+
+
+# --- Aperçu du héros ----------------------------------------------------------------------
+
+## Le héros (son apparence, sa guitare équipée) dans un petit monde 3D à lui : projecteur, contre-jour, fond transparent
+## (le panneau de la fenêtre se voit derrière).
+func _build_preview() -> void:
+	preview = SubViewportContainer.new()
+	preview.stretch = true
+	preview.custom_minimum_size = PREVIEW_SIZE
+	preview.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	preview.mouse_filter = Control.MOUSE_FILTER_STOP
+	preview.mouse_default_cursor_shape = Control.CURSOR_DRAG
+	preview.tooltip_text = "Cliquer-glisser pour faire pivoter le personnage"
+	preview.gui_input.connect(_on_preview_input)
+	var vp := SubViewport.new()
+	vp.own_world_3d = true
+	vp.transparent_bg = true
+	vp.msaa_3d = Viewport.MSAA_4X
+	preview.add_child(vp)
+	var we := WorldEnvironment.new()
+	we.environment = Environment.new()
+	we.environment.background_mode = Environment.BG_CLEAR_COLOR
+	we.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	we.environment.ambient_light_color = Color(0.75, 0.68, 0.62)
+	we.environment.ambient_light_energy = 0.55
+	we.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	we.environment.glow_enabled = true
+	vp.add_child(we)
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-35, 25, 0)
+	key.light_color = Color(1.0, 0.9, 0.78)
+	key.light_energy = 1.5
+	vp.add_child(key)
+	var rim := DirectionalLight3D.new()
+	rim.rotation_degrees = Vector3(-20, 160, 0)
+	rim.light_color = Color(0.65, 0.4, 1.0)
+	rim.light_energy = 1.2
+	vp.add_child(rim)
+	preview_model = HeroModel.new()
+	preview_model.set_guitar_model(GameState.guitar_model())
+	vp.add_child(preview_model)
+	_preview_cam = Camera3D.new()
+	_preview_cam.fov = 30.0
+	vp.add_child(_preview_cam)
+	_frame_preview()
+
+
+## Cadrage : le héros entier (de la tête aux pieds, guitare comprise) au milieu de l'image.
+func _frame_preview() -> void:
+	var h := preview_model.height()
+	var reach := h * 0.55 + 0.08 # demi-hauteur à montrer, avec une marge
+	var dist := reach / tan(deg_to_rad(_preview_cam.fov * 0.5))
+	_preview_cam.transform = Transform3D(Basis.IDENTITY, Vector3(0, h * 0.5, dist)) # de face, à mi-hauteur
+
+
+## Cliqué-glissé : le héros pivote.
+func _on_preview_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT:
+		_dragging = mb.pressed
+		accept_event()
+	var motion := event as InputEventMouseMotion
+	if motion != null and _dragging:
+		preview_model.rotation.y += motion.relative.x * DRAG_TURN
+		accept_event()

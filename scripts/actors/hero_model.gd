@@ -79,6 +79,16 @@ var _hair_back: Node3D
 var _aura: Node3D
 var _aura_light: OmniLight3D
 var _strings_mat: StandardMaterial3D
+## Couleur de la lueur des cordes (bleue ; orange sur la Xplode, voir GLOWING_STRINGS).
+var _strings_color := STRINGS_BLUE
+const STRINGS_BLUE := Color(0.55, 0.85, 1.0)
+## Guitares importées dont les cordes ne sont pas un matériau à part (un seul matériau, texture) : des cordes lumineuses
+## posées par-dessus, du sillet au chevalet (repère des guitares : manche vers +Y, face vers +Z ; mesures relevées
+## sur la vue de face du modèle). La Xplode : six cordes orange incandescentes.
+const GLOWING_STRINGS := {
+	"res://assets/models/guitare/xplode.glb": {"color": Color(1.0, 0.42, 0.06), "count": 6,
+		"nut": Vector3(0.005, 0.38, 0.037), "bridge": Vector3(-0.003, -0.222, 0.047), "nut_w": 0.026, "bridge_w": 0.05},
+}
 var _flash_mats: Array[StandardMaterial3D] = []
 ## Modèle importé piloté par le squelette procédural (héros prédéfini Riffald), ou null.
 var _skin: RiggedSkin
@@ -608,8 +618,39 @@ func _build_imported_guitar(g: Node3D) -> void:
 					m.emission = Color(1.0, 0.1, 0.08)
 					m.emission_energy_multiplier = 1.6
 			mi.set_surface_override_material(i, m)
+	if GLOWING_STRINGS.has(guitar_model):
+		_glowing_strings(inst, GLOWING_STRINGS[guitar_model])
 	if _strings_mat == null:
-		_strings_mat = Visuals.glow_mat(Color(0.55, 0.85, 1.0), 0.8)
+		_strings_mat = Visuals.glow_mat(STRINGS_BLUE, 0.8)
+	_strings_color = _strings_mat.emission
+
+
+## Cordes lumineuses posées sur une guitare importée (GLOWING_STRINGS), et une petite lumière qui teinte la caisse.
+func _glowing_strings(parent: Node3D, spec: Dictionary) -> void:
+	var color: Color = spec["color"]
+	_strings_mat = Visuals.glow_mat(color, 0.8)
+	var count := int(spec["count"])
+	var nut: Vector3 = spec["nut"]
+	var bridge: Vector3 = spec["bridge"]
+	for i in count:
+		var k := float(i) / float(count - 1) - 0.5
+		var a := nut + Vector3(k * float(spec["nut_w"]), 0, 0)
+		var b := bridge + Vector3(k * float(spec["bridge_w"]), 0, 0)
+		var s := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.0018, a.distance_to(b), 0.0018)
+		s.mesh = box
+		s.material_override = _strings_mat
+		s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var up := (a - b).normalized()
+		s.transform = Transform3D(Basis(up.cross(Vector3.BACK).normalized(), up, Vector3.BACK), (a + b) * 0.5)
+		parent.add_child(s)
+	var glow := OmniLight3D.new()
+	glow.light_color = color
+	glow.light_energy = 0.5
+	glow.omni_range = 0.45
+	glow.position = (nut + bridge) * 0.5 + Vector3(0, 0, 0.08)
+	parent.add_child(glow)
 
 
 ## Change de guitare (guitare équipée) : le nouveau modèle remplace l'ancien, au même endroit (même repère).
@@ -909,11 +950,11 @@ func solo_pose(active: bool) -> void:
 	_soloing = active
 	if _anim != null:
 		_anim.play("solo" if active else "loco")
-		_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else Color(0.55, 0.85, 1.0)
+		_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else _strings_color
 		return
 	var tw := create_tween()
 	tw.tween_property(_guitar, "rotation", GUITAR_SOLO if active else GUITAR_REST, 0.15)
-	_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else Color(0.55, 0.85, 1.0)
+	_strings_mat.emission = Color(1.0, 0.9, 0.55) if active else _strings_color
 
 
 ## Guitare dans le dos (taverne hors du sous-sol) ou reprise en main. Avec les animations importées,

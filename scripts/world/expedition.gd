@@ -566,11 +566,11 @@ func _on_duel_finished(mode: String, hits: int, total: int) -> void:
 		Sfx.play("solo_thunder", 0.0)
 		Events.screen_flash.emit(Color(1.0, 0.9, 0.6, 0.5), 0.4)
 		Events.notify("Le Minotaure lâche sa guitare, les oreilles en sang : « ...Respect. » Il s'effondre.", Events.COLOR_GOLD)
-		minotaur.lose_duel()
+		minotaur.duel_result(true) # coopération : l'hôte l'applique pour tout le groupe
 		return
 	Sfx.play("solo_thunder", -2.0)
 	Events.camera_shake.emit(0.35, 0.6)
-	minotaur.win_duel()
+	minotaur.duel_result(false)
 	if hero != null:
 		hero.take_hit(clampi(roundi(GameState.max_hp() * 0.25), 1, maxi(1, GameState.hp - 1)), minotaur.global_position, minotaur)
 	Events.notify("Le Minotaure ricane : « Retourne accorder ta guitare ! » Il reprend des forces...", Events.COLOR_BAD)

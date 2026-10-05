@@ -38,6 +38,7 @@ func _ready() -> void:
 	spawn_hero(TOP + Vector3(0, 0, -3.0) if spawn == "parvis" else PLAZA + Vector3(0, 0, 0.5))
 	Events.story_action.connect(_on_story_action)
 	Events.solo_finished.connect(_on_trial_finished)
+	Net.story_received.connect(_on_story_received)
 	if bool(GameState.flags.get("temple_trial_ok", false)):
 		_open_doors(false)
 	Sfx.play_playlist("res://audio/music/donjons", -12.0)
@@ -292,6 +293,7 @@ func _on_trial_finished(mode: String, hits: int, total: int) -> void:
 		Events.dialogue_requested.emit("backjlack_echec")
 		return
 	GameState.flags["temple_trial_ok"] = true
+	Net.send_story("trial_passed", {}) # coopération : la porte s'ouvre pour tout le groupe
 	if int(GameState.flags.get("temple_attempts", 1)) == 1:
 		GameState.flags["temple_first_try"] = true
 		GameState.damage_buff_time = GameState.DAMAGE_BUFF_DURATION
@@ -300,6 +302,17 @@ func _on_trial_finished(mode: String, hits: int, total: int) -> void:
 	await _open_doors(true)
 	Events.dialogue_requested.emit("backjlack_reussite")
 	GameState.save_game()
+
+
+## Coopération : un autre joueur a réussi l'épreuve (il l'a jouée seul, on l'a regardée) : la porte s'ouvre aussi chez nous.
+func _on_story_received(event: String, _data: Dictionary, peer_id: int) -> void:
+	if event != "trial_passed" or bool(GameState.flags.get("temple_trial_ok", false)):
+		return
+	GameState.flags["temple_trial_ok"] = true
+	Events.quest_updated.emit("pick_destin")
+	Events.notify("%s a réussi l'épreuve de Back Jlack : la porte du temple s'ouvre !" % Net.player_name(peer_id), Events.COLOR_GOLD)
+	GameState.save_game()
+	await _open_doors(true)
 
 
 ## La porte du temple s'ouvre dans un coup de tonnerre ; des éclairs tombent du ciel tout autour du parvis.

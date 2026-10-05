@@ -39,19 +39,22 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			if model != null:
 				model.strum()
 		"tuning":
+			# Accordage de cordes : arc électrique et son riff electrique.wav (qui était celui du Riff électrique).
 			if model != null:
 				model.strum()
 			var pts: PackedVector3Array = data.get("points", PackedVector3Array())
 			for i in pts.size() - 1:
 				ArcBolt.spawn(level, pts[i], pts[i + 1])
-			_sound(level, "zap", Balance.ZAP_VOLUME_DB, _first(pts), remote)
+			var note := int(data.get("stack", 1)) # n° de la note du mini-jeu (1 à 6)
+			# Volume réduit de 70 % (×0,3 ≈ -10,5 dB) : le riff couvrait tout le reste.
+			_sound(level, "riff", -13.5 + note * 0.2, _first(pts), remote, 0.0)
 		"riff":
+			# Riff électrique : un éclair et le grésillement d'arc électrique (qui était celui de l'Accordage).
 			if model != null:
 				model.strum()
-			var stack := int(data.get("stack", 1)) # n° de la note du mini-jeu (1 à 10)
+			var stack := int(data.get("stack", 1))
 			ArcBolt.spawn(level, data["from"], data["to"], 0.1 + 0.025 * stack, 0.25, data.get("color", Color(0.55, 0.85, 1.0)))
-			# Volume réduit de 70 % (×0,3 ≈ -10,5 dB) : le riff couvrait tout le reste.
-			_sound(level, "riff", -13.5 + stack * 0.2, data["from"], remote, 0.0)
+			_sound(level, "zap", Balance.ZAP_VOLUME_DB, data["from"], remote)
 		"riff_black":
 			if model != null:
 				model.strum()

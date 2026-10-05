@@ -8,8 +8,8 @@ extends CanvasLayer
 const SKILLS := [
 	{"id": "attack", "name": "Guitare", "action": "attack", "cost": 0.0, "color": Color(0.8, 0.6, 0.4)},
 	{"id": "dash", "name": "Glissade", "action": "dash", "cost": 0.0, "color": Color(0.7, 0.85, 1.0)},
-	{"id": "tuning", "name": "Accordage\nde cordes", "action": "spell_tuning", "cost": Balance.TUNING_COST, "color": Color(0.5, 0.8, 1.0)},
 	{"id": "riff", "name": "Riff\nélectrique", "action": "spell_riff", "cost": Balance.RIFF_COST, "color": Color(0.4, 0.95, 1.0)},
+	{"id": "tuning", "name": "Accordage\nde cordes", "action": "spell_tuning", "cost": Balance.TUNING_COST, "color": Color(0.5, 0.8, 1.0)},
 	{"id": "wave", "name": "Onde\nde choc", "action": "spell_wave", "cost": Balance.WAVE_COST, "color": Color(0.75, 0.55, 1.0)},
 	{"id": "solo", "name": "Solo de\nla Foudre", "action": "spell_solo", "cost": Balance.SOLO_COST, "color": Color(1.0, 0.85, 0.35)},
 	{"id": "tslot_0", "name": "—", "action": "talent_1", "cost": 0.0, "color": Color(0.55, 0.55, 0.55)},
@@ -639,7 +639,7 @@ func _revive() -> void:
 	Router.go_to(Router.TAVERN)
 
 
-## Touche 1 : Riff électrique, Riff black metal (violet, Batguitare) ou FIREBALL (orange, Xplode) : voir ItemDB.RIFF_STYLES.
+## Clic droit : Riff électrique, Riff black metal (violet, Batguitare) ou FIREBALL (orange, Xplode) : voir ItemDB.RIFF_STYLES.
 
 
 func _refresh_riff_slot() -> void:

@@ -105,16 +105,19 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
   (origine à la jonction manche / corps, sillet à 0,385 m) → `assets/models/guitare/batguitare.glb`.
 - Équipée, elle remplace la Flying V dans les mains du héros (`GameState.guitar_model()`, `HeroModel.set_guitar_model`) ;
   retirée, il reprend la Flying V.
-- **Riff black metal** : avec la Batguitare équipée, le Riff électrique (touche 1) devient le Riff black metal (clé
-  `sort_riff` : `black_metal`) : même mini-jeu et mêmes dégâts (violets), mais un **trait brumeux violet** (`MistTrail`)
+- **Riff black metal** : avec la Batguitare équipée, le Riff électrique (clic droit) devient le Riff black metal (clé
+  `sort_riff` : `black_metal`) : mêmes dégâts et même recharge d'1 s, mais un **trait brumeux violet** (`MistTrail`)
   au lieu de l'éclair, et un **vent brumeux** synthétisé (`Sfx` « mist_wind ») au lieu du son du riff. Vu et entendu
   par tous les joueurs.
 - **Xplode** (`xplode`, rare, FOR +1, CHA +1) : une Explorer de bois calciné (`Imagerie/Guitares/3D/explorer.glb`,
   `art/guitare/prepare_guitares.py -- xplode`) sur le corps du **Gardien des Cryptes** (le boss du portail à XP). Elle
   ne tombe que si le héros ne l'a pas déjà (sac ou main) : on ne la loote qu'une fois, mais une fois vendue à Grokk —
   pour **1 médiator** (clé `prix_vente`) — elle retombe au passage suivant.
-- **FIREBALL** : avec la Xplode équipée, le Riff électrique (touche 1) devient FIREBALL (`sort_riff` : `fireball`) :
-  même mini-jeu et mêmes dégâts (orange), mais chaque note lance une **boule de feu** (`Fireball`) de la guitare vers
+- **FIREBALL** : avec la Xplode équipée, le Riff électrique (clic droit) devient FIREBALL (`sort_riff` : `fireball`) :
+  mêmes dégâts et même recharge d'1 s, mais il lance une **boule de feu** (`Fireball`) de la guitare vers
   l'ennemi, faite avec les textures de feu d'Ulysse (`assets/textures/feu` : flammes, halo, et la
   texture de Voronoi qui fait bouillonner le cœur, `shaders/fireball_core.gdshader`), avec un son de **boule de feu crépitante** synthétisé (`Sfx` « fireball »). Apparence du sort selon la
   guitare : `ItemDB.RIFF_STYLES`.
+- **Cordes de la Xplode** : ses six cordes brillent d'un **orange incandescent**, avec une petite lueur sur la caisse
+  (`HeroModel.GLOWING_STRINGS` : le modèle n'a qu'un matériau, des cordes lumineuses sont posées par-dessus, du sillet
+  au chevalet, d'après la vue de face du modèle).

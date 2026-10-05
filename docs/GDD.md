@@ -38,7 +38,7 @@ Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte ave
                          └─ mort : réveil à la taverne, -25 % d'or, quête conservée
 ```
 
-**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes en chaîne → Riff électrique (mini-jeu à 90 BPM) qui saute d'ennemi en ennemi → finir à la guitare → fouiller les corps.
+**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes (mini-jeu à 90 BPM) qui rebondit d'ennemi en ennemi → Riff électrique toutes les secondes → finir à la guitare → fouiller les corps.
 **Méso-boucle (15 min)** : un donjon complet, montée en tension vers le boss.
 **Macro-boucle (heures)** : niveaux, reliques, nouvelles quêtes, arc narratif contre Morne.
 
@@ -88,8 +88,8 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 | Se déplacer | ZQSD (AZERTY) / WASD (QWERTY) / flèches | Stick gauche |
 | Viser | Souris | Stick droit |
 | Coup de guitare | Espace / clic gauche (maintenir = enchaîner) | X |
-| Accordage de cordes | Clic droit | RB |
-| Riff électrique (mini-jeu, 90 BPM) | 1 | A |
+| Riff électrique (FIREBALL, Riff black metal) | Clic droit | RB |
+| Accordage de cordes (mini-jeu, 90 BPM) | 1 | A |
 | Onde de choc | 2 | B |
 | Solo de la Foudre | 3 | Y |
 | Mini-jeu du solo | 1 2 3 4 | Croix directionnelle |
@@ -117,7 +117,7 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 
 ### 7.2 Valeurs dérivées
 - **PV max** = 30 + 4 × mod CON + (niveau − 1) × (7 + mod CON)
-- **Décibels (dB) max** = 50 + 8 × mod CHA + 6 × (niveau − 1) ; régénération 4 dB/s × (1 + 0,15 × mod SAG)
+- **Décibels (dB) max** = (50 + 8 × mod CHA + 6 × (niveau − 1)) × 0,75 (réserve réduite de 25 % le 6 oct. 2026 : on en avait trop pour lancer les sorts en continu) ; régénération 4 dB/s × (1 + 0,15 × mod SAG)
 - **Classe d'armure** = 11 (cuir clouté) + mod DEX
 - **Bonus de maîtrise** = +2 (niv. 1-4), +3 (5-8), +4 (9-12)…
 - **DD des sorts** = 8 + maîtrise + mod CHA
@@ -132,15 +132,15 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 
 ### 8.1 Résolution
 - **Coup de guitare** : touche **toujours** (pas de jet d'attaque) ; 1 chance sur 20 de critique (dés doublés, chiffre doré).
-- **Sorts** : **80 % de chances de toucher** leur cible sans amélioration (« Raté » sinon, chaque cible tirée à part). Les sorts joués en **mini-jeu** (Riff électrique, Solo de la Foudre, solos des talents) touchent toujours. Certains autorisent un **jet de sauvegarde** de la cible (d20 + bonus ≥ DD) pour diviser les dégâts par deux.
+- **Sorts** : **80 % de chances de toucher** leur cible sans amélioration (« Raté » sinon, chaque cible tirée à part). Les sorts joués en **mini-jeu** (Accordage de cordes, Solo de la Foudre, solos des talents) touchent toujours. Certains autorisent un **jet de sauvegarde** de la cible (d20 + bonus ≥ DD) pour diviser les dégâts par deux.
 - **Ennemis** : même jet d'attaque contre la CA du héros ; « Esquive » s'affiche en cas d'échec. Chaque coup est précédé d'un **élan visible de 0,45 s** : reculer permet d'esquiver.
 
 ### 8.2 Arsenal du barde
 | Capacité | Touche | Coût | Recharge | Effet |
 |---|---|---|---|---|
 | **Coup de guitare** | Clic gauche | — | 0,54 s | La Flying V empoignée par le manche, levée au-dessus de l'épaule puis abattue (20 % plus rapide depuis la v0.1.39). **1d6 + FOR**, touche toujours, cône frontal de 1,9 m, recul. |
-| **Accordage de cordes** | Clic droit | 12 dB | **10 s** | Arc électrique qui rebondit sur **jusqu'à 5 ennemis** (portée 11 m, rebond 6 m). 2d6 + CHA, −12 % par rebond. Son de décharge électrique à volume moyen (−8 dB). |
-| **Riff électrique** | 1 | 6 dB | 3 s | **Mini-jeu** : une seule note (la touche 1), rapide, **90 BPM**. La 1re part avec le sort sur l'ennemi visé (12 m) ; chaque note suivante réussie rejoue le son du riff et **l'éclair saute sur l'ennemi suivant** (8 m), jusqu'à **8 notes** (s'il ne reste personne, il refrappe le même). 1d10 + CHA par note, touche toujours. **Une seule fausse note** (ou un appui à contretemps) arrête le riff et **triple la recharge** (9 s).  Avec la **Batguitare** : **Riff black metal**, trait brumeux violet et vent brumeux au lieu de l'éclair et du riff. Avec la **Xplode** : **FIREBALL**, boule de feu crépitante. |
+| **Riff électrique** | Clic droit | 6 dB | **1 s** | Un éclair sur l'ennemi visé (12 m), 1d10 + CHA, avec le grésillement d'arc électrique (−8 dB). Plus de mini-jeu (il est passé à l'Accordage, 6 oct. 2026). Avec la **Batguitare** : **Riff black metal**, trait brumeux violet et vent brumeux. Avec la **Xplode** : **FIREBALL**, boule de feu crépitante. Même recharge d'1 s pour les trois. |
+| **Accordage de cordes** | 1 | 12 dB | **10 s** | **Mini-jeu** (celui de l'ancien Riff électrique, avec le son riff electrique.wav) : une seule note (la touche 1), rapide, **90 BPM**. La 1re part avec le sort : un arc électrique frappe l'ennemi visé (11 m) ; chaque note suivante réussie rejoue le riff et **l'arc rebondit sur l'ennemi suivant** (6 m), **une note par cible, 5 cibles** (s'il ne reste personne, il refrappe le même). 2d6 + CHA, −12 % par rebond, touche toujours. **Une seule fausse note** (ou un appui à contretemps) l'arrête et **triple la recharge** (30 s). |
 | **Onde de choc** | 2 | 20 dB | 4 s | Onde sonore qui touche **tous les ennemis dans un rayon de 5 m**. 2d8 + CHA (sauvegarde : moitié), fort recul qui étourdit. |
 | **Solo de la Foudre** | 3 | 45 dB | 18 s | Lance le **mini-jeu** ; en cas de réussite, **pluie d'éclairs sur tout l'écran** : 4d10 + CHA sur chaque ennemi visible. |
 | **Potion de soin** | R | 1 potion | 1 s | Rend 40 % des PV max. |
@@ -306,12 +306,12 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 | | Stage Diving | Actif 25 dB / 10 s | Saut (8 m, s'arrête aux murs), impact 4 m : 2d6 + CHA + recul |
 | | Pogo | Passif | Les ennemis fortement repoussés sont assommés 1,5 s |
 | **Transe** (contrôle) | **Solo endiablé** | Actif 30 dB / 25 s | Mini-jeu : les ennemis à 12 m se figent en headbang tant que les notes sont réussies (12 max) ; 1re fausse note = fin. Le héros peut se déplacer (60 % de vitesse). En transe, les ennemis ne bougent plus du tout, même frappés. |
-| | Tempo hypnotique | Passif | Chaque note du Riff électrique ralentit l'ennemi touché de 40 % pendant 2 s |
+| | Tempo hypnotique | Passif | Chaque note de l'Accordage de cordes ralentit l'ennemi touché de 40 % pendant 2 s |
 | | Growl de l'Abîme | Actif 20 dB / 16 s | Les ennemis à 6 m fuient 3,5 s (boss : sonnés) |
 | | Maître du tempo | Passif | Solo endiablé : 16 notes, chaque note réussie inflige 1d6 + CHA aux ennemis en transe |
-| **Thrash** (destruction) | Distorsion | Passif | Accordage de cordes : 6 cibles, +15 % |
+| **Thrash** (destruction) | Distorsion | Passif | Accordage de cordes : 6 notes (6 cibles), +15 % |
 | | Enceinte de façade | Actif 25 dB / 14 s | Enceinte posée au curseur : 6 pulsations de 1d8 + CHA (4 m) |
-| | Overdrive | Passif | Riff électrique : 10 notes au lieu de 8, +25 % de dégâts par note |
+| | Overdrive | Passif | Riff électrique (FIREBALL, Riff black metal) : +25 % de dégâts |
 | | Pyrotechnie | Actif 40 dB / 20 s | 6 colonnes de feu autour du héros après 0,8 s : 4d6 chacune |
 
 **Rôles en coop (à venir)** : Ballade = soigneur, Mur du Son = tank, Mosh Pit = contrôle de zone, Transe = contrôle de foule (idéal pour que les alliés frappent pendant que les ennemis headbanguent), Thrash = dégâts.

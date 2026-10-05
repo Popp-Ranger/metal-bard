@@ -49,6 +49,10 @@ var _last_music_pos := -1.0
 ## Liste de lecture aléatoire en cours (donjons) et dernier morceau joué.
 var _playlist: Array[String] = []
 var _playlist_last := ""
+## Atténuation en cours de la musique de fond (dB, ≤ 0) : Solo de la Foudre (musique baissée de 20 %).
+var _duck_db := 0.0
+## Musique coupée par une cinématique (pause_music / resume_music).
+var _music_held := false
 
 
 func _ready() -> void:
@@ -155,7 +159,8 @@ func play_ambience(id: String, volume_db: float = -12.0) -> void:
 	if stream == null:
 		return
 	_ambience.stream = stream
-	_ambience.volume_db = volume_db
+	_ambience.volume_db = volume_db + _duck_db
+	_unhold_music()
 	_ambience.play()
 
 
@@ -174,7 +179,8 @@ func play_music(path: String, volume_db: float = -8.0) -> void:
 	if ogg != null:
 		ogg.loop = true
 	_ambience.stream = stream
-	_ambience.volume_db = volume_db
+	_ambience.volume_db = volume_db + _duck_db
+	_unhold_music()
 	_ambience.play()
 
 
@@ -190,7 +196,8 @@ func play_playlist(dir: String, volume_db: float = -8.0) -> void:
 		return
 	_playlist = tracks
 	_playlist_last = ""
-	_ambience.volume_db = volume_db
+	_ambience.volume_db = volume_db + _duck_db
+	_unhold_music()
 	_next_track()
 
 
@@ -669,9 +676,10 @@ func _voice_blip(f1: float, f2: float) -> PackedFloat32Array:
 
 # --- Extraits musicaux (mini-jeu de la Ballade) ------------------------------------------
 
-## Joue un passage d'un morceau à partir de `from_seconds` (sur le canal des sorts) et met
-## la musique de fond en sourdine pendant ce temps.
-func play_clip(path: String, from_seconds: float, volume_db: float = -4.0) -> void:
+## Joue un passage d'un morceau à partir de `from_seconds` (sur le canal des sorts). La musique de fond est mise en
+## sourdine pendant ce temps, ou seulement baissée si `music_keep` > 0 (fraction de son volume gardée : 0,8 = 20 % de
+## moins, Solo de la Foudre).
+func play_clip(path: String, from_seconds: float, volume_db: float = -4.0, music_keep: float = 0.0) -> void:
 	var stream := load(path) as AudioStream
 	if stream == null:
 		return
@@ -683,7 +691,10 @@ func play_clip(path: String, from_seconds: float, volume_db: float = -4.0) -> vo
 	_clip.stream = stream
 	_clip.volume_db = volume_db
 	_clip.play(maxf(0.0, from_seconds))
-	_ambience.stream_paused = true
+	if music_keep > 0.0:
+		_set_duck(linear_to_db(music_keep))
+	else:
+		_ambience.stream_paused = true
 
 
 func stop_clip() -> void:
@@ -691,11 +702,45 @@ func stop_clip() -> void:
 		var tw := create_tween()
 		tw.tween_property(_clip, "volume_db", -40.0, 0.4)
 		tw.tween_callback(_clip.stop)
-	_ambience.stream_paused = false
+	_release_music()
 
 
 func _on_clip_finished() -> void:
+	_release_music()
+
+
+## Fin d'un extrait : la musique de fond reprend (sauf si une cinématique la tient coupée) à son volume normal.
+func _release_music() -> void:
+	_set_duck(0.0)
+	_ambience.stream_paused = _music_held
+
+
+func _set_duck(db: float) -> void:
+	_ambience.volume_db += db - _duck_db
+	_duck_db = db
+
+
+## Coupe la musique de fond (fondu de `fade` s) : cinématique de la légende de Back Jlack.
+func pause_music(fade: float = 0.6) -> void:
+	_music_held = true
+	var tw := create_tween()
+	tw.tween_property(_ambience, "volume_db", -40.0, fade)
+	tw.tween_callback(_hold_music.bind(_ambience.volume_db))
+
+
+func _hold_music(volume_db: float) -> void:
+	_ambience.stream_paused = _music_held
+	_ambience.volume_db = volume_db
+
+
+## Reprend la musique coupée par pause_music().
+func resume_music() -> void:
+	_music_held = false
 	_ambience.stream_paused = false
+
+
+func music_paused() -> bool:
+	return _ambience.stream_paused
 
 
 func clip_playing() -> bool:
@@ -731,3 +776,9 @@ func _process(_delta: float) -> void:
 			if crossed:
 				music_strike.emit(s.y)
 	_last_music_pos = pos
+
+
+## Une nouvelle musique démarre : elle n'est plus tenue coupée par une cinématique.
+func _unhold_music() -> void:
+	_music_held = false
+	_ambience.stream_paused = false

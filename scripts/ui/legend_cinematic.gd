@@ -35,6 +35,7 @@ var _done := false
 func _ready() -> void:
 	layer = 60
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	Sfx.pause_music() # la musique se tait pendant la légende (seul l'orage gronde)
 	speaker = DialogueDB.npc_name("inconnue")
 	var black := ColorRect.new()
 	black.color = Color.BLACK
@@ -249,3 +250,7 @@ static func play(parent: Node) -> LegendCinematic:
 	parent.add_child(c)
 	parent.get_tree().paused = true
 	return c
+
+
+func _exit_tree() -> void:
+	Sfx.resume_music()

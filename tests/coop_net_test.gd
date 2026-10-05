@@ -66,7 +66,17 @@ func _run_host() -> void:
 	# Réponse attendue : le client lance ses propres sorts.
 	while not (received.has("wave") and received.has("speaker")):
 		await get_tree().create_timer(0.2).timeout
-	await get_tree().create_timer(1.5).timeout # laisse le temps au client de conclure
+	# Mini-jeu de l'histoire (épreuve de Back Jlack) : l'hôte le joue, le client le regarde en direct.
+	var solo := (get_tree().current_scene as Level).hud.solo
+	Events.solo_requested.emit("epreuve", 0)
+	for i in 3:
+		var wait := float(solo._notes[i]["time"]) - solo._t
+		if wait > 0.0:
+			await get_tree().create_timer(wait).timeout
+		solo._press(int(solo._notes[i]["lane"]))
+	await get_tree().create_timer(0.4).timeout
+	solo._finish()
+	await get_tree().create_timer(2.0).timeout # laisse le temps au client de conclure
 	_finish(true, "")
 
 
@@ -103,7 +113,21 @@ func _run_client() -> void:
 	hero.cooldowns["wave"] = 0.0
 	hero.cast_wave()
 	SpellFx.cast(hero, "speaker", {"pos": hero.global_position + Vector3(2, 0, 0), "yaw": 0.0})
-	await get_tree().create_timer(1.0).timeout
+	# L'hôte joue l'épreuve : on la regarde en direct (panneau, notes jouées), sans la jouer.
+	var solo := level.hud.solo
+	var watched := false
+	var seen_hits := 0
+	var wait_t := 0.0
+	while wait_t < 20.0:
+		if solo._active and solo.spectating and solo.mode == "epreuve":
+			watched = true
+			seen_hits = maxi(seen_hits, solo._hits)
+		if watched and not solo._active:
+			break
+		await get_tree().process_frame
+		wait_t += get_process_delta_time()
+	ok = ok and watched and seen_hits == 3 and not solo._active and not solo.spectating
+	why += " épreuve regardée=%s notes vues=%d" % [watched, seen_hits]
 	_finish(ok, why)
 
 

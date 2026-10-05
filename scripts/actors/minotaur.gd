@@ -1,7 +1,8 @@
 class_name Minotaur
 extends Enemy
-## LE MINOTAURE, gardien du trésor du Labyrinthe du Destin : 3,3 m, tête de taureau aux cornes immenses, anneau dans
-## le mufle, torse d'homme, jambes velues à sabots, et une hache à double tranchant. Capacités :
+## LE MINOTAURE, gardien du trésor du Labyrinthe du Destin : le modèle 3D fourni par Ulysse (art/pnj « minotaure »,
+## taureau noir aux yeux rouges, pantalon rouge rapiécé, sabots), agrandi à 3,3 m, animé (repos d'orc, marche, course,
+## coups, sursaut, mort, victoire, headbang pendant le duel), avec une hache à double tranchant. Capacités :
 ##   • Coup de hache (au contact) et Fendoir (toutes les ~7 s) : un cercle devant lui, puis la hache s'abat ;
 ##   • Charge (toutes les ~8 s, si le héros est loin) : une traînée de cercles jusqu'au héros, puis il fonce et
 ##     renverse tout sur son passage (il s'arrête devant les murs) ;
@@ -17,21 +18,30 @@ var dueling := false
 ## Seuil du duel : 5 % des PV max.
 const DUEL_AT := 0.05
 const DUEL_LOSS_HEAL := 0.35
+## Joueur qui joue le duel (identifiant réseau ; 1 : l'hôte, ou hors ligne).
+var duelist := 1
+## Coopération : si le duelliste ne revient pas (déconnecté), le Minotaure reprend le combat au bout de ce délai (s).
+const DUEL_TIMEOUT := 150.0
+var _duel_time := 0.0
 
-var _torso: Node3D
-var _arm_l: Node3D
-var _arm_r: Node3D
-var _hip_l: Node3D
-var _hip_r: Node3D
+var skin: CharacterSkin
+## Moment de l'impact dans les clips « slash » et « smash » (fraction de leur durée).
+const STRIKE_AT := 0.55
+const SMASH_AT := 0.7
 var _axe: Node3D
 var _guitar: Node3D
-var _slam := 0.0
+var _eyes: OmniLight3D
+var _solo_t := 0.0
 var _cleave_timer := 5.0
 var _charge_timer := 6.0
 var _busy := false
 var _intro_done := false
 var _phase := 1
-var _eye_mats: Array[StandardMaterial3D] = []
+
+
+func _ready() -> void:
+	super()
+	Net.story_received.connect(_on_story)
 
 
 func _configure() -> void:
@@ -55,100 +65,61 @@ func _configure() -> void:
 
 
 func _build_model() -> void:
-	var fur := own_mat(Color(0.3, 0.18, 0.1), 0.9)
-	var hide := own_mat(Color(0.45, 0.28, 0.18), 0.75)
-	var dark := own_mat(Color(0.12, 0.08, 0.05), 0.85)
-	var horn := own_mat(Color(0.85, 0.8, 0.68), 0.45)
+	skin = CharacterSkin.create("minotaure")
+	model.add_child(skin)
+	_flash_mats.append_array(skin.flash_materials)
 	var iron := Visuals.mat(Color(0.3, 0.29, 0.3), 0.35, 0.8)
-	var eye := Visuals.glow_mat(Color(1.0, 0.3, 0.1), 3.5)
-	_eye_mats.append(eye)
-	for side: float in [-1.0, 1.0]:
-		var hip := Node3D.new()
-		hip.position = Vector3(0.28 * side, 1.25, 0)
-		model.add_child(hip)
-		Visuals.capsule(hip, 0.24, 0.7, Vector3(0, -0.3, 0.06), fur, Vector3(-15, 0, 0))
-		Visuals.capsule(hip, 0.15, 0.62, Vector3(0, -0.85, -0.1), fur, Vector3(20, 0, 0)) # jarret vers l'arrière
-		Visuals.box(hip, Vector3(0.2, 0.14, 0.26), Vector3(0, -1.18, 0.0), dark) # sabot
-		if side < 0.0:
-			_hip_l = hip
-		else:
-			_hip_r = hip
-	_torso = Node3D.new()
-	_torso.position = Vector3(0, 1.25, 0)
-	model.add_child(_torso)
-	Visuals.cylinder(_torso, 0.5, 0.56, 0.35, Vector3(0, 0.05, 0), dark, Vector3.ZERO, 10) # pagne de cuir
-	Visuals.box(_torso, Vector3(1.0, 0.1, 0.5), Vector3(0, 0.22, 0), iron) # ceinture
-	Visuals.capsule(_torso, 0.42, 1.0, Vector3(0, 0.75, 0), hide)
-	Visuals.sphere(_torso, 0.46, Vector3(0, 1.0, 0.1), hide, Vector3(1.4, 0.75, 0.75)) # pectoraux
-	Visuals.sphere(_torso, 0.5, Vector3(0, 1.25, -0.1), fur, Vector3(1.5, 0.7, 1.0)) # bosse de taureau
-	var head := Node3D.new()
-	head.position = Vector3(0, 1.6, 0.25)
-	_torso.add_child(head)
-	Visuals.sphere(head, 0.3, Vector3.ZERO, fur, Vector3(0.95, 1.0, 1.1))
-	Visuals.box(head, Vector3(0.32, 0.26, 0.3), Vector3(0, -0.1, 0.27), hide) # mufle
-	Visuals.torus(head, 0.05, 0.075, Vector3(0, -0.2, 0.43), iron, Vector3(90, 0, 0)) # anneau dans le nez
-	for side: float in [-1.0, 1.0]:
-		Visuals.sphere(head, 0.045, Vector3(0.14 * side, 0.08, 0.24), eye)
-		DemonParts.horn(head, Vector3(0.22 * side, 0.18, 0.02), side, horn, 0.75, 22.0)
-		Visuals.cylinder(head, 0.0, 0.07, 0.22, Vector3(0.32 * side, 0.02, -0.05), fur, Vector3(0, 0, -100 * side), 5)
-	for side: float in [-1.0, 1.0]:
-		var arm := Node3D.new()
-		arm.position = Vector3(0.68 * side, 1.25, 0)
-		_torso.add_child(arm)
-		Visuals.sphere(arm, 0.24, Vector3.ZERO, hide)
-		Visuals.capsule(arm, 0.16, 0.65, Vector3(0.04 * side, -0.35, 0), hide)
-		Visuals.capsule(arm, 0.14, 0.6, Vector3(0.06 * side, -0.85, 0.08), hide)
-		Visuals.torus(arm, 0.13, 0.18, Vector3(0.06 * side, -0.95, 0.08), iron) # bracelet
-		Visuals.sphere(arm, 0.14, Vector3(0.07 * side, -1.17, 0.12), hide)
-		if side < 0.0:
-			_arm_l = arm
-		else:
-			_arm_r = arm
-	# Hache à double tranchant.
+	# Hache à double tranchant dans la main droite (vers l'avant au bout du poing, à la pose de repos ; mesures avant
+	# l'agrandissement du modèle).
 	_axe = Node3D.new()
-	_axe.position = Vector3(0.07, -1.17, 0.14)
-	_arm_r.add_child(_axe)
-	Visuals.cylinder(_axe, 0.045, 0.045, 2.1, Vector3(0, 0.0, 0.4), Visuals.mat(Color(0.22, 0.14, 0.07), 0.8), Vector3(90, 0, 0), 6)
+	skin.place(_axe, "hand.R", Basis.IDENTITY, 0.08, Vector3.ZERO)
+	Visuals.cylinder(_axe, 0.035, 0.035, 1.55, Vector3(0, 0.0, 0.3), Visuals.mat(Color(0.22, 0.14, 0.07), 0.8), Vector3(90, 0, 0), 6)
 	for s: float in [-1.0, 1.0]:
-		Visuals.cylinder(_axe, 0.48, 0.48, 0.06, Vector3(0, 0.3 * s, 1.25), iron, Vector3(0, 0, 90), 3)
-	Visuals.sphere(_axe, 0.09, Vector3(0, 0, 1.25), iron)
-	# Guitare du duel (cachée jusqu'au duel).
+		Visuals.cylinder(_axe, 0.32, 0.32, 0.04, Vector3(0, 0.2 * s, 0.9), iron, Vector3(0, 0, 90), 12) # lames en demi-lune
+	Visuals.sphere(_axe, 0.07, Vector3(0, 0, 0.9), iron)
+	skin.attach("hand.R", _axe)
+	# Guitare du duel (cachée jusqu'au duel) : en travers du ventre, manche vers sa main gauche.
 	_guitar = Node3D.new()
-	_guitar.position = Vector3(0, 0.9, 0.5)
+	var y := Vector3(0.8, 0.6, 0.0).normalized()
+	var z := Vector3(0.0, 0.0, 1.0)
+	skin.place(_guitar, "chest", Basis(y.cross(z), y, z), 0.0, Vector3(0.38, 0.06, 0.42))
+	DemonParts.infernal_guitar(_guitar, 0.95)
 	_guitar.visible = false
-	_torso.add_child(_guitar)
-	var g := DemonParts.infernal_guitar(_guitar, 1.7)
-	g.rotation_degrees = Vector3(0, 0, -60)
+	skin.attach("chest", _guitar)
+	# Regard rouge (il s'embrase à mi-vie) et lumière d'arène.
+	_eyes = OmniLight3D.new()
+	_eyes.light_color = Color(1.0, 0.25, 0.1)
+	_eyes.light_energy = 0.6
+	_eyes.omni_range = 1.6
+	skin.place(_eyes, "head", Basis.IDENTITY, 0.12, Vector3(0, 0, 0.3))
+	skin.attach("head", _eyes)
 	var glow := OmniLight3D.new()
-	glow.light_color = Color(1.0, 0.4, 0.15)
-	glow.light_energy = 0.9
-	glow.omni_range = 4.0
-	glow.position = Vector3(0, 3.0, 0.6)
+	glow.light_color = Color(1.0, 0.75, 0.45)
+	glow.light_energy = 1.2
+	glow.omni_range = 5.0
+	glow.position = Vector3(0, 3.8, 1.3)
 	model.add_child(glow)
 
 
-func _animate(_delta: float, moving: bool) -> void:
-	var stride := sin(_anim_t * 4.0) if moving else 0.0
-	_hip_l.rotation.x = stride * 0.45
-	_hip_r.rotation.x = -stride * 0.45
-	_torso.rotation.z = stride * 0.06
-	_torso.position.y = 1.25 + absf(stride) * 0.06
+func _animate(delta: float, _moving: bool) -> void:
 	if dueling:
-		# Il joue : headbang et la main droite qui gratte.
-		_torso.rotation.x = absf(sin(_anim_t * 9.0)) * 0.25
-		_arm_r.rotation.x = -0.9 + sin(_anim_t * 18.0) * 0.25
-		_arm_l.rotation.x = -1.2
-		return
-	_torso.rotation.x = 0.0
-	_arm_l.rotation.x = lerpf(-stride * 0.4, -2.4, _slam * 0.8)
-	_arm_r.rotation.x = lerpf(stride * 0.4, -2.8, _slam)
+		# Il joue : headbang en boucle.
+		_solo_t -= delta
+		if _solo_t <= 0.0:
+			_solo_t = float(skin.lengths.get("headbang", 1.0))
+			skin.action("headbang", _solo_t)
+	skin.step(delta, _speed_now > 0.05 and not dueling, _speed_now)
 
 
+## Coup de hache : le clip « slash » étiré pour que l'impact tombe à la fin de l'élan.
 func _attack_anim(windup: float) -> void:
-	var tw := create_tween()
-	tw.tween_property(self, "_slam", 1.0, windup * 0.85).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(self, "_slam", -0.3, 0.1)
-	tw.tween_property(self, "_slam", 0.0, 0.4)
+	skin.action("slash", windup / STRIKE_AT)
+
+
+func _flash() -> void:
+	if skin != null:
+		skin.hurt()
+	super()
 
 
 func _aggro() -> void:
@@ -177,26 +148,79 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 	var limit := duel_threshold()
 	if not remote_controlled and hp > limit and hp - amount <= limit:
 		super.take_damage(hp - limit, from, 0.0, crit, kind)
-		start_duel()
+		start_duel(Net.damage_source)
 		return
 	super.take_damage(amount, from, knockback, crit, kind)
 
 
-## Il jette sa hache, sort sa guitare et impose le duel.
-func start_duel() -> void:
+## Il jette sa hache, sort sa guitare et impose le duel à `peer` : le joueur qui l'a fait tomber à 5 % (coopération :
+## lui seul joue le duel, les autres le regardent en direct ; hors ligne, 1 = soi).
+func start_duel(peer: int = 1) -> void:
 	if dueling or state == State.DEAD:
 		return
 	dueling = true
+	duelist = peer
+	_duel_time = 0.0
 	_busy = true
 	state = State.STAGGER
 	_stagger = 9999.0
-	_slam = 0.0
+	_solo_t = 0.0
 	_axe.visible = false
 	_guitar.visible = true
 	Sfx.play("solo_thunder", -2.0)
 	Events.camera_shake.emit(0.3, 0.6)
-	if duel_requested.is_valid():
-		duel_requested.call()
+	if not remote_controlled:
+		Net.send_story("duel_start", {"enemy": net_id, "duelist": peer}) # l'hôte prévient le groupe
+	if peer == Net.my_id():
+		if duel_requested.is_valid():
+			duel_requested.call()
+	else:
+		Events.notify("Le Minotaure jette sa hache et défie %s en duel de guitare !" % Net.player_name(peer), Color(1.0, 0.55, 0.35))
+
+
+## Résultat du duel, chez le joueur qui l'a joué (`hero_won` : 80 % au moins). L'hôte l'applique et prévient le groupe ;
+## un client le lui envoie.
+func duel_result(hero_won: bool) -> void:
+	if remote_controlled:
+		Net.send_story("duel_result", {"enemy": net_id, "won": hero_won})
+		_end_duel_visual(hero_won)
+		return
+	_apply_duel_result(hero_won)
+
+
+func _apply_duel_result(hero_won: bool) -> void:
+	if not dueling:
+		return
+	Net.send_story("duel_end", {"enemy": net_id, "won": hero_won})
+	if hero_won:
+		lose_duel()
+	else:
+		win_duel()
+
+
+## Chez un client : fin du duel joué par un autre (l'hôte fait autorité ; sa mort arrive avec ses PV).
+func _end_duel_visual(hero_won: bool) -> void:
+	dueling = false
+	_guitar.visible = false
+	if not hero_won:
+		_axe.visible = true
+		skin.action("victory", 1.4)
+
+
+## Duel partagé (coopération) : début (chez les clients), résultat du duelliste (chez l'hôte), fin (chez les clients).
+func _on_story(event: String, data: Dictionary, _peer: int) -> void:
+	if int(data.get("enemy", -1)) != net_id:
+		return
+	match event:
+		"duel_start":
+			if remote_controlled:
+				start_duel(int(data.get("duelist", 1)))
+		"duel_result":
+			if not remote_controlled:
+				_apply_duel_result(bool(data.get("won", false)))
+		"duel_end":
+			if remote_controlled:
+				_end_duel_visual(bool(data.get("won", false)))
 
 
 ## Le héros a gagné le duel : le Minotaure s'incline et tombe.
@@ -219,6 +243,7 @@ func win_duel() -> void:
 	_update_hp_bar()
 	_guitar.visible = false
 	_axe.visible = true
+	skin.action("victory", 1.4) # il ricane, bras levés
 	_stagger = 0.0
 	state = State.CHASE
 	_busy = false
@@ -227,12 +252,15 @@ func win_duel() -> void:
 
 
 func _update_special(delta: float, dist: float) -> void:
+	if dueling and duelist != Net.my_id():
+		_duel_time += delta
+		if _duel_time > DUEL_TIMEOUT:
+			_apply_duel_result(false)
 	if state == State.WANDER or state == State.DEAD or dueling:
 		return
 	if _phase == 1 and hp <= max_hp / 2.0:
 		_phase = 2
-		for m in _eye_mats:
-			m.emission_energy_multiplier = 6.0
+		_eyes.light_energy = 2.5
 		Sfx.play("croak", 0.0, 0.1)
 		Events.notify("Le Minotaure gratte le sol de ses sabots, naseaux fumants...", Events.COLOR_BAD)
 	if _busy:
@@ -250,10 +278,7 @@ func _cleave() -> void:
 	_busy = true
 	_cleave_timer = 7.0 if _phase == 1 else 5.0
 	var front := global_position + Vector3(sin(model.rotation.y), 0, cos(model.rotation.y)) * 2.3
-	var tw := create_tween()
-	tw.tween_property(self, "_slam", 1.0, 0.9).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(self, "_slam", -0.4, 0.1)
-	tw.tween_property(self, "_slam", 0.0, 0.45)
+	skin.action("smash", 1.0 / SMASH_AT) # la hache s'abat au moment de l'impact
 	await BossMoves.strike(self, front, 2.5, 1.0, Vector3i(3, 8, 3 + level), "slam")
 	_busy = false
 
@@ -285,6 +310,7 @@ func _charge() -> void:
 		var t := float(k + 1) / steps
 		BossMoves.strike(self, start + dir * reach * t, 1.3, 1.1 + t * 0.35, Vector3i(2, 10, 2 + level), "slam")
 	model.rotation.y = atan2(dir.x, dir.z)
+	skin.action("victory", 1.1) # il beugle avant de foncer
 	await get_tree().create_timer(1.1, false).timeout
 	if state == State.DEAD or dueling:
 		_busy = false
@@ -315,7 +341,5 @@ func _death_anim() -> void:
 	Sfx.play("boom", 0.0)
 	Events.camera_shake.emit(0.5, 1.2)
 	_guitar.visible = false
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(model, "rotation:x", -PI * 0.5, 1.1).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(model, "position:y", 0.3, 1.1)
+	skin.die()
 	_corpse(3.0)

@@ -10,8 +10,8 @@ const KEY_ACTIONS := {
 	"move_right": [KEY_D, KEY_RIGHT],
 	"attack": [], # clic gauche (ajouté plus bas)
 	"dash": [KEY_SPACE], # Glissade sur les genoux
-	"spell_tuning": [], # clic droit (ajouté plus bas)
-	"spell_riff": [KEY_1, KEY_KP_1],
+	"spell_riff": [], # clic droit (ajouté plus bas) : Riff électrique (FIREBALL, Riff black metal)
+	"spell_tuning": [KEY_1, KEY_KP_1], # Accordage de cordes (mini-jeu)
 	"spell_wave": [KEY_2, KEY_KP_2],
 	"spell_solo": [KEY_3, KEY_KP_3],
 	"potion": [KEY_R],
@@ -47,7 +47,7 @@ func _ready() -> void:
 	InputMap.action_add_event("attack", click)
 	var right_click := InputEventMouseButton.new()
 	right_click.button_index = MOUSE_BUTTON_RIGHT
-	InputMap.action_add_event("spell_tuning", right_click)
+	InputMap.action_add_event("spell_riff", right_click)
 
 
 ## Libellé de la première touche clavier associée à une action,

@@ -21,6 +21,11 @@ signal code_ready(code: String, note: String)
 signal roster_changed
 ## Effet de sort reçu d'un autre joueur (type, identifiant du joueur).
 signal spell_fx_received(kind: String, peer_id: int)
+## Mini-jeu de l'histoire (épreuve de Back Jlack, duel du Minotaure) joué par un autre joueur : début, notes jouées,
+## fin (SoloMinigame le montre en direct).
+signal minigame_received(event: String, data: Dictionary, peer_id: int)
+## Événement d'histoire partagé par le groupe (duel du Minotaure, épreuve réussie...).
+signal story_received(event: String, data: Dictionary, peer_id: int)
 
 const PORT := 24565
 const MAX_PLAYERS := Balance.COOP_MAX_PLAYERS
@@ -48,6 +53,9 @@ var upnp_enabled := true
 ## false : pas de requête vers PUBLIC_IP_URL (tests automatiques).
 var public_lookup_enabled := true
 var _join_attempt := 0
+## Joueur à l'origine des dégâts que l'hôte applique en ce moment (1 : l'hôte lui-même) : le Minotaure sait ainsi qui
+## l'a fait tomber à 5 % (c'est lui qui joue le duel).
+var damage_source := 1
 
 var _upnp: UPNP
 var _thread: Thread
@@ -620,7 +628,9 @@ func _enemy_damage(id: int, amount: int, from: Vector3, knockback: float, crit: 
 	var ref: WeakRef = _enemies.get(id)
 	var e: Enemy = ref.get_ref() as Enemy if ref != null else null
 	if e != null and e.is_alive():
+		damage_source = multiplayer.get_remote_sender_id()
 		e.take_damage(amount, from, knockback, crit, kind)
+		damage_source = 1
 
 
 ## Un ennemi de l'hôte touche un autre joueur : c'est ce joueur qui encaisse chez lui.
@@ -674,3 +684,39 @@ func enemy_by_id(id: int) -> Enemy:
 	var ref: WeakRef = _enemies.get(id)
 	var e: Enemy = ref.get_ref() as Enemy if ref != null else null
 	return e if e != null and e.is_alive() else null
+
+
+## Identifiant réseau de ce joueur (1 : l'hôte, ou hors ligne).
+func my_id() -> int:
+	return multiplayer.get_unique_id() if is_online() else 1
+
+
+## Nom du joueur `peer_id`.
+func player_name(peer_id: int) -> String:
+	return str((players.get(peer_id, {}) as Dictionary).get("name", "Joueur %d" % peer_id))
+
+
+# --- Mini-jeux et histoire partagés -------------------------------------------------------------
+
+## Le mini-jeu que l'on joue (épreuve, duel) : envoyé aux autres joueurs du même lieu, qui le regardent en direct.
+func send_minigame(event: String, data: Dictionary) -> void:
+	if is_online():
+		_minigame.rpc(_current_scene(), event, data)
+
+
+@rpc("any_peer", "reliable")
+func _minigame(scene: String, event: String, data: Dictionary) -> void:
+	if scene == _current_scene():
+		minigame_received.emit(event, data, multiplayer.get_remote_sender_id())
+
+
+## Événement d'histoire envoyé aux autres joueurs du même lieu.
+func send_story(event: String, data: Dictionary) -> void:
+	if is_online():
+		_story.rpc(_current_scene(), event, data)
+
+
+@rpc("any_peer", "reliable")
+func _story(scene: String, event: String, data: Dictionary) -> void:
+	if scene == _current_scene():
+		story_received.emit(event, data, multiplayer.get_remote_sender_id())
