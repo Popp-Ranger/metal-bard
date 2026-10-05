@@ -38,6 +38,8 @@ signal portal_opened
 signal shop_requested
 ## Touche T : portail bleu de retour à la taverne (traité par le donjon).
 signal town_portal_requested
+## Barre d'incantation (portail bleu...) : `ratio` de 0 à 1 ; négatif pour la cacher.
+signal cast_progress(label: String, ratio: float)
 ## Choix de dialogue qui fait avancer l'histoire (ex. « gloubah_fight »), traité par le niveau.
 signal story_action(action: String)
 signal run_stats_changed

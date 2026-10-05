@@ -449,7 +449,7 @@ func cast_tuning() -> void:
 
 
 ## Riff électrique (touche 1) : mini-jeu. La 1re note part en lançant le sort, sur l'ennemi visé ; puis la même
-## note revient à 160 BPM : chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à
+## note revient à 90 BPM : chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à
 ## 8 notes, 10 avec Overdrive ; s'il ne reste personne d'autre, il refrappe le même). Les notes touchent toujours.
 ## Une seule fausse note (ou un appui à contretemps) arrête le riff et triple la recharge.
 func cast_riff() -> void:

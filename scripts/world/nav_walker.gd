@@ -41,6 +41,16 @@ func walk_to(target: Vector3, walk_speed: float = 1.4) -> void:
 	_no_path_frames = 0
 
 
+## Point praticable le plus proche de `p` (au sol) : hors des tables, tonneaux et murs. `p` tel quel s'il n'y a
+## pas de maillage de navigation (donjon) ou s'il n'est pas encore prêt.
+func snap(p: Vector3) -> Vector3:
+	var map := get_navigation_map()
+	if not map.is_valid() or NavigationServer3D.map_get_iteration_id(map) == 0:
+		return p
+	var q := NavigationServer3D.map_get_closest_point(map, Vector3(p.x, 0.5, p.z))
+	return Vector3(q.x, 0.0, q.z)
+
+
 func stop() -> void:
 	walking = false
 	direction = Vector3.ZERO

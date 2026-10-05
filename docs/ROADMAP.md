@@ -238,6 +238,13 @@
 ## ✅ v0.1.42 — Le solo du sage
 - [x] Épreuve de Back Jlack : le vrai solo du sage, « Chant de fer », joué en entier ; les 78 notes du mini-jeu tombent sur les notes du morceau (mélodie de la guitare solo suivie au demi-ton par tools/audio/detect_notes.py, data/epreuve_solo.json) ; la corde suit la hauteur
 
+## ✅ v0.1.43 — Correctifs et portail incanté
+- [x] Plumeau ne se coince plus dans les tonneaux : la navigation de la taverne reprend le plancher (Godot 4.7 ne lisait que le dessus des meubles) ; ses destinations sont ramenées sur la zone praticable
+- [x] Rats morts : retournés sur le dos au-dessus des dalles (on peut les fouiller)
+- [x] Tout corps qui porte encore du butin scintille (une simple potion comprise)
+- [x] Portail bleu (T) : 3 s d'incantation (barre à l'écran), interrompue si le héros bouge, est touché ou entre en combat ; un seul portail par joueur (y compris dans les Cryptes)
+- [x] Riff électrique à 90 BPM
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

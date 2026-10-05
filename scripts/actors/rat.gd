@@ -63,7 +63,11 @@ func _attack_anim(windup: float) -> void:
 
 func _death_anim() -> void:
 	Sfx.play("clack", -8.0, 0.3)
-	create_tween().tween_property(model, "rotation:z", PI, 0.25) # sur le dos
+	# Sur le dos : il se retourne autour de ses pattes, on le remonte pour que le corps reste au-dessus du sol
+	# (sinon il disparaît sous les dalles et on ne peut plus le fouiller).
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(model, "rotation:z", PI, 0.25)
+	tw.tween_property(model, "position:y", 0.6, 0.25)
 	_corpse(1.45)
 
 

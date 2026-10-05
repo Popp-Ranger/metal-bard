@@ -257,7 +257,9 @@ func _close_doors_behind_hero() -> void:
 ## Maillage de navigation, calculé au lancement à partir des collisions (sols, murs, mobilier).
 func _bake_navigation() -> void:
 	var nm := NavigationMesh.new()
-	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
+	# Collisions (mobilier) ET maillages : Godot 4.7 ne lit pas les collisions d'une GridMap, et sans ses maillages
+	# le plancher manquait (il ne restait que le dessus des meubles, où l'hibours allait se percher dans un tonneau).
+	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_BOTH
 	nm.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_EXPLICIT
 	nm.geometry_source_group_name = TavernDecor.NAV_GROUP
 	nm.agent_radius = 0.25

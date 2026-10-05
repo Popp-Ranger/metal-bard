@@ -75,9 +75,15 @@ func _process(delta: float) -> void:
 	_repath -= delta
 	if d > 1.6 and _repath <= 0.0:
 		_repath = 0.4
-		_walker.walk_to(_target.global_position - to.normalized() * 1.2, _speed)
+		# Destination ramenée sur la zone praticable : jamais dans un tonneau ou sous une table.
+		_walker.walk_to(_walker.snap(_target.global_position - to.normalized() * 1.2), _speed)
 	elif d <= 1.4 and _walker.walking:
 		_walker.stop()
+	elif not _walker.walking and _repath <= 0.0:
+		_repath = 0.4
+		var free := _walker.snap(global_position)
+		if Vector2(free.x - global_position.x, free.z - global_position.z).length() > 0.15:
+			_walker.walk_to(free, _speed) # posé dans un meuble (apparition) : il en sort
 	var look := _walker.direction if moving else to
 	if look.length() > 0.1:
 		rotation.y = lerp_angle(rotation.y, atan2(look.x, look.z), delta * 8.0)

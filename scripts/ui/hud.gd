@@ -42,6 +42,10 @@ var _area_label: Label
 var _boss_box: VBoxContainer
 var _boss_bar: ProgressBar
 var _boss_name: Label
+## Barre d'incantation (portail bleu), au-dessus de la barre de sorts.
+var cast_box: VBoxContainer
+var _cast_bar: ProgressBar
+var _cast_label: Label
 var _flash: ColorRect
 ## Aura rouge clignotante sur le pourtour de l'écran quand la vie passe sous LOW_HP.
 var _low_hp: ColorRect
@@ -72,6 +76,7 @@ func _ready() -> void:
 	_build_skills()
 	_build_quest_tracker()
 	_build_boss_bar()
+	_build_cast_bar()
 	_build_messages()
 	dialogue = DialogueBox.new()
 	_root.add_child(dialogue)
@@ -276,6 +281,35 @@ func _build_boss_bar() -> void:
 	_boss_bar = UiStyle.bar(Color(0.25, 0.55, 0.2), Vector2(600, 18))
 	_boss_box.add_child(_boss_bar)
 	_boss_box.visible = false
+
+
+func _build_cast_bar() -> void:
+	cast_box = VBoxContainer.new()
+	cast_box.anchor_left = 0.5
+	cast_box.anchor_right = 0.5
+	cast_box.anchor_top = 1.0
+	cast_box.anchor_bottom = 1.0
+	cast_box.offset_left = -160
+	cast_box.offset_right = 160
+	cast_box.offset_top = -205
+	cast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(cast_box)
+	_cast_label = UiStyle.label("", 16, Color(0.6, 0.85, 1.0))
+	_cast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cast_box.add_child(_cast_label)
+	_cast_bar = UiStyle.bar(Color(0.3, 0.6, 1.0), Vector2(320, 12))
+	_cast_bar.max_value = 1.0
+	_cast_bar.step = 0.0
+	cast_box.add_child(_cast_bar)
+	cast_box.visible = false
+	Events.cast_progress.connect(_on_cast_progress)
+
+
+func _on_cast_progress(label: String, ratio: float) -> void:
+	cast_box.visible = ratio >= 0.0
+	if ratio >= 0.0:
+		_cast_label.text = label
+		_cast_bar.value = ratio
 
 
 func _build_messages() -> void:

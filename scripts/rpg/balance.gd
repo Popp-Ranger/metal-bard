@@ -41,12 +41,15 @@ const TUNING_JUMP_RANGE := 6.0
 const TUNING_FALLOFF := 0.12 # -12 % de dégâts à chaque rebond
 const ZAP_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc électrique
 
-# Riff électrique (touche 1) : mini-jeu. Une seule note, très rapide (160 BPM) : la 1re part en lançant le sort, puis
+# Riff électrique (touche 1) : mini-jeu. Une seule note, à 90 BPM : la 1re part en lançant le sort, puis
 # chaque note réussie rejoue le riff et l'éclair saute sur l'ennemi suivant (jusqu'à 8 notes). Une fausse note
 # arrête le riff et triple la recharge.
+## Portail bleu de retour à la taverne (touche T) : durée d'incantation (s).
+const TOWN_PORTAL_CAST := 3.0
+
 const RIFF_COST := 6.0
 const RIFF_COOLDOWN := 3.0 # recharge du Riff électrique
-const RIFF_BPM := 160.0
+const RIFF_BPM := 90.0
 const RIFF_NOTES := 8
 const RIFF_FAIL_COOLDOWN_MULT := 3.0
 const RIFF_RANGE := 12.0 # portée de la 1re cible

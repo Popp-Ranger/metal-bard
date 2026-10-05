@@ -38,7 +38,7 @@ Riffald, barde errant à la crinière rousse et au manteau de cuir, affronte ave
                          └─ mort : réveil à la taverne, -25 % d'or, quête conservée
 ```
 
-**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes en chaîne → Riff électrique (mini-jeu à 160 BPM) qui saute d'ennemi en ennemi → finir à la guitare → fouiller les corps.
+**Micro-boucle (30 s)** : repérer un groupe → l'attirer (rayon de détection 4 m) → le regrouper → Onde de choc → Accordage de cordes en chaîne → Riff électrique (mini-jeu à 90 BPM) qui saute d'ennemi en ennemi → finir à la guitare → fouiller les corps.
 **Méso-boucle (15 min)** : un donjon complet, montée en tension vers le boss.
 **Macro-boucle (heures)** : niveaux, reliques, nouvelles quêtes, arc narratif contre Morne.
 
@@ -87,7 +87,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 | Viser | Souris | Stick droit |
 | Coup de guitare | Espace / clic gauche (maintenir = enchaîner) | X |
 | Accordage de cordes | Clic droit | RB |
-| Riff électrique (mini-jeu, 160 BPM) | 1 | A |
+| Riff électrique (mini-jeu, 90 BPM) | 1 | A |
 | Onde de choc | 2 | B |
 | Solo de la Foudre | 3 | Y |
 | Mini-jeu du solo | 1 2 3 4 | Croix directionnelle |
@@ -138,7 +138,7 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 |---|---|---|---|---|
 | **Coup de guitare** | Clic gauche | — | 0,54 s | La Flying V empoignée par le manche, levée au-dessus de l'épaule puis abattue (20 % plus rapide depuis la v0.1.39). **1d6 + FOR**, touche toujours, cône frontal de 1,9 m, recul. |
 | **Accordage de cordes** | Clic droit | 12 dB | **10 s** | Arc électrique qui rebondit sur **jusqu'à 5 ennemis** (portée 11 m, rebond 6 m). 2d6 + CHA, −12 % par rebond. Son de décharge électrique à volume moyen (−8 dB). |
-| **Riff électrique** | 1 | 6 dB | 3 s | **Mini-jeu** : une seule note (la touche 1), très rapide, **160 BPM**. La 1re part avec le sort sur l'ennemi visé (12 m) ; chaque note suivante réussie rejoue le son du riff et **l'éclair saute sur l'ennemi suivant** (8 m), jusqu'à **8 notes** (s'il ne reste personne, il refrappe le même). 1d10 + CHA par note, touche toujours. **Une seule fausse note** (ou un appui à contretemps) arrête le riff et **triple la recharge** (9 s). |
+| **Riff électrique** | 1 | 6 dB | 3 s | **Mini-jeu** : une seule note (la touche 1), rapide, **90 BPM**. La 1re part avec le sort sur l'ennemi visé (12 m) ; chaque note suivante réussie rejoue le son du riff et **l'éclair saute sur l'ennemi suivant** (8 m), jusqu'à **8 notes** (s'il ne reste personne, il refrappe le même). 1d10 + CHA par note, touche toujours. **Une seule fausse note** (ou un appui à contretemps) arrête le riff et **triple la recharge** (9 s). |
 | **Onde de choc** | 2 | 20 dB | 4 s | Onde sonore qui touche **tous les ennemis dans un rayon de 5 m**. 2d8 + CHA (sauvegarde : moitié), fort recul qui étourdit. |
 | **Solo de la Foudre** | 3 | 45 dB | 18 s | Lance le **mini-jeu** ; en cas de réussite, **pluie d'éclairs sur tout l'écran** : 4d10 + CHA sur chaque ennemi visible. |
 | **Potion de soin** | R | 1 potion | 1 s | Rend 40 % des PV max. |

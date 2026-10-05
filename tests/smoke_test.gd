@@ -269,7 +269,7 @@ func _test_quest_flow() -> void:
 			sure_hits += 1
 	_check(is_equal_approx(GameState.spell_hit_chance(), 0.8) and spell_hits > 210 and spell_hits < 270 and sure_hits == 300,
 		"sorts : 80 %% de chances de toucher (%d / 300), mini-jeux toujours (%d / 300)" % [spell_hits, sure_hits])
-	# Riff électrique : mini-jeu, la même note à 160 BPM ; l'éclair saute d'un ennemi au suivant.
+	# Riff électrique : mini-jeu, la même note à 90 BPM ; l'éclair saute d'un ennemi au suivant.
 	var solo_game := (dungeon as Level).hud.solo
 	for i in targets.size():
 		targets[i].hp = 9999
@@ -286,7 +286,7 @@ func _test_quest_flow() -> void:
 	for i in solo_game._notes.size():
 		regular = regular and absf(float(solo_game._notes[i]["time"]) - riff_beat * (i + 1)) < 0.001 and int(solo_game._notes[i]["lane"]) == 0
 	_check(hero.casting_riff and solo_game._active and solo_game.mode == "riff" and solo_game._lanes == 1 and regular,
-		"Riff électrique : mini-jeu d'une seule note, 8 notes à 160 BPM (la 1re part avec le sort)")
+		"Riff électrique : mini-jeu d'une seule note, 8 notes à 90 BPM (la 1re part avec le sort)")
 	for i in solo_game._notes.size():
 		var wait := float(solo_game._notes[i]["time"]) - solo_game._t
 		if wait > 0.0:
@@ -1304,14 +1304,29 @@ func _test_town_portal() -> void:
 	await _frames(3)
 	GameState.stats.xp = 0
 	hero.global_position += Vector3(1.0, 0, 0)
+	# Touche T : 3 s d'incantation (barre d'incantation) ; bouger l'interrompt.
+	var hud := (d1 as Level).hud
 	Events.town_portal_requested.emit()
 	await _frames(2)
+	var casting := float(d1.get("_portal_cast")) >= 0.0 and hud.cast_box.visible and GameState.town_portal.is_empty()
+	hero.global_position += Vector3(0.6, 0, 0)
+	await _frames(2)
+	_check(casting and float(d1.get("_portal_cast")) < 0.0 and not hud.cast_box.visible and GameState.town_portal.is_empty(),
+		"touche T : incantation du portail (barre), interrompue si le héros bouge")
+	Events.town_portal_requested.emit()
+	await get_tree().create_timer(Balance.TOWN_PORTAL_CAST * 0.5).timeout
+	var half_way := GameState.town_portal.is_empty()
+	await get_tree().create_timer(Balance.TOWN_PORTAL_CAST * 0.5 + 0.3).timeout
 	var tp: Array = GameState.town_portal.get("pos", [])
-	var blue_ok := false
-	for c in d1.get_children():
-		if c is Portal and (c as Portal).blue:
-			blue_ok = true
-	_check(tp.size() == 2 and blue_ok, "touche T : portail bleu ouvert dans le donjon")
+	_check(half_way and tp.size() == 2 and _blue_portals(d1) == 1 and not hud.cast_box.visible,
+		"touche T : portail bleu ouvert après %.0f s d'incantation" % Balance.TOWN_PORTAL_CAST)
+	# Un seul portail par joueur : en ouvrir un autre referme le premier.
+	hero.global_position += Vector3(0.0, 0, 1.0)
+	Events.town_portal_requested.emit()
+	await get_tree().create_timer(Balance.TOWN_PORTAL_CAST + 0.3).timeout
+	await _frames(2)
+	tp = GameState.town_portal.get("pos", [])
+	_check(_blue_portals(d1) == 1 and tp.size() == 2, "un seul portail bleu par joueur (le précédent se referme)")
 	var portal_pos := Vector3(float(tp[0]), 0, float(tp[1]))
 	d1.call("_take_town_portal")
 	d1.queue_free()
@@ -1323,6 +1338,21 @@ func _test_town_portal() -> void:
 	var t_hero := get_tree().get_first_node_in_group("hero") as Hero
 	_check(bp != null and bp.blue and t_hero.global_position.distance_to(bp.global_position) < 2.5,
 		"taverne : arrivée devant un portail bleu, à côté de celui de Zarathos")
+	# Plumeau posé dans un tonneau (comme à son retour) : il en sort et suit le héros sans rester coincé.
+	var barrel := Vector3.INF
+	for m in tavern.find_children("Tonneau*", "", true, false):
+		barrel = (m as Node3D).global_position
+		break
+	var cub := OwlbearCub.new()
+	tavern.add_child(cub)
+	cub.global_position = barrel if barrel != Vector3.INF else t_hero.global_position
+	cub.follow(t_hero)
+	await get_tree().create_timer(2.5).timeout
+	var walker: NavWalker = cub.get("_walker")
+	var free := walker.snap(cub.global_position)
+	_check(barrel != Vector3.INF and Vector2(free.x - cub.global_position.x, free.z - cub.global_position.z).length() < 0.2
+		and cub.global_position.distance_to(barrel) > 0.3, "Plumeau apparu dans un tonneau : il en sort (zone praticable)")
+	cub.queue_free()
 	tavern.call("_on_enter_blue_portal")
 	tavern.queue_free()
 	await _frames(3)
@@ -1339,6 +1369,14 @@ func _test_town_portal() -> void:
 	GameState.dungeon_state = {}
 	GameState.dungeon_seed = 0
 	await _frames(3)
+
+
+func _blue_portals(level: Node) -> int:
+	var n := 0
+	for c in level.get_children():
+		if c is Portal and (c as Portal).blue and not c.is_queued_for_deletion():
+			n += 1
+	return n
 
 
 ## Déplacement à la souris façon Diablo : aller au point cliqué, aller frapper un ennemi.
@@ -1490,6 +1528,30 @@ func _test_loot_and_gear() -> void:
 		"fouiller le corps : médiators et équipement ramassés")
 	await get_tree().create_timer(0.9).timeout
 	_check(not is_instance_valid(skel), "une fois fouillé, le corps disparaît")
+	# Une potion seule suffit pour que le corps scintille.
+	var skel2 := Skeleton.new()
+	add_child(skel2)
+	skel2.set_physics_process(false)
+	await _frames(1)
+	skel2.loot.append({"kind": "potion"})
+	skel2.take_damage(9999, skel2.global_position + Vector3(0.1, 0, 0), 0.0)
+	await _frames(3)
+	_check(skel2._glow_tween != null and skel2._glow_tween.is_running(), "corps avec une simple potion : il scintille aussi")
+	skel2.queue_free()
+	# Rat mort : retourné sur le dos, mais au-dessus du sol (on peut le fouiller).
+	var rat := Rat.new()
+	add_child(rat)
+	rat.set_physics_process(false)
+	await _frames(1)
+	rat.loot.append({"kind": "potion"})
+	rat.take_damage(9999, rat.global_position + Vector3(0.1, 0, 0), 0.0)
+	await get_tree().create_timer(0.5).timeout
+	var low := INF
+	for mi in rat.model.find_children("*", "MeshInstance3D", true, false):
+		var aabb := (mi as MeshInstance3D).global_transform * (mi as MeshInstance3D).get_aabb()
+		low = minf(low, aabb.position.y)
+	_check(low > -0.05 and rat._loot_spot != null, "rat mort sur le dos, au-dessus du sol (%.2f m) : on peut le fouiller" % low)
+	rat.queue_free()
 	# Gérald revient à la charge 3 s après un refus, puis 2 s, puis 1 s.
 	var tavern_script: GDScript = load("res://scripts/world/tavern.gd")
 	var delays: Array[float] = []

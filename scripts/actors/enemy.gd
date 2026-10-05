@@ -480,7 +480,7 @@ func _death_anim() -> void:
 
 # --- Corps et butin ------------------------------------------------------------------------
 # Le butin reste sur le corps : on le ramasse en cliquant dessus (ou [E] à côté). Tant qu'il y a quelque chose à
-# prendre, le corps reste au sol ; s'il porte un équipement, il « respire » en doré (1 s pour s'allumer, 1 s pour
+# prendre, le corps reste au sol et « respire » en doré (1 s pour s'allumer, 1 s pour
 # s'éteindre).
 
 const LOOT_GLOW := Color(1.0, 0.78, 0.25)
@@ -520,8 +520,7 @@ func _make_lootable() -> void:
 	_loot_spot = Interactable.create(get_parent(), _corpse_center(), loot_prompt(), loot_all, 1.8)
 	_loot_spot.click_height = 0.6
 	_loot_spot.click_radius = maxf(0.6, radius * 2.0)
-	if has_equipment_loot():
-		_start_gold_glow()
+	_start_gold_glow() # tout corps qui a encore du butin scintille (potion seule comprise)
 
 
 func has_equipment_loot() -> bool:

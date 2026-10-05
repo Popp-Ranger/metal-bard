@@ -152,6 +152,7 @@ func _process(delta: float) -> void:
 		_reveal_room_at(hero.global_position) # salle sans porte (côté ouvert) : on la découvre en entrant
 		_update_lava(delta)
 		_update_nave_ambush()
+		_update_portal_cast(delta)
 	_torch_check -= delta
 	if _torch_check <= 0.0:
 		_torch_check = 0.4
@@ -1143,18 +1144,95 @@ func _take_boss_key(key: Node) -> void:
 # Portail bleu de retour en ville (touche T)
 # =====================================================================================
 
-## Ouvre un portail bleu vers la taverne ; un second portail apparaît à côté de celui de
-## Zarathos, qui ramène exactement ici (le donjon reste tel quel jusqu'à ce qu'on le finisse).
+## Incantation du portail bleu (Balance.TOWN_PORTAL_CAST secondes, -1 = aucune) : interrompue si le héros bouge,
+## est touché, ou si un combat commence.
+var _portal_cast := -1.0
+var _portal_cast_from := Vector3.ZERO
+var _portal_cast_hp := 0
+var _portal_fx: CPUParticles3D
+## Portail bleu de sortie des Cryptes (un seul à la fois, comme le portail de retour des autres donjons).
+var _crypt_exit: Portal
+
+
+## Touche T : le héros incante pendant 3 s, puis un portail bleu s'ouvre vers la taverne. Un seul portail par
+## joueur : en ouvrir un nouveau referme le précédent.
 func open_town_portal() -> void:
-	if hero == null or hero.dead or hero.captive or hero.casting_solo:
+	if hero == null or hero.dead or hero.captive or hero.casting_solo or _portal_cast >= 0.0:
 		return
 	if in_combat():
 		Events.notify("Impossible d'ouvrir un portail en plein combat !", Events.COLOR_BAD)
 		Sfx.play("dud", -8.0)
 		return
+	_portal_cast = 0.0
+	_portal_cast_from = hero.global_position
+	_portal_cast_hp = GameState.hp
+	_portal_fx = _portal_cast_particles()
+	hero.add_child(_portal_fx)
+	Sfx.play("portal", -16.0, 0.0)
+	Events.cast_progress.emit("Portail de retour", 0.0)
+
+
+## Avance l'incantation du portail (appelé à chaque image).
+func _update_portal_cast(delta: float) -> void:
+	if _portal_cast < 0.0:
+		return
+	var moved := Vector2(hero.global_position.x - _portal_cast_from.x, hero.global_position.z - _portal_cast_from.z).length() > 0.25
+	if hero.dead or hero.captive or GameState.hp < _portal_cast_hp or moved or in_combat():
+		_end_portal_cast()
+		Events.notify("Incantation du portail interrompue !", Events.COLOR_BAD)
+		Sfx.play("dud", -10.0)
+		return
+	_portal_cast += delta
+	Events.cast_progress.emit("Portail de retour", minf(1.0, _portal_cast / Balance.TOWN_PORTAL_CAST))
+	if _portal_cast >= Balance.TOWN_PORTAL_CAST:
+		_end_portal_cast()
+		_open_town_portal_now()
+
+
+func _end_portal_cast() -> void:
+	_portal_cast = -1.0
+	Events.cast_progress.emit("", -1.0)
+	if _portal_fx != null and is_instance_valid(_portal_fx):
+		_portal_fx.queue_free()
+	_portal_fx = null
+
+
+## Étincelles bleues qui montent en spirale autour du héros pendant l'incantation.
+func _portal_cast_particles() -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 40
+	p.lifetime = 1.0
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	p.emission_ring_axis = Vector3.UP
+	p.emission_ring_radius = 0.7
+	p.emission_ring_inner_radius = 0.5
+	p.emission_ring_height = 0.1
+	p.direction = Vector3.UP
+	p.spread = 10.0
+	p.gravity = Vector3.ZERO
+	p.initial_velocity_min = 1.0
+	p.initial_velocity_max = 1.8
+	p.orbit_velocity_min = 0.4
+	p.orbit_velocity_max = 0.6
+	p.scale_amount_min = 0.6
+	var m := SphereMesh.new()
+	m.radius = 0.04
+	m.height = 0.08
+	m.material = Visuals.glow_mat(Color(0.4, 0.7, 1.0), 4.0)
+	p.mesh = m
+	p.position.y = 0.1
+	return p
+
+
+## Ouvre le portail bleu vers la taverne ; un second portail apparaît à côté de celui de
+## Zarathos, qui ramène exactement ici (le donjon reste tel quel jusqu'à ce qu'on le finisse).
+func _open_town_portal_now() -> void:
 	if not persistent:
 		# Cryptes : le portail bleu ramène à la taverne, et les cryptes se régénéreront.
+		if _crypt_exit != null and is_instance_valid(_crypt_exit):
+			_crypt_exit.queue_free()
 		var exit := Portal.new()
+		_crypt_exit = exit
 		exit.blue = true
 		var spot := hero.global_position + hero.facing * 1.8
 		exit.position = Vector3(spot.x, 0.0, spot.z) if is_walkable(spot) else hero.global_position
