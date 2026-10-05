@@ -44,6 +44,9 @@ var _boss_bar: ProgressBar
 var _boss_name: Label
 ## Barre d'incantation (portail bleu), au-dessus de la barre de sorts.
 var cast_box: VBoxContainer
+## Barre de sorts (dans son cadre) et ligne d'aide : masquées pendant les dialogues.
+var skill_bar: TextureRect
+var _help: Label
 var _cast_bar: ProgressBar
 var _cast_label: Label
 var _flash: ColorRect
@@ -209,6 +212,7 @@ func _build_skills() -> void:
 	frame.offset_bottom = -BOTTOM_MARGIN
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(frame)
+	skill_bar = frame
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 6)
 	var width := SKILLS.size() * SLOT + (SKILLS.size() - 1) * 6.0
@@ -270,6 +274,7 @@ func _build_skills() -> void:
 	help.offset_top = -26
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(help)
+	_help = help
 	_prompt = UiStyle.label("", 20, Color(1.0, 0.9, 0.6))
 	_prompt.anchor_left = 0.5
 	_prompt.anchor_right = 0.5
@@ -432,14 +437,18 @@ func _build_death_screen() -> void:
 
 func _process(delta: float) -> void:
 	_update_low_hp(delta)
+	# Pendant un dialogue, la barre de sorts s'efface (son cadre dépasserait autour de la boîte de dialogue).
+	var talking := dialogue.visible
+	skill_bar.visible = not talking
+	_help.visible = not talking
 	for id: String in _slots:
 		var slot: Dictionary = _slots[id]
 		var remaining := maxf(0.0, float(slot["remaining"]) - delta)
 		slot["remaining"] = remaining
 		var ratio := remaining / maxf(0.01, float(slot["duration"]))
 		var overlay: ColorRect = slot["overlay"]
-		overlay.size = Vector2(84, 84.0 * ratio)
-		overlay.position = Vector2(0, 84.0 * (1.0 - ratio))
+		overlay.size = Vector2(SLOT, SLOT * ratio)
+		overlay.position = Vector2(0, SLOT * (1.0 - ratio))
 		var cost: float = slot["cost"]
 		var panel: Panel = slot["panel"]
 		panel.modulate = Color(0.5, 0.5, 0.6) if cost > GameState.mana else Color.WHITE

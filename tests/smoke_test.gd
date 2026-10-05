@@ -7,6 +7,10 @@ var _failures := 0
 
 
 func _ready() -> void:
+	# Cadence de référence (60 images/s) quels que soient les réglages d'affichage du joueur (fichier non modifié) :
+	# certains tests comptent des images de physique.
+	Display.fps = 60
+	Display.apply()
 	await get_tree().process_frame
 	_test_rules()
 	_test_generator()
@@ -1338,6 +1342,13 @@ func _test_town_portal() -> void:
 	hero.global_position += Vector3(1.0, 0, 0)
 	# Touche T : 3 s d'incantation (barre d'incantation) ; bouger l'interrompt.
 	var hud := (d1 as Level).hud
+	# Pendant un dialogue, la barre de sorts s'efface ; elle revient à la fermeture.
+	Events.dialogue_requested.emit("gerald")
+	await _frames(2)
+	var hidden_in_dialogue := hud.dialogue.visible and not hud.skill_bar.visible
+	hud.dialogue.close()
+	await _frames(2)
+	_check(hidden_in_dialogue and hud.skill_bar.visible, "la barre de sorts disparaît pendant les dialogues")
 	Events.town_portal_requested.emit()
 	await _frames(2)
 	var casting := float(d1.get("_portal_cast")) >= 0.0 and hud.cast_box.visible and GameState.town_portal.is_empty()
