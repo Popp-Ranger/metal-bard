@@ -252,6 +252,7 @@ func _build_all() -> void:
 	_streams["potion"] = _fx(_potion())
 	_streams["portal"] = _fx(_portal())
 	_streams["mist_wind"] = _fx(_mist_wind())
+	_streams["fireball"] = _fx(_fireball())
 	_streams["dud"] = _fx(_dud())
 	_streams["levelup"] = _fx(_arpeggio([329.63, 415.3, 493.88, 659.25], 0.11))
 	_streams["solo_start"] = _fx(_arpeggio([164.81, 246.94, 329.63], 0.08))
@@ -443,6 +444,34 @@ func _bones() -> PackedFloat32Array:
 			if dt >= 0.0 and dt < 0.06:
 				s += sin(TAU * (900.0 + c * 900.0) * dt) * exp(-dt * 90.0)
 		b[i] = s * 0.5
+	return b
+
+
+## Boule de feu crépitante (FIREBALL de la Xplode) : souffle de flammes qui enfle, grondement sourd, et des dizaines de
+## petits craquements secs (bois qui éclate dans le feu) ; une détonation étouffée à la fin.
+func _fireball() -> PackedFloat32Array:
+	var dur := 0.95
+	var b := _buffer(dur)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var n := randf_range(-1.0, 1.0)
+		lp += 0.08 * (n - lp) # souffle des flammes
+		lp2 += 0.012 * (n - lp2) # grondement
+		var roar := (lp * 1.6 + lp2 * 4.0) * smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.55, dur, t))
+		var thump_t := t - 0.62
+		var thump := sin(TAU * 70.0 * thump_t) * exp(-thump_t * 14.0) * 0.9 if thump_t > 0.0 else 0.0
+		b[i] = roar * 0.8 + thump
+	# Craquements : chacun écrit dans sa petite fenêtre (12 ms).
+	var win := int(RATE * 0.012)
+	for k in 45:
+		var start := int(randf_range(0.02, dur - 0.1) * RATE)
+		var amp := randf_range(0.3, 1.0) * 0.55
+		var f := randf_range(1800.0, 4200.0)
+		for j in win:
+			var dt := float(j) / RATE
+			b[start + j] += amp * (randf_range(-1.0, 1.0) * exp(-dt * 600.0) + sin(TAU * f * dt) * 0.4 * exp(-dt * 400.0))
 	return b
 
 

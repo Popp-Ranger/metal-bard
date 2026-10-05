@@ -49,6 +49,7 @@ Emplacements : guitare, tête, cou, torse, poignets, ceinture, pieds, anneau, ta
 | `portrait_aieule` | Portrait de l'arrière-arrière-arrière-grand-mère de Gérald | talisman | SAG +1, CHA +1 | rare | non (récompense de Gérald, avec 50 médiators) |
 | `couronne_gloubah` | Couronne de nénuphar de Gloubah | tête | CON +2, CHA +1 | épique | non (butin de Gloubah) |
 | `batguitare` | Batguitare de l'Ange déchu | guitare | CHA +2, INT +1 | épique | non (sur le corps de l'ange déchu, Temple du Dragon) |
+| `xplode` | Xplode | guitare | FOR +1, CHA +1 | rare | non (sur le Gardien des Cryptes, une fois ; revendue 1 médiator) |
 
 **Butin sur les corps** : ce que lâche un ennemi (médiators, potion, équipement) reste sur son corps ; on le ramasse
 en **cliquant sur le corps** (ou [E] à côté). Le corps ne disparaît pas tant qu'il reste du butin, et s'il porte un
@@ -108,3 +109,11 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
   `sort_riff` : `black_metal`) : même mini-jeu et mêmes dégâts (violets), mais un **trait brumeux violet** (`MistTrail`)
   au lieu de l'éclair, et un **vent brumeux** synthétisé (`Sfx` « mist_wind ») au lieu du son du riff. Vu et entendu
   par tous les joueurs.
+- **Xplode** (`xplode`, rare, FOR +1, CHA +1) : une Explorer de bois calciné (`Imagerie/Guitares/3D/explorer.glb`,
+  `art/guitare/prepare_guitares.py -- xplode`) sur le corps du **Gardien des Cryptes** (le boss du portail à XP). Elle
+  ne tombe que si le héros ne l'a pas déjà (sac ou main) : on ne la loote qu'une fois, mais une fois vendue à Grokk —
+  pour **1 médiator** (clé `prix_vente`) — elle retombe au passage suivant.
+- **FIREBALL** : avec la Xplode équipée, le Riff électrique (touche 1) devient FIREBALL (`sort_riff` : `fireball`) :
+  même mini-jeu et mêmes dégâts (orange), mais chaque note lance une **boule de feu** (`Fireball`) de la guitare vers
+  l'ennemi, avec un son de **boule de feu crépitante** synthétisé (`Sfx` « fireball »). Apparence du sort selon la
+  guitare : `ItemDB.RIFF_STYLES`.

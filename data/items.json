@@ -40,6 +40,18 @@
 		}
 	},
 	"reliques": {
+		"xplode": {
+			"nom": "Xplode",
+			"desc": "Une Explorer de bois calciné aux crânes de bouc, arrachée au Gardien des Cryptes. Elle sent la poudre : son riff part en boule de feu. (Grokk n'en donne qu'un médiator : elle lui fait peur.)",
+			"bonus": {"FOR": 1, "CHA": 1},
+			"rarete": "rare",
+			"butin": false,
+			"emplacement": "guitare",
+			"modele": "res://assets/models/guitare/xplode.glb",
+			"sort_riff": "fireball",
+			"prix_vente": 1,
+			"actif": true
+		},
 		"batguitare": {
 			"nom": "Batguitare de l'Ange déchu",
 			"desc": "Arrachée à l'ange déchu : caisse aux ailes de chauve-souris, tête de vampire, pentagramme gravé sous les cordes. Elle sent le soufre et le sang de la fontaine.",

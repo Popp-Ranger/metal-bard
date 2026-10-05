@@ -1,9 +1,13 @@
 class_name DemonBrute
 extends Enemy
 ## Démon cornu : colosse rouge de 2,4 m aux cornes de bélier, sabots fendus et grande hache à deux mains. Lent,
-## coriace, il frappe fort. Variante « gardien » (`guardian`) : 30 % plus grand, garde la sortie des Cryptes.
+## coriace, il frappe fort. Variante « gardien » (`guardian`) : 30 % plus grand, garde la sortie des Cryptes et porte la
+## Xplode (guitare, à looter sur son corps).
 
 var guardian := false
+## Guitare du Gardien des Cryptes (data/items.json) : sur son corps tant que le héros ne la possède pas (une fois vendue
+## à Grokk, elle retombe au passage suivant).
+const XPLODE := "xplode"
 
 var _hip_l: Node3D
 var _hip_r: Node3D
@@ -122,6 +126,13 @@ func _attack_anim(windup: float) -> void:
 	tw.tween_property(self, "_axe_arm", 1.0, windup * 0.85).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(self, "_axe_arm", -0.3, 0.1)
 	tw.tween_property(self, "_axe_arm", 0.0, 0.35)
+
+
+## Le Gardien des Cryptes laisse la Xplode, si le héros ne l'a pas déjà (dans son sac ou en main).
+func _drop_loot() -> void:
+	super._drop_loot()
+	if guardian and not GameState.owns(XPLODE):
+		loot.append({"kind": "item", "item": XPLODE})
 
 
 func _death_anim() -> void:

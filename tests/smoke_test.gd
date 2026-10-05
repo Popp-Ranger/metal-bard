@@ -1700,6 +1700,37 @@ func _test_crypt() -> void:
 	hero.can_cast()
 	_check(not early and slung and still and not hero.model.guitar_slung and not hero.travel_slung,
 		"après 4 s de marche, le héros range sa guitare dans son dos ; il la reprend pour frapper")
+	# La Xplode : sur le corps du Gardien des Cryptes, une seule à la fois ; vendue (1 médiator), elle retombe.
+	guardian.take_damage(99999, guardian.global_position + Vector3(0.1, 0, 0), 0.0)
+	await _frames(3)
+	var drops := guardian.loot.filter(func(l: Dictionary) -> bool: return str(l.get("item", "")) == "xplode").size()
+	guardian.loot_all()
+	await _frames(2)
+	var again := DemonBrute.new()
+	again.guardian = true
+	again._drop_loot()
+	var twice := again.loot.filter(func(l: Dictionary) -> bool: return str(l.get("item", "")) == "xplode").size()
+	_check(drops == 1 and GameState.owns("xplode") and twice == 0, "le Gardien des Cryptes laisse la Xplode, une seule fois tant qu'on l'a")
+	GameState.equip("xplode")
+	await _frames(1)
+	SpellFx.play(crypt, hero, "fireball", {"from": hero.global_position + Vector3(0, 1, 0), "to": hero.global_position + Vector3(4, 1, 0), "stack": 1}, false)
+	await _frames(1)
+	var balls := crypt.get_children().filter(func(n: Node) -> bool: return n is Fireball).size()
+	var slot_label: Label = (crypt as Level).hud._slots["riff"]["name"]
+	_check(GameState.riff_variant() == "fireball" and Hero.riff_name() == "FIREBALL" and slot_label.text.contains("FIRE") and balls == 1
+		and hero.model.guitar_model.ends_with("xplode.glb") and Sfx._streams.has("fireball"),
+		"Xplode équipée : elle passe dans les mains du héros, le Riff électrique devient FIREBALL (boule de feu crépitante)")
+	GameState.unequip("guitare")
+	var gold_before := GameState.gold
+	GameState.sell_item("xplode")
+	var third := DemonBrute.new()
+	third.guardian = true
+	third._drop_loot()
+	var back := third.loot.filter(func(l: Dictionary) -> bool: return str(l.get("item", "")) == "xplode").size()
+	_check(GameState.gold == gold_before + 1 and not GameState.owns("xplode") and back == 1,
+		"Xplode vendue à Grokk pour 1 médiator : le Gardien la porte de nouveau")
+	again.free()
+	third.free()
 	# On revient toujours au portail démoniaque de la taverne ; les Cryptes seront tirées à nouveau.
 	var dest := str(crypt.call("_exit_scene"))
 	_check(dest == Router.TAVERN and bool(GameState.flags.get("from_crypt", false)) and GameState.crypt_seed == 0,

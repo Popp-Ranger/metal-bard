@@ -271,9 +271,19 @@ func _on_gear_changed() -> void:
 	Events.hero_mana_changed.emit(mana, max_mana())
 
 
-## La guitare équipée change le Riff électrique en Riff black metal (Batguitare).
+## Variante du Riff électrique donnée par la guitare équipée : « » (Riff électrique), « black_metal » (Batguitare),
+## « fireball » (Xplode).
+func riff_variant() -> String:
+	return ItemDB.riff_variant(str(equipment.get("guitare", "")))
+
+
+## Apparence du sort de la touche 1 (nom, couleur...) : voir ItemDB.RIFF_STYLES.
+func riff_style() -> Dictionary:
+	return ItemDB.riff_style(riff_variant())
+
+
 func black_metal_riff() -> bool:
-	return ItemDB.riff_variant(str(equipment.get("guitare", ""))) == "black_metal"
+	return riff_variant() == "black_metal"
 
 
 ## Modèle de la guitare équipée (emplacement « guitare »), sinon la guitare des héros.

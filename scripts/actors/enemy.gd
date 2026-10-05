@@ -410,6 +410,8 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 			color = Color(0.55, 0.85, 1.0)
 		"sound":
 			color = Color(0.8, 0.6, 1.0)
+		"fire":
+			color = Color(1.0, 0.55, 0.15) # boule de feu (Xplode)
 	if crit:
 		color = Color(1.0, 0.8, 0.2)
 	DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.3, 0), "%d%s" % [amount, "!" if crit else ""], color, crit)

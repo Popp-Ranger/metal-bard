@@ -639,18 +639,17 @@ func _revive() -> void:
 	Router.go_to(Router.TAVERN)
 
 
-## Touche 1 : Riff électrique, ou Riff black metal (violet) quand la Batguitare est équipée.
-const BLACK_METAL_COLOR := Color(0.72, 0.42, 1.0)
+## Touche 1 : Riff électrique, Riff black metal (violet, Batguitare) ou FIREBALL (orange, Xplode) : voir ItemDB.RIFF_STYLES.
 
 
 func _refresh_riff_slot() -> void:
 	if not _slots.has("riff"):
 		return
 	var slot: Dictionary = _slots["riff"]
-	var black := GameState.black_metal_riff()
-	var color: Color = BLACK_METAL_COLOR if black else Color(0.4, 0.95, 1.0)
+	var style := GameState.riff_style()
+	var color: Color = style["color"]
 	var name_label: Label = slot["name"]
-	name_label.text = "Riff\nblack metal" if black else "Riff\nélectrique"
+	name_label.text = str(style["slot"])
 	name_label.add_theme_color_override("font_color", color)
 	var bg := UiStyle.box(Color(0.06, 0.045, 0.045, 0.95), color.darkened(0.45), 1, 2)
 	bg.shadow_size = 0

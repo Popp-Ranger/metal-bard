@@ -189,6 +189,9 @@ static func relic_drop_chance() -> float:
 ## Prix auquel Grokk rachète une relique (selon sa rareté, data/items.json : monnaie.vente) ; on peut la lui
 ## racheter au même prix.
 static func sell_price(id: String) -> int:
+	var own: Variant = (relics().get(id, {}) as Dictionary).get("prix_vente", null) # prix propre à l'objet (la Xplode : 1)
+	if own != null:
+		return int(own)
 	var prices: Dictionary = (data().get("monnaie", {}) as Dictionary).get("vente", {})
 	var fallback := {"commun": 8, "peu commun": 15, "rare": 30, "épique": 60}
 	var rarity := str(get_item(id).get("rarity", "commun"))
@@ -219,3 +222,17 @@ static func guitar_model(id: String) -> String:
 ## metal, trait brumeux violet et vent brumeux), sinon « » (Riff électrique).
 static func riff_variant(id: String) -> String:
 	return str((relics().get(id, {}) as Dictionary).get("sort_riff", ""))
+
+
+## Apparence du sort de la touche 1 selon la guitare équipée (clé « sort_riff ») : nom, nom dans la barre de sorts,
+## couleur, titre du mini-jeu.
+const RIFF_STYLES := {
+	"": {"name": "Riff électrique", "slot": "Riff\nélectrique", "color": Color(0.4, 0.95, 1.0), "title": "RIFF"},
+	"black_metal": {"name": "Riff black metal", "slot": "Riff\nblack metal", "color": Color(0.72, 0.42, 1.0), "title": "BLACK METAL"},
+	"fireball": {"name": "FIREBALL", "slot": "FIRE\nBALL", "color": Color(1.0, 0.55, 0.15), "title": "FIREBALL"},
+}
+
+
+static func riff_style(variant: String) -> Dictionary:
+	var s: Dictionary = RIFF_STYLES.get(variant, RIFF_STYLES[""])
+	return s

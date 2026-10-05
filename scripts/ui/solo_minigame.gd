@@ -43,8 +43,10 @@ var _clip_source := ""
 var _clip_offset := 0.0
 var _clip_at := 0.0
 var _clip_started := true
-## Couleur de la corde du Riff (violette pour le Riff black metal de la Batguitare).
+## Couleur de la corde du Riff (violette : Riff black metal de la Batguitare ; orange : FIREBALL de la Xplode) et
+## apparence du sort (ItemDB.RIFF_STYLES).
 var _riff_color := RIFF_COLOR
+var _riff_style := {}
 
 
 func _ready() -> void:
@@ -99,7 +101,8 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 		_clip_offset = 0.0
 		_clip_at = LEAD_TIME
 		_clip_started = stream == null
-	_riff_color = Color(0.72, 0.42, 1.0) if GameState.black_metal_riff() else RIFF_COLOR # Batguitare : riff violet
+	_riff_style = GameState.riff_style() # Batguitare : violet, Xplode : orange
+	_riff_color = _riff_style["color"]
 	if mode == "riff":
 		# La même note à 90 BPM : la 1re est partie avec le sort, les suivantes tombent sur chaque temps.
 		var beat := 60.0 / Balance.RIFF_BPM
@@ -231,7 +234,7 @@ func _draw() -> void:
 	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "riff": "RIFF", "epreuve": "L'ÉPREUVE DE BACK JLACK", "duel": "DUEL : LE MINOTAURE"}
 	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "90 BPM", "epreuve": "80 % requis", "duel": "80 % requis"}
 	var riff := 1 if mode == "riff" else 0 # la 1re note du riff est partie avec le sort
-	var title := "BLACK METAL" if mode == "riff" and _riff_color != RIFF_COLOR else str(titles.get(mode, "SOLO"))
+	var title := str(_riff_style.get("title", "RIFF")) if mode == "riff" else str(titles.get(mode, "SOLO"))
 	draw_string(font, origin + Vector2(0, 42), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
 	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits + riff, _notes.size() + riff, str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
 

@@ -58,6 +58,12 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			var notes := int(data.get("stack", 1))
 			MistTrail.spawn(level, data["from"], data["to"], 0.1 + 0.02 * notes, data.get("color", Color(0.62, 0.3, 1.0)))
 			_sound(level, "mist_wind", -9.0 + notes * 0.2, data["from"], remote, 0.05)
+		"fireball":
+			if model != null:
+				model.strum()
+			var balls := int(data.get("stack", 1))
+			Fireball.spawn(level, data["from"], data["to"], 0.18 + 0.015 * balls)
+			_sound(level, "fireball", -8.0 + balls * 0.2, data["from"], remote, 0.08)
 		"bolt":
 			ArcBolt.spawn(level, data["from"], data["to"], float(data.get("width", 0.12)), float(data.get("life", 0.3)),
 				data.get("color", Color(0.55, 0.85, 1.0)))

@@ -274,6 +274,7 @@
 - [x] Batguitare : la guitare de l'ange déchu, sur son corps ; nouvel emplacement d'équipement « Guitare » : équipée, elle passe dans les mains du héros
 - [x] Riff black metal : avec la Batguitare, le Riff électrique devient un trait brumeux violet accompagné d'un vent brumeux
 - [x] Back Jlack porte sa basse dans le dos (modèle d'Ulysse) ; Troll des cavernes : modèle 3D d'Ulysse, animé
+- [x] Xplode : guitare du Gardien des Cryptes (une fois ; revendue 1 médiator, elle retombe), son riff devient FIREBALL (boule de feu crépitante)
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
