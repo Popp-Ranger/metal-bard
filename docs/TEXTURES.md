@@ -36,6 +36,10 @@ matière dans `CHOIX`, relancer le script, puis rouvrir le projet dans Godot (ou
 | `neige` | Stylized_09_Snow02 | col de la montagne, labyrinthe, congères |
 | `glace` | Stylized_18_Ice | murs du Labyrinthe du Destin |
 
+Textures de feu (pack « GAP Fire Textures » d'Ulysse, `Imagerie/Textures/FIRE`), ramenées en 512 px dans
+`assets/textures/feu/` : `flamme_1.png`, `flamme_2.png` (flammes blanches, forme dans la transparence : on les teinte),
+`halo.png` (halo radial) et `voronoi.png` (bruit cellulaire). Utilisées par la boule de feu de la Xplode (`Fireball`).
+
 ## Dans le jeu
 
 - `Visuals.textured(nom, mètres, teinte)` : matériau projeté sur les trois axes **du monde** (triplanaire) ; la
