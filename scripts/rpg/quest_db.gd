@@ -32,7 +32,7 @@ const QUESTS := {
 		"summary": "La légende du sage Back Jlack, qui vainquit avec l'aide de Satan le dragon Mèhn-Strïm, ennemi du métal.",
 		# Étapes : tant que le drapeau n'est pas levé, son texte sert d'objectif.
 		"stages": [
-			["temple_trial_ok", "Réussir l'épreuve de Back Jlack (40 notes, 120 BPM, 80 % au moins), en haut des marches interminables."],
+			["temple_trial_ok", "Réussir l'épreuve de Back Jlack (jouer son solo, le Chant de fer, avec 80 % de notes justes), en haut des marches interminables."],
 		],
 		"objective": "Explorer le Temple du Dragon, chercher le Pick du Destin et vaincre l'ange déchu.",
 		"objective_done": "Rapporter la partition maudite à Back Jlack, sur le parvis du temple.",

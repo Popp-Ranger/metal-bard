@@ -20,8 +20,6 @@ const RIFF_WINDOW_PERFECT := 0.06
 const RIFF_WINDOW_GOOD := 0.12
 const RIFF_COLOR := Color(0.4, 0.95, 1.0)
 ## Épreuve de Back Jlack.
-const EPREUVE_BPM := 120.0
-var _beat_t := INF
 
 var _notes: Array[Dictionary] = []
 var _t := 0.0
@@ -35,7 +33,8 @@ var _lanes := LANES
 var _end_t := 0.0
 ## "foudre" (Solo de la Foudre, 5 notes), "endiable" (Solo endiablé) ou "ballade" (Ballade
 ## réparatrice : le vrai solo de la musique de la taverne) ou "riff" (Riff électrique : une seule note à
-## 160 BPM, la 1re jouée en lançant le sort) ou "epreuve" (épreuve de Back Jlack : 40 notes à 120 BPM, il faut 80 %).
+## 160 BPM, la 1re jouée en lançant le sort) ou "epreuve" (épreuve de Back Jlack : le solo du sage « Chant de fer »
+## en entier, une note sur chacune de ses notes, voir data/epreuve_solo.json ; il faut 80 %).
 ## Tous sauf le Solo de la Foudre et l'épreuve s'arrêtent à la première fausse note.
 var mode := "foudre"
 ## Extrait musical de la Ballade : lancé quand _t atteint _clip_at, à partir de _clip_offset.
@@ -55,16 +54,17 @@ func _ready() -> void:
 
 func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -> void:
 	mode = solo_mode
-	_beat_t = INF
 	_lanes = 1 if mode == "riff" else LANES
 	_clip_started = true
 	_clip_source = ""
 	_notes.clear()
 	var t := LEAD_TIME
 	var last_lane := -1
-	if mode == "ballade":
+	if mode == "ballade" or mode == "epreuve":
+		# Ballade (le solo de la musique de la taverne) et épreuve de Back Jlack (le solo du sage en entier) :
+		# une note par note du morceau, détectées dans l'enregistrement (tools/audio/detect_notes.py).
 		note_count = 0
-		var chart := ballade_chart()
+		var chart := chart_of(BALLADE_CHART_PATH if mode == "ballade" else EPREUVE_CHART_PATH)
 		for n: Dictionary in chart.get("notes", []):
 			_notes.append({"lane": int(n["lane"]), "time": LEAD_TIME + float(n["t"]), "judged": false, "hit": false})
 		t = LEAD_TIME + float(chart.get("duration", 10.0))
@@ -96,18 +96,6 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES) -
 		_clip_offset = 0.0
 		_clip_at = LEAD_TIME
 		_clip_started = stream == null
-	if mode == "epreuve":
-		# Épreuve de Back Jlack : 40 notes à 120 BPM sur les 4 cordes, une sur chaque temps.
-		var beat := 60.0 / EPREUVE_BPM
-		for i in note_count:
-			var lane := randi_range(0, LANES - 1)
-			if lane == last_lane:
-				lane = (lane + randi_range(1, LANES - 1)) % LANES
-			last_lane = lane
-			_notes.append({"lane": lane, "time": LEAD_TIME + beat * i, "judged": false, "hit": false})
-		t = LEAD_TIME + beat * (note_count - 1)
-		note_count = 0
-		_beat_t = LEAD_TIME
 	if mode == "riff":
 		# La même note à 160 BPM : la 1re est partie avec le sort, les suivantes tombent sur chaque temps.
 		var beat := 60.0 / Balance.RIFF_BPM
@@ -142,9 +130,6 @@ func _process(delta: float) -> void:
 		_clip_started = true
 		Sfx.play_clip(_clip_source, _clip_offset + (_t - _clip_at))
 	_feedback_t -= delta
-	if mode == "epreuve" and _t >= _beat_t:
-		_beat_t += 60.0 / EPREUVE_BPM # grosse caisse sur chaque temps
-		Sfx.play("thud", -16.0, 0.0)
 	for i in LANES:
 		_lane_flash[i] = maxf(0.0, float(_lane_flash[i]) - delta * 4.0)
 	for n in _notes:
@@ -199,7 +184,7 @@ func _press(lane: int) -> void:
 	best["hit"] = true
 	_hits += 1
 	Events.solo_note_hit.emit(mode, _hits)
-	if mode == "endiable" or mode == "epreuve": # la ballade et le Solo de la Foudre jouent un vrai morceau
+	if mode == "endiable": # les autres solos jouent un vrai morceau
 		Sfx.play("note_%d" % lane, -3.0, 0.0)
 	if best_err <= (RIFF_WINDOW_PERFECT if mode == "riff" else WINDOW_PERFECT):
 		_set_feedback("PARFAIT !", Color(1.0, 0.9, 0.3))
@@ -239,7 +224,7 @@ func _draw() -> void:
 	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
 	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "riff": "RIFF", "epreuve": "L'ÉPREUVE DE BACK JLACK"}
-	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "160 BPM", "epreuve": "120 BPM, 80 % requis"}
+	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "riff": "160 BPM", "epreuve": "80 % requis"}
 	var riff := 1 if mode == "riff" else 0 # la 1re note du riff est partie avec le sort
 	draw_string(font, origin + Vector2(0, 42), str(titles.get(mode, "SOLO")), HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
 	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits + riff, _notes.size() + riff, str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
@@ -281,13 +266,18 @@ func _draw() -> void:
 
 
 const BALLADE_CHART_PATH := "res://data/ballade_solo.json"
-static var _ballade_cache := {}
+const EPREUVE_CHART_PATH := "res://data/epreuve_solo.json"
+static var _chart_cache := {}
 
 
 ## Partition du solo de la Ballade réparatrice (voir data/ballade_solo.json).
 static func ballade_chart() -> Dictionary:
-	if _ballade_cache.is_empty():
-		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BALLADE_CHART_PATH))
-		if parsed is Dictionary:
-			_ballade_cache = parsed
-	return _ballade_cache
+	return chart_of(BALLADE_CHART_PATH)
+
+
+## Partition d'un solo (data/*.json : source, duration, notes [{t, lane}]), mise en cache.
+static func chart_of(path: String) -> Dictionary:
+	if not _chart_cache.has(path):
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		_chart_cache[path] = parsed if parsed is Dictionary else {}
+	return _chart_cache[path]

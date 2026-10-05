@@ -235,6 +235,9 @@
 - [x] Textures peintes (packs « Stylized » d'Ulysse, ramenées en 1K) sur les sols et les murs : pierre moussue et blocs de pierre (Catacombes), roche de lave et basalte (Cryptes), damier et pierre claire (Temple), parquet, briques et dalles (taverne), dalles et roche (parvis du temple), herbe, terre et pierres tombales (intro) — voir docs/TEXTURES.md
 - [x] Lave : croûte de roche noire aux fissures incandescentes qui dérive sur le bouillonnement
 
+## ✅ v0.1.42 — Le solo du sage
+- [x] Épreuve de Back Jlack : le vrai solo du sage, « Chant de fer », joué en entier ; les 78 notes du mini-jeu tombent sur les notes du morceau (mélodie de la guitare solo suivie au demi-ton par tools/audio/detect_notes.py, data/epreuve_solo.json) ; la corde suit la hauteur
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

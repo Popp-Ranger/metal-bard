@@ -3,15 +3,14 @@ extends Level
 ##   • En bas : une esplanade de roche sous l'orage, au pied de marches interminables qui se perdent dans les nuages ;
 ##     un portail ramène à la taverne de notre époque (pour se reposer).
 ##   • En haut (zone séparée, reliée par les marches avec un fondu) : le parvis, la façade du temple et son immense
-##     tête de dragon, Back Jlack, et la porte, scellée jusqu'à l'épreuve (un solo de 40 notes à 120 BPM, 80 % au
-##     moins). Réussie, la porte s'ouvre dans un coup de tonnerre, et la foudre tombe du ciel ; elle mène au donjon
+##     tête de dragon, Back Jlack, et la porte, scellée jusqu'à l'épreuve (jouer le solo du sage, « Chant de fer », en
+##     entier : une note sur chacune de ses notes, 80 % au moins). Réussie, la porte s'ouvre dans un coup de tonnerre, et la foudre tombe du ciel ; elle mène au donjon
 ##     du temple (dungeon.gd, thème « temple »).
 
 const PLAZA := Vector3.ZERO
 const TOP := Vector3(0.0, 0.0, -150.0)
 const STEP_DEPTH := 0.9
 const STEP_RISE := 0.32
-const TRIAL_NOTES := 40
 const TRIAL_PASS := 0.8
 
 var backjlack: Npc
@@ -263,8 +262,8 @@ func _on_story_action(action: String) -> void:
 	GameState.flags["temple_attempts"] = int(GameState.flags.get("temple_attempts", 0)) + 1
 	hero.planted = true
 	hero.model.solo_pose(true)
-	Events.notify("L'épreuve : 40 notes, 120 BPM. Il faut 80 % de justesse. Touches 1 2 3 4 !", Events.COLOR_GOLD)
-	Events.solo_requested.emit("epreuve", TRIAL_NOTES)
+	Events.notify("L'épreuve : joue le Chant de fer, note pour note. Il faut 80 % de justesse. Touches 1 2 3 4 !", Events.COLOR_GOLD)
+	Events.solo_requested.emit("epreuve", 0) # la partition vient du morceau (data/epreuve_solo.json)
 
 
 ## Résultat de l'épreuve : au moins 80 % de notes justes pour ouvrir le temple (du premier coup : bénédiction).

@@ -310,7 +310,7 @@ const LEGEND_LINES := [
 ## Back Jlack, en haut des marches interminables, devant le Temple du Dragon.
 static func _backjlack() -> Dictionary:
 	var b := npc_name("backjlack")
-	var trial := ["« Envoie la sauce. » (épreuve : 40 notes à 120 BPM)", "flag:temple_met+story:epreuve"]
+	var trial := ["« Envoie la sauce. » (épreuve : jouer le Chant de fer)", "flag:temple_met+story:epreuve"]
 	match GameState.quest_state("pick_destin"):
 		QuestDB.State.OBJECTIVE_DONE:
 			return {
@@ -337,7 +337,7 @@ static func _backjlack() -> Dictionary:
 		}
 	if bool(GameState.flags.get("temple_met", false)):
 		return {
-			"lines": [[b, "Alors ? Tes doigts sont prêts ? 40 notes, 120 BPM, 80 % au moins. Le métal n'attend pas."]],
+			"lines": [[b, "Alors ? Tes doigts sont prêts ? Le Chant de fer, note pour note, 80 % au moins. Le métal n'attend pas."]],
 			"choices": [trial, ["« Pas encore. »", "close"]],
 		}
 	return {
@@ -349,7 +349,7 @@ static func _backjlack() -> Dictionary:
 			[b, "Mais avant de te laisser entrer dans ce temple, je dois savoir si tu es à la hauteur."],
 			[b, "Parce qu'ici, il ne s'agit pas de battre une grenouille ou des squelettes. Non. Ici, ce sont des démons corrompus... par d'autres démons."],
 			[b, "...Oui. C'est un truc démoniaque."],
-			[b, "Joue-moi un solo digne des plus grands : 40 notes, 120 BPM, avec un score d'au moins 80 %."],
+			[b, "Joue-moi mon solo, le Chant de fer, note pour note, en entier : il me faut au moins 80 % de notes justes."],
 		],
 		"choices": [trial, ["« Laisse-moi m'échauffer les doigts. »", "flag:temple_met"]],
 	}

@@ -1617,16 +1617,25 @@ func _test_chapter_two() -> void:
 	_check(bj != null and bj.npc_id == "backjlack" and door.prompt.contains("scellée") and climb,
 		"Temple du Dragon : marches interminables, Back Jlack, porte scellée")
 	var hero := temple.get("hero") as Hero
-	# L'épreuve : 40 notes à 120 BPM sur les 4 cordes.
+	# L'épreuve : le solo du sage en entier, une note sur chacune de ses notes (partition détectée dans le morceau).
 	temple.call("_on_story_action", "epreuve")
 	Events.dialogue_closed.emit()
 	await _frames(2)
 	var solo := (temple as Level).hud.solo
-	var spaced := solo._notes.size() == 40
-	for i in range(1, solo._notes.size()):
-		spaced = spaced and absf(float(solo._notes[i]["time"]) - float(solo._notes[i - 1]["time"]) - 0.5) < 0.001
-	_check(solo._active and solo.mode == "epreuve" and solo._lanes == 4 and spaced and hero.planted,
-		"épreuve de Back Jlack : 40 notes à 120 BPM, touches 1 2 3 4")
+	var chart := SoloMinigame.chart_of(SoloMinigame.EPREUVE_CHART_PATH)
+	var song := load(str(chart.get("source", ""))) as AudioStream
+	var synced := song != null and solo._notes.size() == (chart["notes"] as Array).size() and solo._notes.size() >= 40
+	var lanes_used := {}
+	for i in solo._notes.size():
+		lanes_used[int(solo._notes[i]["lane"])] = true
+		if i > 0:
+			synced = synced and float(solo._notes[i]["time"]) - float(solo._notes[i - 1]["time"]) >= 0.14
+	# le morceau est joué en entier : le mini-jeu dure jusqu'à sa fin, la dernière note tombe avant
+	synced = synced and absf(solo._end_t - (SoloMinigame.LEAD_TIME + song.get_length() + 0.5)) < 0.1
+	synced = synced and float(solo._notes[-1]["time"]) < solo._end_t
+	_check(solo._active and solo.mode == "epreuve" and solo._lanes == 4 and lanes_used.size() == 4 and synced
+		and solo._clip_source == "res://audio/riffs/chant_de_fer.mp3" and hero.planted,
+		"épreuve de Back Jlack : le Chant de fer en entier, %d notes calées sur le morceau, touches 1 2 3 4" % solo._notes.size())
 	solo._active = false
 	solo.visible = false
 	temple.call("_on_trial_finished", "epreuve", 31, 40)
