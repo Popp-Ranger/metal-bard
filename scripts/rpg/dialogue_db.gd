@@ -165,11 +165,11 @@ static func _gerald_plea(g: String, refusals: int) -> Dictionary:
 			"lines": [
 				[g, str(GERALD_PLEAS[k])],
 				[NARRATOR, "Il sort de sa poche une part de fromage d'hibours, tiède et légèrement poilue. Ça sent... la ferme."],
-				[g, "Tenez, goûtez. C'est offert, même si vous dites non. Je suis comme ça, moi."],
+				[g, "Revenez me voir si vous changez d'avis."],
 			],
 			"choices": [
 				["« Pour du fromage d'hibours, j'y vais ! » (le manger)", "cheese+accept:plumeau"],
-				["« Toujours non. » (le manger quand même)", "cheese+refuse:plumeau"],
+				["« Toujours non. »", "refuse:plumeau"],
 			],
 		}
 	return {
@@ -231,14 +231,14 @@ static func _ozz_labyrinthe() -> Dictionary:
 				"lines": [
 					[hero(), "Ozz ! Toi qui sais tout... As-tu déjà entendu parler du Pick du Destin ?"],
 					[z, "Le pic du Destin ? Évidemment. Tout le monde connaît le pic du Destin."],
-					[z, "Il se trouve dans la montagne du Dest... dans le Labyrinthe du Destin. Pardon. C'est un labyrinthe, en haut d'une montagne. Ça porte à confusion."],
+					[z, "Il se trouve dans la montagne du Dest... dans le Labyrinthe du Destin. Pardon. C'est un labyrinthe, en haut d'une montagne."],
 					[hero(), "Un pick. Un médiator. Pas un sommet."],
 					[z, "...Ah. Eh bien figure-toi que c'est le même endroit. Le trésor de ce labyrinthe, c'est ton médiator."],
-					[z, "Et il est gardé par, ni plus ni moins... LE MINOTAURE."],
+					[z, "Et il est gardé par, ni plus ni moins que... LE MINOTAURE."],
 					[NARRATOR, "Un coup de tonnerre retentit au loin. Derrière le comptoir, Grokk laisse tomber une chope."],
 					[z, "Le chemin est long. D'abord la prairie, au pied de la montagne. Puis les flancs, où rôde un Bigfoot qui déteste la musique."],
 					[z, "Ensuite les grottes des gobelins, à l'intérieur de la montagne. Leur chef est un troll des cavernes : il se régénère, alors tape vite et tape fort."],
-					[z, "Puis le col. Pas de murs, juste des précipices. Et un élémentaire de glace grand comme la taverne."],
+					[z, "Puis le col au bord des précipices. Et un élémentaire de glace grand comme la taverne."],
 					[z, "Et enfin, le Labyrinthe : des élémentaires de glace et de roche à chaque détour. Et au centre... lui."],
 					[z, "Je t'ouvre un portail jusqu'au pied de la montagne, et un autre après chaque étape. Comment ? Je suis le grand mage. Je fais des trucs de grand mage."],
 				],
