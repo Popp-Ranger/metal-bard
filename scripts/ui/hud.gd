@@ -5,6 +5,9 @@ extends CanvasLayer
 ## suivi de quête, messages, invite d'interaction, barre de vie du boss,
 ## et les fenêtres (dialogue, solo, fiche, pause, mort).
 
+## Son du gain de niveau : -2 dB, baissé de 30 % (amplitude × 0,7, soit -3,1 dB) le 6 oct. 2026.
+const LEVEL_UP_DB := -5.1 # -2 dB - 3,1 dB
+
 const SKILLS := [
 	{"id": "attack", "name": "Guitare", "action": "attack", "cost": 0.0, "color": Color(0.8, 0.6, 0.4)},
 	{"id": "dash", "name": "Glissade", "action": "dash", "cost": 0.0, "color": Color(0.7, 0.85, 1.0)},
@@ -132,7 +135,7 @@ func _connect_events() -> void:
 	Events.boss_health.connect(_on_boss_health)
 	Events.screen_flash.connect(_on_flash)
 	Events.hero_died.connect(_on_hero_died)
-	Events.level_up.connect(func(_l: int) -> void: Sfx.play("levelup", -2.0, 0.0))
+	Events.level_up.connect(func(_l: int) -> void: Sfx.play("levelup", LEVEL_UP_DB, 0.0))
 
 
 # --- Construction -------------------------------------------------------------

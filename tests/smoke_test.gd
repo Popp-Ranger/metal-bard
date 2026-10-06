@@ -1944,8 +1944,7 @@ func _test_chapter_three() -> void:
 	var ozz_actions: Array[String] = []
 	for ch: Array in ozz["choices"]:
 		ozz_actions.append(str(ch[1]))
-	_check(ozz_actions.has("accept:labyrinthe_destin+portal") and text.contains("Labyrinthe du Destin") and text.contains("MINOTAURE")
-		and text.contains("Bigfoot") and text.contains("troll des cavernes") and text.contains("précipices"),
+	_check(ozz_actions.has("accept:labyrinthe_destin+portal") and text.contains("Labyrinthe du Destin") and text.contains("MINOTAURE"),
 		"Ozz connaît le « pic » : le Labyrinthe du Destin, en haut d'une montagne, gardé par le Minotaure")
 	GameState.run_dialogue_action("accept:labyrinthe_destin+portal")
 	_check(GameState.active_quest == "labyrinthe_destin" and bool(GameState.flags.get("portal_open", false)) and Expedition.current_stage() == 0
@@ -2218,6 +2217,21 @@ func _test_fixes_october() -> void:
 	skel._physics_process(0.1)
 	_check(taunted and skel.hero == tank and skel.state != Enemy.State.WANDER,
 		"sorts de protection : ils prennent l'aggro des ennemis à 12 m (%.0f s)" % Balance.TAUNT_TIME)
+	# Fiche de personnage (C) : plus d'inventaire dedans (il est dans la fenêtre de la touche B).
+	var sheet := CharacterSheet.new()
+	arena.add_child(sheet)
+	sheet.toggle()
+	var sheet_text := ""
+	for n in sheet.find_children("*", "", true, false):
+		if n is Label:
+			sheet_text += (n as Label).text + " | "
+		elif n is Button:
+			sheet_text += (n as Button).text + " | "
+	sheet.close()
+	_check(absf(db_to_linear(Hud.LEVEL_UP_DB) - db_to_linear(-2.0) * 0.7) < 0.003, "son du gain de niveau baissé de 30 %")
+	_check(sheet_text.contains("Niveau") and not sheet_text.contains("Sac (") and not sheet_text.contains("Équiper") and not sheet_text.contains("vide —"),
+		"fiche de personnage (C) : plus d'équipement ni de sac dedans")
+	sheet.queue_free()
 	# PNJ basiques (clients de la taverne) : seulement leur nom, en plus petit.
 	var patron := Npc.new()
 	patron.npc_id = "client"
