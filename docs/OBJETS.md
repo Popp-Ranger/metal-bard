@@ -48,6 +48,7 @@ Emplacements : guitare, tête, cou, torse, poignets, ceinture, pieds, anneau, ta
 | `pendentif_plume` | Pendentif de plume de hibours | cou | CHA +1, SAG +1 | rare | non (plus distribué) |
 | `portrait_aieule` | Portrait de l'arrière-arrière-arrière-grand-mère de Gérald | talisman | SAG +1, CHA +1 | rare | non (récompense de Gérald, avec 50 médiators) |
 | `couronne_gloubah` | Couronne de nénuphar de Gloubah | tête | CON +2, CHA +1 | épique | non (butin de Gloubah) |
+| `flying_v` | Flying V du barde | guitare | — | commun | non (la guitare de départ, équipée en début de partie) |
 | `batguitare` | Batguitare de l'Ange déchu | guitare | CHA +2, INT +1 | épique | non (sur le corps de l'ange déchu, Temple du Dragon) |
 | `xplode` | Xplode | guitare | FOR +1, CHA +1 | rare | non (sur le Gardien des Cryptes, une fois ; revendue 1 médiator) |
 
@@ -107,6 +108,10 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
 
 ## Guitares (emplacement « Guitare »)
 
+- **Flying V du barde** (`flying_v`) : la guitare de départ, **un objet comme les autres** (emplacement « Guitare ») :
+  équipée en début de partie (et donnée aux anciennes sauvegardes), on peut la retirer, la vendre, la remplacer.
+  **Sans guitare équipée, le héros ne peut pas attaquer** : ni coup de guitare, ni sort (`Hero.can_cast`) ; la guitare
+  disparaît de ses mains, chez les autres joueurs aussi (coop).
 - **Batguitare de l'Ange déchu** (`batguitare`) : la guitare de l'ange déchu, qui en joue pendant le combat ; elle
   reste sur son corps (Temple du Dragon). Modèle fourni par Ulysse (`Imagerie/Guitares/3D/batguitare.glb`), préparé
   par `art/guitare/prepare_guitares.py` (300 000 → 24 000 faces) dans le même repère que la guitare des héros

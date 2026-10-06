@@ -40,6 +40,16 @@
 		}
 	},
 	"reliques": {
+		"flying_v": {
+			"nom": "Flying V du barde",
+			"desc": "La guitare des débuts : une Flying V noire et rouge, cabossée par mille concerts de taverne. Sans elle, pas de riff, pas de coup de guitare.",
+			"bonus": {},
+			"rarete": "commun",
+			"butin": false,
+			"emplacement": "guitare",
+			"modele": "res://assets/models/guitare/guitare_heros.glb",
+			"actif": true
+		},
 		"xplode": {
 			"nom": "Xplode",
 			"desc": "Une Explorer de bois calciné aux crânes de bouc, arrachée au Gardien des Cryptes. Elle sent la poudre : son riff part en boule de feu. (Grokk n'en donne qu'un médiator : elle lui fait peur.)",

@@ -73,6 +73,7 @@ func _process(delta: float) -> void:
 	model.set_moving((_flags & 1) != 0)
 	var level := Level.of(self)
 	model.set_guitar_slung((level != null and not level.spells_allowed_at(global_position)) or (_flags & 16) != 0)
+	model.set_guitar_shown((_flags & 32) == 0) # bit 32 : ce joueur n'a pas de guitare équipée
 
 
 ## Mur de Larsen de ce joueur (SpellFx « shield ») : bulle affichée chez les autres joueurs.

@@ -112,6 +112,9 @@ func new_game() -> void:
 	shield = 0
 	location = {}
 	pending_spawn = Vector3.INF
+	# La guitare de départ, équipée (un objet comme les autres : on peut la retirer, la vendre).
+	equipment["guitare"] = ItemDB.STARTER_GUITAR
+	flags["starter_guitar"] = true
 	hp = max_hp()
 	mana = max_mana()
 
@@ -289,6 +292,11 @@ func black_metal_riff() -> bool:
 ## Modèle de la guitare équipée (emplacement « guitare »), sinon la guitare des héros.
 func guitar_model() -> String:
 	return ItemDB.guitar_model(str(equipment.get("guitare", "")))
+
+
+## Une guitare est-elle équipée ? Sans guitare, ni coup de guitare ni sort.
+func has_guitar() -> bool:
+	return not str(equipment.get("guitare", "")).is_empty()
 
 
 ## Vend à Grokk un objet du sac (on ne vend pas ce qu'on porte) : il rejoint l'historique de rachat.
@@ -755,6 +763,14 @@ func apply_save(data: Dictionary) -> void:
 	for id: String in saved_quests:
 		quests[id] = int(saved_quests[id])
 	flags = data.get("flags", {})
+	# Sauvegarde d'avant la guitare-objet (6 oct. 2026) : la Flying V est donnée, équipée si la main est libre.
+	if not flags.has("starter_guitar"):
+		flags["starter_guitar"] = true
+		if not owns(ItemDB.STARTER_GUITAR):
+			if equipment.has("guitare"):
+				inventory.append(ItemDB.STARTER_GUITAR)
+			else:
+				equipment["guitare"] = ItemDB.STARTER_GUITAR
 	active_quest = str(data.get("active_quest", ""))
 	hero_name = str(data.get("hero_name", DEFAULT_NAME))
 	var saved_look: Dictionary = data.get("appearance", {})

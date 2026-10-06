@@ -35,6 +35,8 @@ const RIFFALD_MODEL := "res://assets/models/riffald/riffald.glb"
 const GUITAR_MODEL := "res://assets/models/guitare/guitare_heros.glb"
 ## Guitare tenue (modèle importé) : celle des héros, ou la guitare équipée du héros local (GameState.guitar_model).
 var guitar_model := GUITAR_MODEL
+## Guitare visible : false quand le héros n'a pas de guitare équipée (GameState.has_guitar).
+var guitar_shown := true
 ## Longueur du manche de la Flying V procédurale (sillet), pour placer la main gauche.
 const PROC_NUT := 0.64
 ## Main gauche sur le bout du manche, près du sillet (fraction jonction → sillet) ; pendant le solo,
@@ -253,6 +255,7 @@ func _build() -> void:
 		_guitar.rotation = GUITAR_REST
 		_guitar.scale = Vector3.ONE * 1.05
 		_build_flying_v(_guitar, metal)
+		_guitar.visible = guitar_shown
 
 	# --- Bras (IK à deux os) et mains à cinq doigts.
 	_upper_l = _pivot(_torso, Vector3(-shoulder - 0.02, 0.48, 0.0))
@@ -653,9 +656,11 @@ func _glowing_strings(parent: Node3D, spec: Dictionary) -> void:
 	parent.add_child(glow)
 
 
-## Change de guitare (guitare équipée) : le nouveau modèle remplace l'ancien, au même endroit (même repère).
+## Change de guitare (guitare équipée) : le nouveau modèle remplace l'ancien, au même endroit (même repère). "" : pas
+## de guitare équipée, elle disparaît des mains (et du dos).
 func set_guitar_model(path: String) -> void:
-	if path == guitar_model or not ResourceLoader.exists(path):
+	set_guitar_shown(not path.is_empty())
+	if path.is_empty() or path == guitar_model or not ResourceLoader.exists(path):
 		return
 	guitar_model = path
 	if _guitar == null:
@@ -1098,3 +1103,10 @@ func _apply_special_pose(delta: float) -> void:
 			_torso.rotation.x = -0.05
 			_torso.rotation.z = sin(_t * 8.0) * 0.12
 			_head.rotation.x = absf(sin(_t * 16.0)) * 0.3
+
+
+## Guitare dans les mains (ou le dos) ou non : sans guitare équipée, le héros n'en a plus.
+func set_guitar_shown(value: bool) -> void:
+	guitar_shown = value
+	if _guitar != null:
+		_guitar.visible = value

@@ -295,6 +295,7 @@
 - [x] XP gagnée réduite de 25 % partout (ennemis, boss, quêtes)
 - [x] Hella : cape en tissu (os de cape simulés par SpringBoneSimulator3D : elle flotte derrière quand on court, se balance et retombe)
 - [x] Riffald : cape en tissu aussi
+- [x] La Flying V de départ devient un objet (équiper / retirer) ; sans guitare équipée, pas d'attaque
 - [x] Déplacement à la souris uniquement (plus de ZQSD ni de flèches) ; clic au sol : zone lumineuse sans l'anneau jaune
 
 ## v0.2 — « Ça ressemble à un vrai jeu »

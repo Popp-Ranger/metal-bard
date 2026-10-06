@@ -24,6 +24,8 @@ const DEFAULT_SLOT := "talisman"
 
 ## Valeurs de secours (identiques au fichier livré).
 const DEFAULT_RELICS := {
+	"flying_v": {"nom": "Flying V du barde", "desc": "La guitare des débuts.", "bonus": {}, "rarete": "commun", "butin": false,
+		"emplacement": "guitare", "modele": "res://assets/models/guitare/guitare_heros.glb"},
 	"mediator_os": {"nom": "Médiator en os", "desc": "Taillé dans la phalange d'un squelette trop bavard.",
 		"bonus": {"DEX": 1}, "rarete": "commun", "butin": true, "emplacement": "mediator"},
 	"ceinture_cloutee": {"nom": "Ceinture cloutée", "desc": "Trente-deux clous, trente-deux raisons de ne pas mourir.",
@@ -208,12 +210,17 @@ static func quest_item(id: String) -> Dictionary:
 
 # --- Guitares -------------------------------------------------------------------------------
 
-## Guitare des héros sans guitare équipée (voir docs/GUITARE.md).
+## Modèle de la guitare des héros, la Flying V (voir docs/GUITARE.md) : celui de la guitare de départ, et des guitares
+## sans modèle propre.
 const DEFAULT_GUITAR := "res://assets/models/guitare/guitare_heros.glb"
+## La guitare de départ : un objet comme les autres (emplacement « Guitare »), qu'on peut retirer ou vendre.
+const STARTER_GUITAR := "flying_v"
 
 
-## Modèle 3D d'une guitare (clé « modele » de l'objet) ; la guitare des héros par défaut.
+## Modèle 3D d'une guitare (clé « modele » de l'objet) ; "" sans guitare (aucune équipée).
 static func guitar_model(id: String) -> String:
+	if id.is_empty():
+		return ""
 	var path := str((relics().get(id, {}) as Dictionary).get("modele", ""))
 	return path if not path.is_empty() and ResourceLoader.exists(path) else DEFAULT_GUITAR
 

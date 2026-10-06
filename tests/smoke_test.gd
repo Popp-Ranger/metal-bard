@@ -303,6 +303,18 @@ func _test_quest_flow() -> void:
 	var backing := hud_ui.skill_backing
 	_check(raised.is_empty() and backing != null and backing.color == Color.BLACK and backing.get_parent() == hud_ui.skill_bar,
 		"barre de sorts : fond noir derrière les cases ; elle ne passe plus par-dessus les fenêtres (%s)" % ", ".join(raised))
+	# Sans guitare équipée : ni coup de guitare ni sort.
+	GameState.unequip("guitare")
+	GameState.mana = GameState.max_mana()
+	hero.cooldowns["riff"] = 0.0
+	hero.cooldowns["attack"] = 0.0
+	var hp_unarmed := targets[0].hp
+	hero.cast_riff()
+	hero.melee()
+	await get_tree().create_timer(Balance.MELEE_HIT_DELAY + 0.1).timeout
+	var unarmed_ok: bool = is_equal_approx(GameState.mana, GameState.max_mana()) and targets[0].hp == hp_unarmed and not hero.can_cast()
+	GameState.equip(ItemDB.STARTER_GUITAR)
+	_check(unarmed_ok and hero.can_cast(), "sans guitare équipée, le héros ne peut pas attaquer (ni coup de guitare ni sort)")
 	_check(Controls.key_label("spell_riff") == "Clic D" and Controls.key_label("spell_tuning") == "1",
 		"touches échangées : Riff électrique au clic droit, Accordage de cordes sur la touche 1")
 	var banging := 0
@@ -939,8 +951,9 @@ func _test_inventory() -> void:
 	var cha_base := GameState.ability("CHA")
 	for id: String in relics:
 		GameState.add_item(id)
-	_check(GameState.inventory.size() == relics.size() and GameState.equipment.is_empty() and GameState.ability("CHA") == cha_base,
-		"le butin va dans le sac : ses bonus ne comptent pas tant qu'il n'est pas équipé")
+	# (la Flying V de départ est déjà équipée : elle ne va pas dans le sac)
+	_check(GameState.inventory.size() == relics.size() - 1 and GameState.equipment == {"guitare": ItemDB.STARTER_GUITAR}
+		and GameState.ability("CHA") == cha_base, "le butin va dans le sac : ses bonus ne comptent pas tant qu'il n'est pas équipé")
 	var slots_ok := true
 	for id: String in relics:
 		slots_ok = slots_ok and ItemDB.SLOTS.has(ItemDB.slot_of(id))
@@ -1918,8 +1931,12 @@ func _test_chapter_two() -> void:
 		and mist == 1 and Sfx._streams.has("mist_wind"), "Batguitare équipée : le Riff électrique devient le Riff black metal (trait brumeux violet, vent brumeux)")
 	GameState.unequip("guitare")
 	await _frames(1)
-	_check(hero.model.guitar_model == ItemDB.DEFAULT_GUITAR and not GameState.black_metal_riff() and riff_label.text.contains("électrique"),
-		"guitare retirée : le héros reprend sa Flying V et son Riff électrique")
+	var bare := not GameState.has_guitar() and not hero.model.guitar_shown and not hero.model._guitar.visible
+	GameState.equip(ItemDB.STARTER_GUITAR)
+	await _frames(1)
+	_check(bare and hero.model.guitar_shown and hero.model.guitar_model == ItemDB.DEFAULT_GUITAR and not GameState.black_metal_riff()
+		and riff_label.text.contains("électrique"),
+		"guitare retirée : plus de guitare dans les mains ; la Flying V rééquipée, le Riff électrique revient")
 	# Jouer la partition sans le Pick du Destin : la foudre frappe (sans tuer).
 	GameState.hp = 5
 	var inv := InventoryWindow.new()
@@ -2091,6 +2108,14 @@ func _test_minotaur_duel(ex: Node) -> void:
 func _test_fixes_october() -> void:
 	print("[Correctifs : dB, musique, inventaire, Xplode, mini-jeux partagés]")
 	GameState.new_game()
+	# La guitare de départ est un objet : équipée dans une nouvelle partie, donnée aux anciennes sauvegardes.
+	var old_save := {"stats": {}, "equipment": {}, "inventory": [], "flags": {}}
+	GameState.apply_save(old_save)
+	var migrated: bool = GameState.equipment.get("guitare", "") == ItemDB.STARTER_GUITAR and GameState.flags.has("starter_guitar")
+	GameState.new_game()
+	_check(migrated and GameState.has_guitar() and ItemDB.slot_of(ItemDB.STARTER_GUITAR) == "guitare"
+		and ItemDB.guitar_model(ItemDB.STARTER_GUITAR) == ItemDB.DEFAULT_GUITAR and ItemDB.guitar_model("") == "",
+		"la Flying V de départ est un objet (emplacement Guitare) : équipée en début de partie, donnée aux anciennes sauvegardes")
 	var raw := Balance.HERO_BASE_MANA + Balance.HERO_MANA_PER_CHA * GameState.mod("CHA") + Balance.HERO_MANA_PER_LEVEL * (GameState.stats.level - 1)
 	_check(is_equal_approx(GameState.max_mana(), roundf(raw * 0.75)), "réserve de dB réduite de 25 %% (%d au lieu de %d)" % [GameState.max_mana(), raw])
 	# Solo de la Foudre : la musique continue, baissée de 20 % ; les autres solos la coupent.

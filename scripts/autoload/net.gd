@@ -531,6 +531,8 @@ func _send_hero_state() -> void:
 		flags |= 8
 	if h.travel_slung:
 		flags |= 16 # guitare rangée dans le dos après une longue marche
+	if not GameState.has_guitar():
+		flags |= 32 # pas de guitare équipée
 	_hero_state.rpc(_current_scene(), h.global_position, h.model.rotation.y, flags, GameState.hp, GameState.max_hp())
 
 

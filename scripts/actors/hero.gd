@@ -55,7 +55,9 @@ func _ready() -> void:
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	model = HeroModel.new()
 	model.move_speed = Balance.HERO_SPEED # foulée de course
-	model.guitar_model = GameState.guitar_model() # guitare équipée (Batguitare...)
+	if GameState.has_guitar():
+		model.guitar_model = GameState.guitar_model() # guitare équipée (Flying V, Batguitare...)
+	model.guitar_shown = GameState.has_guitar()
 	add_child(model)
 	Events.stats_changed.connect(_on_gear_changed)
 	# Collision adaptée à la taille de la race (1,8 m à 2,5 m).
@@ -95,9 +97,15 @@ func _update_zone() -> void:
 	model.set_guitar_slung(not spells_allowed or travel_slung)
 
 
-## Sorts et coups de guitare : refusés (avec un message, pas plus d'une fois par seconde et demie)
-## là où l'on ne joue pas.
+## Sorts et coups de guitare : refusés (avec un message, pas plus d'une fois par seconde et demie) sans guitare équipée,
+## ou là où l'on ne joue pas.
 func can_cast() -> bool:
+	if not GameState.has_guitar():
+		var t := Time.get_ticks_msec() / 1000.0
+		if t - _blocked_notice > 1.5:
+			_blocked_notice = t
+			Events.notify("Pas de guitare équipée : impossible d'attaquer ! Équipez-en une dans l'inventaire [%s]." % Controls.key_label("inventory"), Events.COLOR_BAD)
+		return false
 	if spells_allowed:
 		_draw_guitar()
 		return true
