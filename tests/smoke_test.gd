@@ -291,6 +291,8 @@ func _test_quest_flow() -> void:
 	_check(is_equal_approx(Balance.RIFF_REPEAT, 0.3) and is_equal_approx(early_mana, GameState.max_mana())
 		and is_equal_approx(held_mana, GameState.max_mana() - 2.0 * Balance.RIFF_COST) and is_equal_approx(GameState.mana, held_mana)
 		and not hero._riff_held, "clic droit maintenu : le sort repart toutes les 0,30 s, et s'arrête au relâchement")
+	_check(is_equal_approx(Balance.RIFF_RANGE, 6.0) and is_equal_approx(Balance.RIFF_DAMAGE, 0.67) and hero._riff_target() == targets[0]
+		and Balance.RIFF_RANGE < Balance.TUNING_FIRST_RANGE, "sorts du clic droit : portée 6 m (divisée par 2), dégâts réduits de 33 %")
 	_check(Controls.key_label("spell_riff") == "Clic D" and Controls.key_label("spell_tuning") == "1",
 		"touches échangées : Riff électrique au clic droit, Accordage de cordes sur la touche 1")
 	var banging := 0

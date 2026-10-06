@@ -600,7 +600,7 @@ func cast_riff(held: bool = false) -> void:
 		SpellFx.cast(self, "riff_black", {"from": from, "to": to, "stack": 1, "color": Color(0.62, 0.3, 1.0)})
 	else:
 		SpellFx.cast(self, "riff", {"from": from, "to": to, "stack": 1, "color": Color(0.55, 0.85, 1.0)})
-	var dmg := Dice.roll(1, 10, GameState.mod("CHA"))
+	var dmg := maxi(1, roundi(Dice.roll(1, 10, GameState.mod("CHA")) * Balance.RIFF_DAMAGE)) # -33 %
 	if GameState.has_talent("overdrive"):
 		dmg = roundi(dmg * 1.25)
 	hit_enemy(target, dmg, 0.4, str({"black_metal": "sound", "fireball": "fire"}.get(variant, "shock")), global_position)

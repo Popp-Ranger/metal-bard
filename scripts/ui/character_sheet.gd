@@ -97,7 +97,7 @@ func _refresh() -> void:
 		"DD des sorts : %d" % GameState.spell_dc(),
 		"Coup de guitare : 1d%d%+d (touche toujours)" % [Balance.MELEE_DICE, GameState.mod("FOR")],
 		"Sorts : %d %% de chances de toucher" % roundi(GameState.spell_hit_chance() * 100.0),
-		"Riff électrique : 1d10%+d (sans recharge)" % GameState.mod("CHA"),
+		"Riff électrique : (1d10%+d) × 0,67, 6 m (sans recharge)" % GameState.mod("CHA"),
 		"Accordage de cordes : 2d6%+d par note (%d notes, une par cible)" % [GameState.mod("CHA"), Balance.TUNING_MAX_TARGETS + (1 if GameState.has_talent("distorsion") else 0)],
 		"Onde de choc : 2d8%+d, headbang %s s" % [GameState.mod("CHA"), String.num(Balance.WAVE_HEADBANG, 2).replace(".", ",")],
 		"Solo de la Foudre : 4d10%+d" % GameState.mod("CHA"),
