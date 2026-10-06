@@ -1,7 +1,7 @@
 class_name Reservoir
 extends Control
-## Réservoir du HUD : un récipient de verre fumé rendu dans Blender (la main cornue pour la vie, l'enceinte pour les
-## décibels, voir art/hud/build_hud.py), rempli d'un liquide animé (shaders/reservoir.gdshader) au niveau de `ratio`.
+## Réservoir du HUD : un récipient (la main cornue du dessin d'Ulysse pour la vie, art/hud/main_cornes.py ; l'enceinte de
+## verre fumé rendue dans Blender pour les décibels, art/hud/build_hud.py), rempli d'un liquide animé (shaders/reservoir.gdshader) au niveau de `ratio`.
 ## Le liquide est dessiné d'abord, dans la silhouette du récipient (son masque), puis l'image de verre par-dessus : on
 ## le voit à travers le verre, et les chaînes, bagues et pointes de fer passent devant. En dessous, une plaque de fer porte le texte (« VIE 85 % · 38 / 45 »).
 

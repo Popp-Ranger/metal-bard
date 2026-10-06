@@ -13,7 +13,7 @@ blender --background --factory-startup --python art/hud/build_hud.py -- [element
 
 | Élément | Rôle |
 |---|---|
-| `main_vie` (+ `_masque`) | main du signe des cornes toute en verre fumé = **réservoir de vie** (bas à gauche) ; runes, bagues, chaînes et bracelet à pointes par-dessus |
+| `main_vie` (+ `_masque`) | la main cornue du dessin d'Ulysse (`art/hud/main_cornes_dessin.jpg`), sans la couleur de peau = **réservoir de vie** (bas à gauche) : le liquide rouge remplit la main, sous le contour noir, les plis et le bracelet à pointes ; la partie vide est en verre sombre. Fabriquée par `art/hud/main_cornes.py` (fond en damier retiré, peau retirée, masque = silhouette de la main) |
 | `enceinte_db` (+ `_masque`) | baffle de scène tout en verre fumé = **réservoir de décibels** (bas à droite) ; coins, cerclages, boutons et pointes de métal |
 | `barre_sorts` | cadre de la barre de sorts : crânes des squelettes ennemis (tête découpée dans art/pnj/squelette.blend), cornu au centre, pointes, chaînes pendantes |
 | `case` | cadre de fer d'une case de sort |

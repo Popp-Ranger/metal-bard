@@ -5,7 +5,8 @@
 #   blender --background --factory-startup --python art/hud/build_hud.py -- [element...]
 #       -> assets/ui/<element>.png (fond transparent) ; pour les réservoirs, aussi <element>_masque.png : la zone où le
 #          jeu dessine le liquide (blanc), sous l'image : la main et l'enceinte sont des récipients de verre fumé.
-#   éléments : main_vie, enceinte_db, barre_sorts, case, cadre, bouton (tous par défaut)
+#   éléments : enceinte_db, barre_sorts, case, cadre, bouton (tous par défaut) ; main_vie (l'ancienne main de verre,
+#   seulement si on la demande : la jauge de vie vient maintenant du dessin d'Ulysse, voir art/hud/main_cornes.py)
 #
 # Repère : X à droite, Z en haut, la caméra (orthographique) regarde vers +Y ; on modèle face à elle (côté -Y).
 import bpy, bmesh, math, os, sys, random
@@ -566,7 +567,7 @@ BUILDERS = {"main_vie": main_vie, "enceinte_db": enceinte_db, "barre_sorts": bar
 
 def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    for n in (args or list(BUILDERS)):
+    for n in (args or [b for b in BUILDERS if b != "main_vie"]):
         BUILDERS[n]()
 
 

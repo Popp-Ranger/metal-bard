@@ -290,6 +290,8 @@
 - [x] Boss : -10 % de dégâts reçus, +20 % de PV, attaques 15 % plus rapides
 - [x] PNJ basiques (clients) : seulement leur nom, police plus petite
 - [x] Inventaire façon MMO : petites cases, icônes carrées, bulle d'info sous le curseur, héros au centre entouré de ses 12 emplacements
+- [x] Jauge de vie : la main cornue du dessin d'Ulysse, sans couleur de peau, sert de réservoir (le liquide rouge la remplit)
+- [x] Barre de sorts : fond noir derrière les cases ; elle ne passe plus par-dessus les fenêtres
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
