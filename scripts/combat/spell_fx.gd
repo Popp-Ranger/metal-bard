@@ -99,12 +99,14 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			if bool(data.get("on", false)):
 				if model != null:
 					model.act("cast")
+				_taunt(caster, remote)
 				_sound(level, "zap", -10.0, _pos(caster), remote)
 				_sound(level, "boom", -14.0, _pos(caster), remote)
 		"amps":
 			if remote and caster != null:
 				var amps := build_amps(caster)
 				amps.get_tree().create_timer(AMPS_TIME, false).timeout.connect(amps.queue_free)
+			_taunt(caster, remote)
 			if model != null:
 				model.act("cast")
 			_sound(level, "thud", -2.0, _pos(caster), remote)
@@ -370,3 +372,13 @@ class PyroFx extends Node3D:
 		tw.tween_interval(0.35)
 		tw.tween_property(col, "scale", Vector3(0.1, 1.2, 0.1), 0.35)
 		tw.tween_callback(col.queue_free)
+
+
+## Sorts de la voie Protection (Mur de Larsen, Pile d'amplis) : le lanceur prend l'aggro des ennemis proches. Chez
+## l'hôte (ou hors ligne), qu'il soit le lanceur ou qu'il rejoue le sort d'un autre joueur (son personnage distant).
+static func _taunt(caster: Node3D, remote: bool) -> void:
+	if caster == null or not is_instance_valid(caster):
+		return
+	var n := Enemy.taunt_around(caster)
+	if n > 0 and not remote:
+		Events.notify("Vous attirez l'attention de %d ennemi%s : ils se ruent sur vous !" % [n, "s" if n > 1 else ""], Color(0.45, 0.7, 1.0))

@@ -363,7 +363,6 @@ func _spawn_npcs() -> void:
 			p.npc_id = "client"
 			p.look = look
 			p.display_name = npc_name
-			p.title_override = "Cliente" if female else "Client"
 			p.dialogue_id = "client|" + npc_name
 		add_child(p)
 	# Katrkar, en fauteuil roulant (jambes écrasées par un troll des montagnes).

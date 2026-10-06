@@ -54,6 +54,10 @@ const RIFF_REPEAT := 0.3 # clic droit maintenu : un tir toutes les 0,30 s
 const RIFF_RANGE := 6.0 # portée (divisée par 2 le 6 oct. 2026 : 12 m → 6 m)
 const RIFF_DAMAGE := 0.67 # dégâts réduits de 33 % (1d10 + CHA × 0,67)
 
+# Sorts de la voie Protection (Mur du Son : Mur de Larsen, Pile d'amplis) : ils prennent l'aggro des ennemis proches.
+const TAUNT_RADIUS := 12.0
+const TAUNT_TIME := 6.0
+
 const WAVE_COST := 20.0
 const WAVE_COOLDOWN := 4.0
 const WAVE_RADIUS := 5.0
@@ -86,6 +90,11 @@ const ENEMY_LOSE_RADIUS := 9.0 # Distance à laquelle ils abandonnent la poursui
 const ENEMY_SPEED_RATIO := 0.25 # « ... ils se déplacent à 0,25 × la vitesse du héros »
 const ENEMY_ATTACK_COOLDOWN := 2.5 # « ... 1 attaque toutes les 2,5 secondes »
 const ENEMY_ATTACK_WINDUP := 0.45 # Temps d'élan (télégraphie) avant le coup
+## Boss (6 oct. 2026) : plus résistants (-10 % de dégâts reçus, +20 % de PV) et des attaques 15 % plus rapides (recharge et
+## élan des coups, et leurs attaques spéciales).
+const BOSS_DAMAGE_TAKEN := 0.9
+const BOSS_HP_MULT := 1.2
+const BOSS_ATTACK_SPEED := 1.15
 
 const DROP_ITEM_CHANCE := 0.08
 

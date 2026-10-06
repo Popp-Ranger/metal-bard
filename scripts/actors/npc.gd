@@ -36,6 +36,8 @@ var npc_id := ""
 ## Nom affiché (sinon celui de DialogueDB) et identifiant du dialogue (sinon npc_id).
 var display_name := ""
 var title_override := ""
+## Taille du nom au-dessus de la tête (réduite de 2 crans le 6 oct. 2026 : 34 → 30).
+const NAME_SIZE := 30
 var dialogue_id := ""
 ## Échelle du personnage par rapport à sa race (Gérald, petit homme : 0,8), pour placer les étiquettes.
 var size_k := 1.0
@@ -105,13 +107,14 @@ func _ready() -> void:
 	_labels = Node3D.new()
 	add_child(_labels)
 	var top := _top_height()
-	var name_label := Visuals.label(_labels, get_display_name(), Vector3(0, top + 0.25, 0), DialogueDB.npc_color(npc_id), 34)
+	var name_label := Visuals.label(_labels, get_display_name(), Vector3(0, top + 0.25, 0), DialogueDB.npc_color(npc_id), NAME_SIZE)
 	name_label.modulate.a = 0.85
+	name_label.set_meta("dy", 0.25)
 	var title := title_override
 	if title.is_empty():
 		title = str(DialogueDB.NPCS.get(npc_id, {}).get("title", ""))
 	if not title.is_empty():
-		Visuals.label(_labels, title, Vector3(0, top + 0.05, 0), Color(0.7, 0.65, 0.6), 24)
+		Visuals.label(_labels, title, Vector3(0, top + 0.05, 0), Color(0.7, 0.65, 0.6), 24).set_meta("dy", 0.05)
 	# Donneur de quête : « ! » vert (quête disponible) ; « ? » vert chez celui à qui on la rend (« turn_in_to »,
 	# sinon le donneur).
 	for qid: String in QuestDB.QUESTS:
@@ -121,6 +124,7 @@ func _ready() -> void:
 	if not _quest_ids.is_empty():
 		_marker = Visuals.label(_labels, "!", Vector3(0, top + 0.75, 0), Color(0.3, 1.0, 0.35), 120)
 		_marker.outline_size = 16
+		_marker.set_meta("dy", 0.75)
 		Events.quest_updated.connect(func(_q: String) -> void: _refresh_marker())
 		_refresh_marker()
 	if seated and model != null:
@@ -187,7 +191,7 @@ func sit(value: bool, seat_height: float = 0.49) -> void:
 		for i in _labels.get_child_count():
 			var l := _labels.get_child(i) as Label3D
 			if l != null:
-				l.position.y = _top_height() + [0.25, 0.05, 0.75][mini(i, 2)]
+				l.position.y = _top_height() + float(l.get_meta("dy", 0.25))
 
 
 ## Petite bulle de texte au-dessus de la tête (vie de la taverne).

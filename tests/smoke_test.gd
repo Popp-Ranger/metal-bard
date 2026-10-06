@@ -2160,6 +2160,38 @@ func _test_fixes_october() -> void:
 	var resumed: bool = not mino.dueling and mino._axe.visible and not mino._guitar.visible
 	mino.start_duel(1)
 	_check(others and resumed and asked[0] == 1, "duel du Minotaure en coopération : seul le joueur qui l'a fait tomber à 5 % le joue ; l'hôte applique son résultat")
+	# Boss : +20 % de PV, -10 % de dégâts reçus, attaques 15 % plus rapides.
+	var boss_hp := 340 + 45 * (mino.level - 1)
+	var skel := Skeleton.new()
+	arena.add_child(skel)
+	await _frames(1)
+	_check(mino.max_hp == roundi(boss_hp * 1.2) and mino.resist(100) == 90 and skel.resist(100) == 100
+		and is_equal_approx(mino.attack_cooldown, Balance.ENEMY_ATTACK_COOLDOWN / 1.15) and is_equal_approx(skel.attack_cooldown, Balance.ENEMY_ATTACK_COOLDOWN),
+		"boss : +20 %% de PV (%d), 10 %% de dégâts en moins, attaques 15 %% plus rapides" % mino.max_hp)
+	# Sorts de protection (Mur de Larsen, Pile d'amplis) : ils prennent l'aggro des ennemis proches.
+	var tank := Node3D.new()
+	tank.add_to_group("heroes")
+	arena.add_child(tank)
+	tank.global_position = Vector3(3, 0, 0)
+	skel.global_position = Vector3(8, 0, 0)
+	var far := Skeleton.new()
+	arena.add_child(far)
+	await _frames(1)
+	far.global_position = Vector3(40, 0, 0)
+	SpellFx.play(arena, tank, "amps", {}, false)
+	var taunted: bool = skel._taunter == tank and skel.hero == tank and skel._taunt_time > 0.0 and far._taunter == null
+	skel._physics_process(0.1)
+	_check(taunted and skel.hero == tank and skel.state != Enemy.State.WANDER,
+		"sorts de protection : ils prennent l'aggro des ennemis à 12 m (%.0f s)" % Balance.TAUNT_TIME)
+	# PNJ basiques (clients de la taverne) : seulement leur nom, en plus petit.
+	var patron := Npc.new()
+	patron.npc_id = "client"
+	patron.display_name = "Bjorn"
+	arena.add_child(patron)
+	await _frames(1)
+	var name_l := patron._labels.get_child(0) as Label3D
+	_check(patron._labels.get_child_count() == 1 and name_l.text == "Bjorn" and name_l.font_size == 30,
+		"clients de la taverne : seulement leur nom (plus « Client » dessous), police réduite de 2 crans")
 	arena.queue_free()
 	await _frames(2)
 	GameState.new_game()

@@ -26,6 +26,8 @@ var detect_radius := Balance.ENEMY_DETECT_RADIUS
 var lose_radius := Balance.ENEMY_LOSE_RADIUS
 var attack_range := 1.0
 var attack_cooldown := Balance.ENEMY_ATTACK_COOLDOWN
+## Vitesse des attaques (1,15 pour les boss : recharge, élan et attaques spéciales 15 % plus rapides).
+var attack_speed := 1.0
 var xp_reward := 50
 var gold_range := Vector2i(2, 8)
 var radius := 0.4
@@ -67,6 +69,11 @@ var _alert: Label3D
 var _slow_factor := 1.0
 var _slow_time := 0.0
 var _fear_time := 0.0
+## Provocation (sorts de la voie Protection, Mur du Son) : le héros qui a pris l'aggro, et pour combien de temps (s).
+var _taunter: Node3D
+var _taunt_time := 0.0
+## Coup déjà réduit par resist() (le Minotaure le fait avant son seuil de duel).
+var _resisted := false
 ## Transe limitée dans le temps (Onde de choc) ; 0 = transe sans fin (Solo endiablé, jusqu'à exit_trance).
 var _trance_time := 0.0
 var _trance_label: Label3D
@@ -80,6 +87,11 @@ func _ready() -> void:
 	collision_mask = 1 | 2 | 4
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	_configure()
+	if is_boss:
+		# Boss : +20 % de PV, attaques 15 % plus rapides (et -10 % de dégâts reçus, voir resist).
+		max_hp = roundi(max_hp * Balance.BOSS_HP_MULT)
+		attack_speed = Balance.BOSS_ATTACK_SPEED
+		attack_cooldown /= attack_speed
 	# Coop : les ennemis sont plus résistants quand il y a plus de joueurs.
 	if not (self is TrainingDummy):
 		max_hp = roundi(max_hp * Balance.coop_enemy_hp_mult(Net.player_count()))
@@ -163,7 +175,10 @@ func _physics_process(delta: float) -> void:
 		_net_follow(delta)
 		return
 	_retarget -= delta
-	if hero == null or not is_instance_valid(hero) or _retarget <= 0.0:
+	_taunt_time = maxf(0.0, _taunt_time - delta)
+	if _taunt_time > 0.0 and not is_down(_taunter):
+		hero = _taunter # provoqué (sort de protection) : il ne lâche pas le barde
+	elif hero == null or not is_instance_valid(hero) or _retarget <= 0.0:
 		_retarget = 0.5
 		hero = nearest_hero(self)
 	_attack_timer = maxf(0.0, _attack_timer - delta)
@@ -218,7 +233,7 @@ func _physics_process(delta: float) -> void:
 				state = State.CHASE
 
 	if state != State.TRANCE:
-		_update_special(delta, dist)
+		_update_special(delta * attack_speed, dist) # boss : attaques spéciales 15 % plus rapides
 	velocity = desired + _knock
 	_knock = _knock.move_toward(Vector3.ZERO, 20.0 * delta)
 	move_and_slide()
@@ -324,6 +339,41 @@ func _aggro() -> void:
 		tw.tween_callback(_clear_alert)
 
 
+## Boss : -10 % de dégâts reçus. Appliqué une seule fois par coup : là où il est porté (hors ligne, chez l'hôte ou chez
+## le client qui frappe), pas une seconde fois quand l'hôte applique le coup reçu d'un client (Net.damage_source).
+func resist(amount: int) -> int:
+	if not is_boss or Net.damage_source != 1:
+		return amount
+	return maxi(1, roundi(amount * Balance.BOSS_DAMAGE_TAKEN))
+
+
+## Provoqué par `by` (Mur de Larsen, Pile d'amplis) : il le prend pour cible pendant `duration` s, quoi qu'il arrive.
+func taunt(by: Node3D, duration: float) -> void:
+	if state == State.DEAD or remote_controlled or is_down(by):
+		return
+	_taunter = by
+	_taunt_time = duration
+	hero = by
+	if state == State.WANDER:
+		_aggro()
+	elif state == State.FEAR:
+		state = State.CHASE
+
+
+## Les sorts de protection prennent l'aggro : tous les ennemis à `radius` m de `caster` le prennent pour cible
+## (chez l'hôte ou hors ligne : c'est lui qui fait agir les ennemis). Renvoie le nombre d'ennemis provoqués.
+static func taunt_around(caster: Node3D, radius: float = Balance.TAUNT_RADIUS, duration: float = Balance.TAUNT_TIME) -> int:
+	if caster == null or not caster.is_inside_tree() or Net.is_client():
+		return 0
+	var n := 0
+	for node in caster.get_tree().get_nodes_in_group("enemies"):
+		var e := node as Enemy
+		if e != null and e.is_alive() and e.global_position.distance_to(caster.global_position) <= radius:
+			e.taunt(caster, duration)
+			n += 1
+	return n
+
+
 func _clear_alert() -> void:
 	if _alert != null and is_instance_valid(_alert):
 		_alert.queue_free()
@@ -363,8 +413,9 @@ func _pick_wander_target() -> void:
 func _begin_attack() -> void:
 	_attacking = true
 	_attack_timer = attack_cooldown
-	_attack_anim(Balance.ENEMY_ATTACK_WINDUP)
-	await get_tree().create_timer(Balance.ENEMY_ATTACK_WINDUP, false).timeout
+	var windup := Balance.ENEMY_ATTACK_WINDUP / attack_speed
+	_attack_anim(windup)
+	await get_tree().create_timer(windup, false).timeout
 	_attacking = false
 	if state == State.DEAD or state == State.TRANCE or state == State.FEAR or hero == null or not is_instance_valid(hero) or is_down(hero):
 		return
@@ -396,6 +447,8 @@ func show_miss() -> void:
 func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool = false, kind: String = "phys") -> void:
 	if state == State.DEAD:
 		return
+	if not _resisted:
+		amount = resist(amount)
 	if remote_controlled:
 		# Coop (client) : l'hôte fait autorité, on lui transmet le coup.
 		GameState.run_add("dealt", mini(amount, maxi(hp, 0)))
@@ -640,7 +693,7 @@ static func nearest_hero(from: Node3D) -> Node3D:
 
 
 static func is_down(h: Node3D) -> bool:
-	return h == null or not is_instance_valid(h) or bool(h.get("dead"))
+	return h == null or not is_instance_valid(h) or h.get("dead") == true
 
 
 ## Chez un client : l'ennemi suit l'état envoyé par l'hôte (position, orientation, PV).

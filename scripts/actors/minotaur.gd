@@ -145,12 +145,16 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 	if dueling:
 		DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.3, 0), "Duel !", Color(1.0, 0.8, 0.3))
 		return
+	amount = resist(amount) # boss : -10 % (avant le seuil du duel)
+	_resisted = true
 	var limit := duel_threshold()
 	if not remote_controlled and hp > limit and hp - amount <= limit:
 		super.take_damage(hp - limit, from, 0.0, crit, kind)
+		_resisted = false
 		start_duel(Net.damage_source)
 		return
 	super.take_damage(amount, from, knockback, crit, kind)
+	_resisted = false
 
 
 ## Il jette sa hache, sort sa guitare et impose le duel à `peer` : le joueur qui l'a fait tomber à 5 % (coopération :

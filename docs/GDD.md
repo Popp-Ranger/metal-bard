@@ -173,6 +173,8 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 
 Machine à états des ennemis : **Errance → Poursuite (≤ 4 m) → Attaque (au contact) → Sonné (après un gros recul) → Mort**. Ils abandonnent la poursuite au-delà de 9 m et réagissent immédiatement s'ils sont touchés.
 
+**Tous les boss** (6 oct. 2026) : plus résistants, **-10 % de dégâts reçus** et **+20 % de PV**, et des attaques **15 % plus rapides** (recharge, élan des coups et attaques spéciales). Les sorts de la voie Protection (Mur de Larsen, Pile d'amplis) **prennent l'aggro** : les ennemis à 12 m prennent le lanceur pour cible pendant 6 s (en coop aussi, l'hôte l'applique quel que soit le lanceur).
+
 ### 8.5 Boss : Gloubah, Grenouille des Marées Mortes
 Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 - **Vague déferlante** (toutes les ~6 s) : un mur d'eau en arc de 110° part vers le héros → **s'écarter sur le côté**.
@@ -297,9 +299,9 @@ Implémentée dans `scripts/world/dungeon_generator.gd` (logique pure, testée s
 | | Rappel | Passif | Chaque ennemi vaincu rend 3 PV et 4 dB |
 | | Hymne du Phénix | Actif 35 dB / 30 s | Cercle de flammes (4 m, 8 s) : 6 % PV max/s |
 | | Encore ! | Passif | Survit à un coup mortel à 1 PV + soin de 50 % (1 fois / 2 min) |
-| **Mur du Son** (protection) | Mur de Larsen | Actif 20 dB / 15 s | Bouclier 10 + 3 × CHA + 2 × niveau pendant 8 s |
+| **Mur du Son** (protection) | Mur de Larsen | Actif 20 dB / 15 s | Bouclier 10 + 3 × CHA + 2 × niveau pendant 8 s ; **prend l'aggro** des ennemis à 12 m pendant 6 s |
 | | Cuir clouté renforcé | Passif | +2 CA |
-| | Pile d'amplis | Actif 30 dB / 25 s | 6 s : dégâts reçus ÷ 2, riposte 1d6 + CHA sur l'attaquant |
+| | Pile d'amplis | Actif 30 dB / 25 s | 6 s : dégâts reçus ÷ 2, riposte 1d6 + CHA sur l'attaquant ; **prend l'aggro** des ennemis à 12 m pendant 6 s |
 | | Sustain | Passif | −10 % de dégâts ; le bouclier brisé explose et repousse |
 | **Mosh Pit** (repoussement) | Wall of Death | Actif 15 dB / 6 s | Cône 7 m : 1d8 + CHA, projection violente |
 | | Larsen persistant | Passif | Onde de choc : +2 m de rayon, recul +50 % |

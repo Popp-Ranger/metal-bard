@@ -285,6 +285,10 @@
 - [x] Xplode : effet lumineux orange sur les cordes
 - [x] Inventaire : le héros au centre de l'écran, de la tête aux pieds avec sa guitare équipée ; cliquer-glisser le fait pivoter
 - [x] Cinématique de Back Jlack : la musique se tait ; Solo de la Foudre : la musique continue, baissée de 20 %
+- [x] Sorts du clic droit : portée divisée par 2 (6 m), dégâts -33 % ; Accordage de cordes sans mini-jeu
+- [x] Voie Protection : le Mur de Larsen et la Pile d'amplis prennent l'aggro des ennemis proches (6 s)
+- [x] Boss : -10 % de dégâts reçus, +20 % de PV, attaques 15 % plus rapides
+- [x] PNJ basiques (clients) : seulement leur nom, police plus petite
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau

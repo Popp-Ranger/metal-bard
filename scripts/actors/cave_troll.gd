@@ -110,7 +110,7 @@ func take_damage(amount: int, from: Vector3, knockback: float = 0.0, crit: bool 
 func _update_special(delta: float, dist: float) -> void:
 	if state == State.WANDER or state == State.DEAD:
 		return
-	_update_regen(delta)
+	_update_regen(delta / attack_speed) # (delta accéléré pour les attaques des boss ; la régénération, elle, ne l'est pas)
 	if not _called and hp <= max_hp / 2.0:
 		_call_goblins()
 	if _busy:
