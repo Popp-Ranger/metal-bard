@@ -123,7 +123,7 @@ Modificateur = ⌊(valeur − 10) / 2⌋, comme dans D&D. Plafond de base : 20 (
 - **DD des sorts** = 8 + maîtrise + mod CHA
 
 ### 7.3 Progression
-- **XP** : table officielle D&D 5e (300 XP pour le niveau 2, 900 pour le 3, 2 700 pour le 4…), niveau max 20.
+- **XP** : table officielle D&D 5e (300 XP pour le niveau 2, 900 pour le 3, 2 700 pour le 4…), niveau max 20. Toute l'XP gagnée (ennemis, boss, quêtes) est réduite de 25 % (6 oct. 2026 ; les humains gardent leur +10 % par-dessus).
 - **Sources d'XP** : ennemis (squelette 50, capitaine 150, Gloubah 450) + quêtes (Plumeau 300).
 - **Montée de niveau** : PV et dB restaurés, **+2 points de caractéristique à répartir librement** (variante « Oblivion » plus généreuse que les ASI de D&D tous les 4 niveaux).
 - **Talents** : 1 point par niveau à dépenser dans l'arbre de talents (voir 14 ter).
