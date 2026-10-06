@@ -106,7 +106,7 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
 - Équipée, elle remplace la Flying V dans les mains du héros (`GameState.guitar_model()`, `HeroModel.set_guitar_model`) ;
   retirée, il reprend la Flying V.
 - **Riff black metal** : avec la Batguitare équipée, le Riff électrique (clic droit) devient le Riff black metal (clé
-  `sort_riff` : `black_metal`) : mêmes dégâts et même recharge d'1 s, mais un **trait brumeux violet** (`MistTrail`)
+  `sort_riff` : `black_metal`) : mêmes dégâts, sans recharge non plus, mais un **trait brumeux violet** (`MistTrail`)
   au lieu de l'éclair, et un **vent brumeux** synthétisé (`Sfx` « mist_wind ») au lieu du son du riff. Vu et entendu
   par tous les joueurs.
 - **Xplode** (`xplode`, rare, FOR +1, CHA +1) : une Explorer de bois calciné (`Imagerie/Guitares/3D/explorer.glb`,
@@ -114,7 +114,7 @@ Attention à la syntaxe JSON : une virgule entre deux blocs, pas de virgule apr�
   ne tombe que si le héros ne l'a pas déjà (sac ou main) : on ne la loote qu'une fois, mais une fois vendue à Grokk —
   pour **1 médiator** (clé `prix_vente`) — elle retombe au passage suivant.
 - **FIREBALL** : avec la Xplode équipée, le Riff électrique (clic droit) devient FIREBALL (`sort_riff` : `fireball`) :
-  mêmes dégâts et même recharge d'1 s, mais il lance une **boule de feu** (`Fireball`) de la guitare vers
+  mêmes dégâts, sans recharge non plus, mais il lance une **boule de feu** (`Fireball`) de la guitare vers
   l'ennemi, faite avec les textures de feu d'Ulysse (`assets/textures/feu` : flammes, halo, et la
   texture de Voronoi qui fait bouillonner le cœur, `shaders/fireball_core.gdshader`), avec un son de **boule de feu crépitante** synthétisé (`Sfx` « fireball »). Apparence du sort selon la
   guitare : `ItemDB.RIFF_STYLES`.

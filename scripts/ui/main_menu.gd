@@ -82,7 +82,7 @@ func _ready() -> void:
 		"Clic gauche : aller là (maintenu : suivre la souris), frapper un ennemi, parler / interagir",
 		"Maj + clic gauche : frapper sur place",
 		"Espace : Glissade sur les genoux (5 m, esquive tout, recharge 20 s)",
-		"Clic droit : Riff électrique (un éclair, recharge 1 s)",
+		"Clic droit : Riff électrique (un éclair par clic, sans recharge)",
 		"%s : Accordage de cordes (mini-jeu en rythme : jusqu'à 5 cibles)" % Controls.key_label("spell_tuning"),
 		"%s : Onde de choc sonore (zone)" % Controls.key_label("spell_wave"),
 		"%s : Solo de la Foudre (mini-jeu)" % Controls.key_label("spell_solo"),

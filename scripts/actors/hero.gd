@@ -552,7 +552,7 @@ func _tuning_target() -> Enemy:
 	return _aimed_enemy(Balance.TUNING_FIRST_RANGE)
 
 
-## Riff électrique (clic droit) : un éclair sur l'ennemi visé, recharge d'1 s (plus de mini-jeu : il est passé à
+## Riff électrique (clic droit) : un éclair sur l'ennemi visé, sans recharge : autant de clics que de dB (plus de mini-jeu : il est passé à
 ## l'Accordage de cordes, qui a pris le son du riff ; l'éclair a pris le grésillement de l'Accordage). Selon la guitare
 ## équipée : Riff black metal (Batguitare, trait brumeux violet) ou FIREBALL (Xplode, boule de feu).
 func cast_riff() -> void:
@@ -565,7 +565,6 @@ func cast_riff() -> void:
 	if not GameState.spend_mana(Balance.RIFF_COST):
 		_no_mana()
 		return
-	_cooldown("riff", Balance.RIFF_COOLDOWN)
 	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
 	var to := target.global_position + Vector3(0, 0.9, 0)
 	var variant := GameState.riff_variant()

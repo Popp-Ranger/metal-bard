@@ -255,7 +255,7 @@ func _test_quest_flow() -> void:
 	var hp_before := 0
 	for e in targets:
 		hp_before += e.hp
-	# Riff électrique (clic droit) : un éclair, sans mini-jeu, recharge d'1 s. Les sorts touchent 8 fois sur 10 : on
+	# Riff électrique (clic droit) : un éclair, sans mini-jeu ni recharge. Les sorts touchent 8 fois sur 10 : on
 	# relance si la cible l'a esquivé.
 	var hp_after := hp_before
 	for attempt in 8:
@@ -270,11 +270,12 @@ func _test_quest_flow() -> void:
 			break
 	_check(hp_after < hp_before and not hero.casting_tuning and not (dungeon as Level).hud.solo._active,
 		"Riff électrique : un éclair sur l'ennemi visé, sans mini-jeu")
-	# (la recharge a déjà un peu décompté pendant les deux images : un à-coup de chargement ne doit pas faire échouer)
-	var riff_cd := float(hero.cooldowns["riff"])
-	var riff_full := Balance.RIFF_COOLDOWN * GameState.cooldown_multiplier()
-	_check(is_equal_approx(Balance.RIFF_COOLDOWN, 1.0) and riff_cd <= riff_full + 0.01 and riff_cd > riff_full - 0.5,
-		"Riff électrique (FIREBALL, Riff black metal) : recharge d'1 s")
+	# Sans recharge : deux clics de suite, deux éclairs (seuls les dB le limitent).
+	GameState.mana = GameState.max_mana()
+	hero.cast_riff()
+	hero.cast_riff()
+	_check(is_zero_approx(float(hero.cooldowns["riff"])) and is_equal_approx(GameState.mana, GameState.max_mana() - 2.0 * Balance.RIFF_COST),
+		"Riff électrique (FIREBALL, Riff black metal) : sans recharge, un éclair par clic")
 	_check(Controls.key_label("spell_riff") == "Clic D" and Controls.key_label("spell_tuning") == "1",
 		"touches échangées : Riff électrique au clic droit, Accordage de cordes sur la touche 1")
 	var banging := 0
