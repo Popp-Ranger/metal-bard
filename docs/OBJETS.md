@@ -22,7 +22,7 @@ Tous les objets sont définis dans **[`data/items.json`](../data/items.json)**. 
 | Objet | Rôle |
 |---|---|
 | **Clé rouillée de la cage** | Lâchée par Gloubah (ou offerte si elle devient amicale). Ouvre la cage de Plumeau. |
-| **Partition maudite du Riff Ultime** | Sur le corps de l'ange déchu (Temple du Dragon). Visible dans l'inventaire (B), section « Objets de quête » ; bouton « Jouer » : sans le Pick du Destin, la foudre frappe (30 % des PV, jamais mortel). Servira contre Mèhn-Strïm. |
+| **Partition maudite du Riff Ultime** | Sur le corps de l'ange déchu (Temple du Dragon). Visible dans l'inventaire (B), section « Objets de quête » ; clic sur son icône pour la jouer : sans le Pick du Destin, la foudre frappe (30 % des PV, jamais mortel). Servira contre Mèhn-Strïm. |
 
 ### Équipement (section « reliques » du fichier)
 
@@ -59,12 +59,20 @@ cul-de-sac (au sol, attiré par le héros).
 
 ### Inventaire et revente (touche B)
 
-- **B** ouvre l'inventaire : le sac (bouton « Équiper »), l'équipement porté (bouton « Retirer ») et le total de
-  ses bonus. Le jeu ne se met pas en pause, mais le héros ne bouge plus tant que la fenêtre est ouverte.
-- Chez **Grokk**, le choix « Vendre ou racheter de l'équipement » ouvre la même fenêtre en boutique : chaque objet
-  **du sac** se vend selon sa rareté (`monnaie.vente` dans `data/items.json` : commun 8, peu commun 15, rare 30,
+- **B** ouvre l'inventaire, façon MMO (`scripts/ui/inventory_window.gd`) :
+  - à gauche, le **sac** : une grille de petites cases (6 × 8, plus si besoin), chaque objet est une **icône carrée**
+    (`ItemIcon` : dessinée selon son emplacement, liseré de la couleur de sa rareté) ; dessous, potions et médiators ;
+  - au centre, le **héros en 3D** de la tête aux pieds avec sa guitare équipée (cliquer-glisser pour le faire pivoter),
+    entouré de ses **12 emplacements d'équipement** (silhouette grise quand ils sont vides) ;
+  - à droite, le total des bonus et les **objets de quête** (icônes aussi).
+  - Au survol, une **bulle d'info** s'affiche sous le curseur : nom (couleur de rareté), rareté et emplacement, bonus,
+    effet sur les sorts (Batguitare, Xplode), description, prix de revente et action du clic.
+  - **Clic** (gauche ou droit) : équiper un objet du sac, retirer un objet porté, jouer la partition maudite.
+  Le jeu ne se met pas en pause, mais le héros ne bouge plus tant que la fenêtre est ouverte.
+- Chez **Grokk**, le choix « Vendre ou racheter de l'équipement » ouvre la même fenêtre en boutique : un clic sur un objet
+  **du sac** le vend selon sa rareté (`monnaie.vente` dans `data/items.json` : commun 8, peu commun 15, rare 30,
   épique 60 médiators). Un objet porté ne se vend pas : il faut d'abord le retirer.
-- Les **10 derniers objets vendus** peuvent être rachetés, au prix où Grokk les a payés (ils reviennent dans le sac ;
+- Les **10 derniers objets vendus** (à droite, en icônes) peuvent être rachetés d'un clic, au prix où Grokk les a payés (ils reviennent dans le sac ;
   historique sauvegardé avec la partie).
 
 ## Modifier un objet

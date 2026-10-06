@@ -289,6 +289,7 @@
 - [x] Voie Protection : le Mur de Larsen et la Pile d'amplis prennent l'aggro des ennemis proches (6 s)
 - [x] Boss : -10 % de dégâts reçus, +20 % de PV, attaques 15 % plus rapides
 - [x] PNJ basiques (clients) : seulement leur nom, police plus petite
+- [x] Inventaire façon MMO : petites cases, icônes carrées, bulle d'info sous le curseur, héros au centre entouré de ses 12 emplacements
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau

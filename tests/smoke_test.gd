@@ -907,15 +907,17 @@ func _test_story() -> void:
 		pleas.append(str((d["lines"] as Array)[0][1]))
 	_check(pleas[0] == "Et maintenant, tu veux bien ?" and pleas[3].begins_with("Allé") and pleas[4] == "Je te donnerai du fromage d'hibours !",
 		"Gérald revient à la charge : %s" % " / ".join(pleas))
+	# Refuser encore : pas de fromage, la proposition tourne en boucle ; accepter : on le mange (+20 % de PV max).
 	var cheese: Array = DialogueDB.get_dialogue("gerald")["choices"]
 	GameState.run_dialogue_action(str(cheese[1][1]))
-	_check(GameState.cheese_time > 0.0 and GameState.max_hp() == roundi(hp0 * 1.2) and int(GameState.flags["gerald_refus"]) == 5
+	_check(is_zero_approx(GameState.cheese_time) and int(GameState.flags["gerald_refus"]) == 5
 		and str(DialogueDB.get_dialogue("gerald")["lines"][0][1]) == "Je te donnerai du fromage d'hibours !",
-		"fromage d'hibours : +20 %% de PV max (%d → %d) pendant 20 min, puis la proposition tourne en boucle" % [hp0, GameState.max_hp()])
+		"« Toujours non » : pas de fromage, la proposition tourne en boucle")
+	GameState.run_dialogue_action(str(DialogueDB.get_dialogue("gerald")["choices"][0][1]))
+	_check(GameState.cheese_time > 0.0 and GameState.max_hp() == roundi(hp0 * 1.2) and GameState.quest_state("plumeau") == QuestDB.State.ACTIVE,
+		"on peut toujours accepter après avoir refusé : fromage d'hibours, +20 %% de PV max (%d → %d) pendant 20 min" % [hp0, GameState.max_hp()])
 	GameState.run_dialogue_action("cheese")
 	_check(is_equal_approx(GameState.cheese_time, GameState.CHEESE_DURATION), "le fromage n'est offert qu'une fois")
-	GameState.run_dialogue_action(str(DialogueDB.get_dialogue("gerald")["choices"][0][1]))
-	_check(GameState.quest_state("plumeau") == QuestDB.State.ACTIVE, "on peut toujours accepter après avoir refusé")
 	GameState.new_game()
 
 
@@ -2091,7 +2093,8 @@ func _test_fixes_october() -> void:
 	inv.open(false)
 	await _frames(3)
 	var cols := inv.preview.get_parent()
-	var centered := cols != null and cols.get_child_count() == 3 and cols.get_child(1) == inv.preview
+	var centered := cols != null and cols.get_child_count() == 5 and cols.get_child(2) == inv.preview
+	centered = centered and is_equal_approx((cols.get_child(0) as Control).size.x, (cols.get_child(4) as Control).size.x)
 	var h := inv.preview_model.height()
 	var cam := inv._preview_cam
 	var half := tan(deg_to_rad(cam.fov * 0.5)) * cam.position.z
@@ -2118,6 +2121,29 @@ func _test_fixes_october() -> void:
 			strings += 1
 	var orange := inv.preview_model._strings_color
 	_check(strings == 6 and orange.r > 0.9 and orange.g < 0.6 and orange.b < 0.2, "Xplode : effet lumineux orange sur les 6 cordes")
+	# Inventaire façon MMO : petites cases, une icône carrée par objet, bulle d'info sous le curseur, clic pour équiper.
+	GameState.add_item("bottes_roadie")
+	inv._refresh()
+	await _frames(1)
+	var boots: InventorySlot = null
+	for s in inv.bag_slots:
+		if s.item_id == "bottes_roadie":
+			boots = s
+	var grid_ok := boots != null and boots.get_parent() is GridContainer and boots.size.x <= 60.0 and absf(boots.size.x - boots.size.y) < 0.5
+	grid_ok = grid_ok and (boots.get_parent() as GridContainer).get_child_count() >= InventoryWindow.BAG_COLUMNS * InventoryWindow.BAG_ROWS
+	inv._on_slot_hovered(boots, true)
+	var tip_text := ""
+	for l in inv._tip_box.get_children():
+		tip_text += (l as Label).text + " | "
+	var tip_ok := inv.tip.visible and tip_text.contains(str(ItemDB.get_item("bottes_roadie")["name"])) and tip_text.contains("Pieds")
+	tip_ok = tip_ok and tip_text.contains("Clic : équiper") and tip_text.contains("Revente")
+	inv._on_slot_hovered(boots, false)
+	inv._on_slot_activated(boots)
+	var worn_boots := false
+	for s in inv.worn_slots:
+		worn_boots = worn_boots or (s.equip_slot == "pieds" and s.item_id == "bottes_roadie")
+	_check(grid_ok and tip_ok and not inv.tip.visible and worn_boots and GameState.equipment.get("pieds", "") == "bottes_roadie" and inv.worn_slots.size() == 12,
+		"inventaire façon MMO : petites cases, une icône carrée par objet, bulle d'info sous le curseur, clic pour équiper (12 emplacements autour du héros)")
 	inv.close()
 	inv.queue_free()
 	GameState.unequip("guitare")
