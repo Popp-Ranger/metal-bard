@@ -1169,9 +1169,13 @@ func _test_characters() -> void:
 	await _frames(3)
 	var hella: HeroModel = creation._model
 	_check(hella_i >= 0 and creation._name_edit.text == "Hella" and str(creation.appearance["sex"]) == "f"
-		and hella._skin != null and hella._skin.skeleton.get_bone_count() == 17 and hella._anim != null
+		and hella._skin != null and hella._skin.skeleton.get_bone_count() == 17 + 12 and hella._anim != null
 		and hella._anim.lengths.size() >= 16 and is_equal_approx(hella.height(), 1.75),
-		"Hella : héroïne prédéfinie, son modèle, les 17 os et les %d animations de Riffald, 1,75 m" % (hella._anim.lengths.size() if hella._anim else 0))
+		"Hella : héroïne prédéfinie, son modèle, les 17 os (+ 12 de cape) et les %d animations de Riffald, 1,75 m" % (hella._anim.lengths.size() if hella._anim else 0))
+	var cape_sim := hella._skin.cape
+	_check(cape_sim != null and cape_sim.setting_count == 3 and cape_sim.get_root_bone_name(0).begins_with("cape_")
+		and cape_sim.get_child_count() >= 7,
+		"Hella : cape en tissu (3 chaînes d'os simulées, collisions sur le bassin, le dos et les jambes)")
 	var sk_h := hella._skin.skeleton
 	await sk_h.skeleton_updated
 	var gt_h := hella._anim._skel_to_model().affine_inverse() * hella._guitar.transform.orthonormalized()

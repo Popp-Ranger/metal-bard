@@ -143,7 +143,9 @@ def retarget(rig, src, prefix, game_name, first, last, root_mode):
     action = bpy.data.actions.new(game_name)
     rig.animation_data_create()
     rig.animation_data.action = action
-    order = [b.name for b in rig.data.bones]  # parents avant enfants
+    # Parents avant enfants ; seuls les 17 os animés (les os de cape, art/pnj/cape_bones.py, restent libres : le jeu
+    # les simule comme du tissu).
+    order = [b.name for b in rig.data.bones if b.name in BONES]
     for f in range(f0, f1 + 1):
         scene.frame_set(f)
         world = {}

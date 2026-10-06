@@ -34,8 +34,9 @@ CHARS = {
         "hip.L": (0.10, -0.02, 0.92), "knee.L": (0.13, 0.0, 0.59), "ankle.L": (0.17, 0.05, 0.15),
         "hip.R": (-0.10, -0.02, 0.92), "knee.R": (-0.12, 0.0, 0.59), "ankle.R": (-0.17, 0.05, 0.15)}},
     # Hella, héroïne jouable (héros prédéfini) : modèle retravaillé par Ulysse dans Blender (Hella.glb, 4 oct. 2026).
+    # Os de cape en tissu ajoutés par art/pnj/cape_bones.py (6 oct. 2026) : « rig » les effacerait, d'où « retouche ».
     "hella": {"src": r"C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\Humain\Féminin",
-              "file": "Hella.glb", "out": "hella", "name": "Hella", "height": 1.75, "tris": 40000, "cape": True, "joints": {
+              "file": "Hella.glb", "out": "hella", "name": "Hella", "height": 1.75, "tris": 40000, "cape": True, "retouche": True, "joints": {
         "hips": (0.0, -0.04, 0.95), "spine": (0.0, -0.045, 1.10), "chest": (0.0, -0.05, 1.25),
         "neck": (0.0, -0.04, 1.40), "head": (0.0, -0.03, 1.48), "head_top": (0.0, -0.02, 1.75),
         "shoulder.L": (0.21, 0.0, 1.36), "elbow.L": (0.28, 0.0, 1.13), "wrist.L": (0.31, -0.07, 0.90),

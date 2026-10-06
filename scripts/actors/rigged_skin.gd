@@ -49,6 +49,62 @@ func _ready() -> void:
 		_rest_l[b] = skeleton.get_bone_rest(b)
 	for mi in find_children("*", "MeshInstance3D", true, false):
 		_style(mi as MeshInstance3D)
+	_setup_cape()
+
+
+## Cape en tissu (Hella) : les os « cape_<R|C|L>_<n> » ajoutés par art/pnj/cape_bones.py ne sont pas animés ; ils sont
+## simulés comme du tissu (SpringBoneSimulator3D) : la cape traîne derrière quand on court, se balance, retombe avec la
+## gravité, et glisse sur des capsules posées sur le bassin, le dos et les jambes au lieu de les traverser.
+const CAPE_STIFFNESS := 0.35
+const CAPE_DRAG := 0.5
+const CAPE_GRAVITY := 3.0
+var cape: SpringBoneSimulator3D
+
+
+func _setup_cape() -> void:
+	var chains := {}
+	for bone_name: String in _bone:
+		if bone_name.begins_with("cape_"):
+			var parts := bone_name.split("_")
+			chains[parts[1]] = maxi(int(chains.get(parts[1], 0)), int(parts[2]))
+	if chains.is_empty():
+		return
+	cape = SpringBoneSimulator3D.new()
+	cape.name = "Cape"
+	skeleton.add_child(cape)
+	cape.setting_count = chains.size()
+	var i := 0
+	for side: String in chains:
+		cape.set_root_bone_name(i, "cape_%s_0" % side)
+		cape.set_end_bone_name(i, "cape_%s_%d" % [side, int(chains[side])])
+		cape.set_extend_end_bone(i, true)
+		cape.set_end_bone_length(i, 0.08)
+		cape.set_radius(i, 0.04)
+		cape.set_stiffness(i, CAPE_STIFFNESS)
+		cape.set_drag(i, CAPE_DRAG)
+		cape.set_gravity(i, CAPE_GRAVITY)
+		cape.set_gravity_direction(i, Vector3.DOWN)
+		cape.set_enable_all_child_collisions(i, true)
+		i += 1
+	# Le corps sur lequel la cape glisse : bassin, dos, cuisses, tibias.
+	for spec: Array in [["hips", 0.16], ["spine", 0.15], ["chest", 0.14], ["thigh.L", 0.1], ["thigh.R", 0.1], ["shin.L", 0.08], ["shin.R", 0.08]]:
+		var b := int(_bone.get(spec[0], -1))
+		if b < 0:
+			continue
+		var length := _bone_length(b)
+		var col := SpringBoneCollisionCapsule3D.new()
+		col.bone_name = str(spec[0])
+		col.radius = float(spec[1])
+		col.height = length + 2.0 * col.radius
+		col.position_offset = Vector3(0, length * 0.5, 0) # le long de l'os (axe Y des os importés)
+		cape.add_child(col)
+
+
+## Longueur d'un os : jusqu'à son premier enfant (sinon 0,2 m).
+func _bone_length(b: int) -> float:
+	for c in skeleton.get_bone_children(b):
+		return skeleton.get_bone_rest(c).origin.length()
+	return 0.2
 
 
 ## Matériaux du modèle : teintes ajustées à l'éclairage du jeu, clignotement quand il est touché.

@@ -293,6 +293,7 @@
 - [x] Jauge de vie : la main cornue du dessin d'Ulysse, sans couleur de peau, sert de réservoir (le liquide rouge la remplit)
 - [x] Barre de sorts : fond noir derrière les cases ; elle ne passe plus par-dessus les fenêtres
 - [x] XP gagnée réduite de 25 % partout (ennemis, boss, quêtes)
+- [x] Hella : cape en tissu (os de cape simulés par SpringBoneSimulator3D : elle flotte derrière quand on court, se balance et retombe)
 
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
