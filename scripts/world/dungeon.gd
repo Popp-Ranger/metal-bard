@@ -768,8 +768,7 @@ func _spawn_victory_portal() -> void:
 func _befriend_gloubah() -> void:
 	boss.befriend()
 	_state["boss_friend"] = true
-	var xp := boss.xp_reward * 2
-	GameState.add_xp(xp)
+	var xp := GameState.add_xp(boss.xp_reward * 2)
 	DamageNumber.spawn(self, boss.global_position + Vector3(0, 3.0, 0), "+%d XP" % xp, Events.COLOR_GOLD, true)
 	Events.notify("Gloubah vous confie la clé de la cage, les yeux humides. (+%d XP — victoire sans combat !)" % xp, Events.COLOR_GOLD)
 	_take_key()

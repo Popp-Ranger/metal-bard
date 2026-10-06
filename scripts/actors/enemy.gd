@@ -502,8 +502,8 @@ func _die() -> void:
 	set_deferred("collision_layer", 0)
 	set_deferred("collision_mask", 0)
 	_hp_bar.visible = false
-	GameState.add_xp(xp_reward)
-	DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.9, 0), "+%d XP" % xp_reward, Events.COLOR_GOLD)
+	var gained := GameState.add_xp(xp_reward)
+	DamageNumber.spawn(get_parent(), global_position + Vector3(0, height + 0.9, 0), "+%d XP" % gained, Events.COLOR_GOLD)
 	_drop_loot()
 	Events.enemy_killed.emit(self)
 	_death_anim()

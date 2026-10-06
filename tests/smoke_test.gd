@@ -87,8 +87,9 @@ func _test_rules() -> void:
 	_check(GameState.proficiency() == 2, "maîtrise niveau 1 = +2")
 	_check(GameState.armor_class() == 13, "CA de départ = 13 (11 + DEX 14)")
 	_check(GameState.spell_dc() == 13, "DD des sorts = 13 (8 + 2 + CHA 16)")
-	GameState.add_xp(300)
-	_check(GameState.stats.level == 2, "300 XP → niveau 2")
+	var gained := GameState.add_xp(400)
+	_check(gained == roundi(400 * 0.75 * (1.1 if GameState.race() == "humain" else 1.0)) and GameState.stats.level == 2,
+		"XP gagnée réduite de 25 %% (400 → %d) ; 300 XP → niveau 2" % gained)
 	_check(GameState.stats.unspent_points == Balance.POINTS_PER_LEVEL, "points gagnés au niveau 2")
 	var cha_before := GameState.ability("CHA")
 	_check(GameState.spend_point("CHA") and GameState.ability("CHA") == cha_before + 1, "dépense d'un point en CHA")
@@ -579,7 +580,7 @@ func _test_quest_flow() -> void:
 	var xp_friend := GameState.stats.xp
 	GameState.run_dialogue_action("story:gloubah_friend")
 	await _frames(3)
-	_check(boss.friendly and bool(d_level.get("_has_key")) and GameState.stats.xp >= xp_friend + boss.xp_reward * 2,
+	_check(boss.friendly and bool(d_level.get("_has_key")) and GameState.stats.xp >= xp_friend + GameState.xp_gain(boss.xp_reward * 2),
 		"« il est kiki » : Gloubah amicale, clé offerte, XP doublée")
 	d_level.call("_try_open_cage")
 	_check(GameState.quest_state("plumeau") == QuestDB.State.OBJECTIVE_DONE, "cage ouverte avec la clé → objectif accompli")

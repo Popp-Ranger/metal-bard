@@ -20,6 +20,9 @@ const POINTS_PER_LEVEL := 2 # Points de caractéristique par niveau (variante «
 const ABILITY_CAP := 20
 
 ## XP totale requise pour atteindre le niveau (index + 1). Table officielle D&D 5e.
+## XP gagnée partout réduite de 25 % (6 oct. 2026) : ennemis, boss, quêtes.
+const XP_GAIN := 0.75
+
 const XP_TABLE := [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
 	85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000]
 

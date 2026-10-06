@@ -316,9 +316,17 @@ func buy_back(id: String) -> bool:
 	return true
 
 
-func add_xp(amount: int) -> void:
+## XP réellement gagnée pour `amount` : -25 % partout (Balance.XP_GAIN), puis +10 % pour les humains (Polyvalent).
+func xp_gain(amount: int) -> int:
+	var gained := amount * Balance.XP_GAIN
 	if race() == "humain":
-		amount = roundi(amount * 1.1) # Polyvalent : +10 % d'XP
+		gained *= 1.1 # Polyvalent : +10 % d'XP
+	return maxi(1, roundi(gained)) if amount > 0 else 0
+
+
+## Gagne de l'XP (récompense de base `amount`, réduite par xp_gain) ; renvoie l'XP réellement gagnée.
+func add_xp(amount: int) -> int:
+	amount = xp_gain(amount)
 	stats.xp += amount
 	while stats.level < Balance.MAX_LEVEL and stats.xp >= next_level_xp():
 		stats.level += 1
@@ -331,6 +339,7 @@ func add_xp(amount: int) -> void:
 			stats.level, Balance.POINTS_PER_LEVEL, Controls.key_label("character_sheet"),
 			Controls.key_label("talents")], Events.COLOR_GOLD)
 	Events.xp_changed.emit(stats.xp, next_level_xp(), stats.level)
+	return amount
 	_on_stats_changed()
 
 
