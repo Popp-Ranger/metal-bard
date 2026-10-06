@@ -13,13 +13,6 @@ const WINDOW_PERFECT := 0.08
 const WINDOW_GOOD := 0.17
 const LANE_COLORS := [Color(0.3, 0.9, 0.35), Color(0.95, 0.25, 0.2), Color(1.0, 0.85, 0.2), Color(0.3, 0.55, 1.0)]
 const PANEL_SIZE := Vector2(400, 520)
-## Accordage de cordes (l'ancien mini-jeu du Riff électrique) : une seule corde (la touche du sort), notes rapides,
-## fenêtres plus serrées.
-const TUNING_PANEL_W := 200.0
-const TUNING_NOTE_SPEED := 620.0
-const TUNING_WINDOW_PERFECT := 0.06
-const TUNING_WINDOW_GOOD := 0.12
-const TUNING_COLOR := Color(0.5, 0.8, 1.0)
 ## Épreuve de Back Jlack.
 
 var _notes: Array[Dictionary] = []
@@ -30,11 +23,9 @@ var _feedback := ""
 var _feedback_color := Color.WHITE
 var _feedback_t := 0.0
 var _lane_flash := [0.0, 0.0, 0.0, 0.0]
-var _lanes := LANES
 var _end_t := 0.0
 ## "foudre" (Solo de la Foudre, 5 notes), "endiable" (Solo endiablé) ou "ballade" (Ballade
-## réparatrice : le vrai solo de la musique de la taverne) ou "tuning" (Accordage de cordes : une seule note à
-## 90 BPM, la 1re jouée en lançant le sort) ou "epreuve" (épreuve de Back Jlack : le solo du sage « Chant de fer »
+## réparatrice : le vrai solo de la musique de la taverne) ou "epreuve" (épreuve de Back Jlack : le solo du sage « Chant de fer »
 ## en entier, une note sur chacune de ses notes, voir data/epreuve_solo.json ; il faut 80 %) ou "duel" (duel contre le
 ## Minotaure, même principe sur « Edge of the Cliff », data/duel_minotaure.json ; 80 % aussi).
 ## Tous sauf le Solo de la Foudre, l'épreuve et le duel s'arrêtent à la première fausse note.
@@ -71,7 +62,6 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES, w
 		Sfx.stop_clip() # on regardait un autre joueur : son morceau s'arrête
 	spectating = watch
 	mode = solo_mode
-	_lanes = 1 if mode == "tuning" else LANES
 	_clip_started = true
 	_clip_source = ""
 	_notes.clear()
@@ -113,13 +103,6 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES, w
 		_clip_offset = 0.0
 		_clip_at = LEAD_TIME
 		_clip_started = stream == null
-	if mode == "tuning":
-		# Accordage : la même note à 90 BPM ; la 1re est partie avec le sort, les suivantes tombent sur chaque temps.
-		var beat := 60.0 / Balance.TUNING_BPM
-		for i in range(1, note_count):
-			_notes.append({"lane": 0, "time": beat * i, "judged": false, "hit": false})
-		t = beat * (note_count - 1)
-		note_count = 0
 	for i in note_count:
 		var lane := randi_range(0, LANES - 1)
 		if lane == last_lane:
@@ -130,7 +113,7 @@ func start(solo_mode: String = "foudre", note_count: int = Balance.SOLO_NOTES, w
 	_end_t = t + 0.5
 	_t = 0.0
 	_hits = 0
-	_feedback = "EN RYTHME !" if mode == "tuning" else "PRÉPARE-TOI !"
+	_feedback = "PRÉPARE-TOI !"
 	_feedback_color = Color(1.0, 0.85, 0.4)
 	_feedback_t = 1.2
 	_active = true
@@ -185,7 +168,7 @@ func _all_judged() -> bool:
 func _input(event: InputEvent) -> void:
 	if not _active or spectating:
 		return
-	for lane in _lanes:
+	for lane in LANES:
 		if event.is_action_pressed("solo_lane_%d" % lane):
 			_press(lane)
 			get_viewport().set_input_as_handled()
@@ -206,15 +189,11 @@ func _press(lane: int) -> void:
 			best_err = err
 			best = n
 			best_i = i
-	var perfect := best_err <= (TUNING_WINDOW_PERFECT if mode == "tuning" else WINDOW_PERFECT)
+	var perfect := best_err <= WINDOW_PERFECT
 	if mode in SHARED:
 		Net.send_minigame("press", {"lane": lane, "note": best_i, "perfect": perfect})
 	if best.is_empty():
 		Sfx.play("dud", -14.0)
-		if mode == "tuning":
-			# Accordage : un appui à contretemps est une fausse note.
-			_set_feedback("CONTRETEMPS", Color(1.0, 0.35, 0.3))
-			_finish()
 		return
 	best["judged"] = true
 	best["hit"] = true
@@ -226,12 +205,10 @@ func _press(lane: int) -> void:
 		_set_feedback("PARFAIT !", Color(1.0, 0.9, 0.3))
 	else:
 		_set_feedback("BIEN", Color(0.6, 0.95, 0.6))
-	if mode == "tuning" and _all_judged():
-		_finish() # dernière note de l'accordage : la recharge démarre tout de suite
 
 
 func _window_good() -> float:
-	return TUNING_WINDOW_GOOD if mode == "tuning" else WINDOW_GOOD
+	return WINDOW_GOOD
 
 
 func _set_feedback(text: String, color: Color) -> void:
@@ -297,33 +274,32 @@ func _draw() -> void:
 	var font := UiStyle.serif()
 	var vp := get_viewport_rect().size
 	# Panneau sur la droite de l'écran : l'action reste visible (le jeu n'est pas en pause).
-	var size := Vector2(TUNING_PANEL_W, PANEL_SIZE.y) if mode == "tuning" else PANEL_SIZE
+	var size := PANEL_SIZE
 	var origin := Vector2(vp.x - size.x - 40.0, (vp.y - size.y) * 0.5)
 	var panel := Rect2(origin, size)
 	draw_rect(panel, Color(0.05, 0.03, 0.04, 0.88))
 	draw_rect(panel, UiStyle.BORDER, false, 3.0)
-	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "tuning": "ACCORDAGE", "epreuve": "L'ÉPREUVE DE BACK JLACK", "duel": "DUEL : LE MINOTAURE"}
-	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "tuning": "90 BPM", "epreuve": "80 % requis", "duel": "80 % requis"}
-	var first := 1 if mode == "tuning" else 0 # la 1re note de l'accordage est partie avec le sort
+	var titles := {"endiable": "SOLO ENDIABLÉ", "ballade": "BALLADE RÉPARATRICE", "foudre": "SOLO DE LA FOUDRE", "epreuve": "L'ÉPREUVE DE BACK JLACK", "duel": "DUEL : LE MINOTAURE"}
+	var tags := {"endiable": "TRANSE", "ballade": "SOINS", "foudre": "INVINCIBLE", "epreuve": "80 % requis", "duel": "80 % requis"}
 	var title := str(titles.get(mode, "SOLO"))
 	draw_string(font, origin + Vector2(0, 42), title, HORIZONTAL_ALIGNMENT_CENTER, size.x, 30, Color(1.0, 0.8, 0.4))
-	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits + first, _notes.size() + first, str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
+	draw_string(font, origin + Vector2(0, 70), "%d / %d notes  •  %s" % [_hits, _notes.size(), str(tags.get(mode, ""))], HORIZONTAL_ALIGNMENT_CENTER, size.x, 18, Color(1.0, 0.85, 0.45))
 
 	var lane_w := 76.0
-	var lanes_x := origin.x + (size.x - lane_w * _lanes) * 0.5
+	var lanes_x := origin.x + (size.x - lane_w * LANES) * 0.5
 	var top := origin.y + 90.0
 	var hit_y := origin.y + size.y - 90.0
-	var speed := TUNING_NOTE_SPEED if mode == "tuning" else NOTE_SPEED
-	for i in _lanes:
+	var speed := NOTE_SPEED
+	for i in LANES:
 		var x := lanes_x + i * lane_w
-		var c: Color = TUNING_COLOR if mode == "tuning" else LANE_COLORS[i]
+		var c: Color = LANE_COLORS[i]
 		var flash := float(_lane_flash[i])
 		draw_rect(Rect2(x + 4, top, lane_w - 8, hit_y - top + 30), Color(c.r, c.g, c.b, 0.06 + flash * 0.25))
 		draw_line(Vector2(x + lane_w * 0.5, top), Vector2(x + lane_w * 0.5, hit_y + 30), Color(0.8, 0.8, 0.8, 0.25), 2.0)
 		# Cible.
 		draw_arc(Vector2(x + lane_w * 0.5, hit_y), 26, 0, TAU, 32, c.lightened(flash * 0.5), 4.0)
 		draw_string(font, Vector2(x, hit_y + 66), Controls.key_label("solo_lane_%d" % i), HORIZONTAL_ALIGNMENT_CENTER, lane_w, 30, UiStyle.BONE)
-	draw_line(Vector2(lanes_x, hit_y), Vector2(lanes_x + lane_w * _lanes, hit_y), Color(1, 1, 1, 0.3), 2.0)
+	draw_line(Vector2(lanes_x, hit_y), Vector2(lanes_x + lane_w * LANES, hit_y), Color(1, 1, 1, 0.3), 2.0)
 	# Notes.
 	for n in _notes:
 		if n["judged"] and n["hit"]:
@@ -332,7 +308,7 @@ func _draw() -> void:
 		if y < top - 20 or y > hit_y + 40:
 			continue
 		var lane := int(n["lane"])
-		var c: Color = TUNING_COLOR if mode == "tuning" else LANE_COLORS[lane]
+		var c: Color = LANE_COLORS[lane]
 		if n["judged"]:
 			c = Color(0.3, 0.3, 0.3)
 		var center := Vector2(lanes_x + lane * lane_w + lane_w * 0.5, y)
@@ -341,7 +317,7 @@ func _draw() -> void:
 	if _feedback_t > 0.0:
 		var a := clampf(_feedback_t / 0.3, 0.0, 1.0)
 		draw_string(font, Vector2(origin.x, origin.y + size.y * 0.45), _feedback, HORIZONTAL_ALIGNMENT_CENTER,
-			size.x, 24 if mode == "tuning" else 40, Color(_feedback_color.r, _feedback_color.g, _feedback_color.b, a))
+			size.x, 40, Color(_feedback_color.r, _feedback_color.g, _feedback_color.b, a))
 	if spectating:
 		# Sous le panneau : qui joue (on le regarde en direct).
 		draw_circle(origin + Vector2(22, size.y + 26), 7, Color(1.0, 0.2, 0.15, 0.6 + 0.4 * absf(sin(_t * 4.0))))

@@ -24,7 +24,7 @@ const XP_TABLE := [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
 	85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000]
 
 # --- Compétences -----------------------------------------------------------
-## Sorts sans mini-jeu (Riff électrique, Onde de choc, talents) : 8 chances sur 10 de toucher. Accordage, Solo de
+## Sorts sans mini-jeu (Riff électrique, Accordage, Onde de choc, talents) : 8 chances sur 10 de toucher. Solo de
 ## la Foudre et les solos des talents (mini-jeux) touchent toujours, comme le coup de guitare.
 const SPELL_HIT_CHANCE := 0.8
 ## Coup de guitare : touche toujours (pas de jet d'attaque), 1d6 + FOR, 20 % plus rapide qu'avant (0,65 s → 0,54 s).
@@ -34,17 +34,14 @@ const MELEE_DICE := 6
 const MELEE_RANGE := 1.9
 const MELEE_KNOCKBACK := 2.5
 
-# Accordage de cordes (touche 1) : mini-jeu (celui de l'ancien Riff électrique, 6 oct. 2026). Une seule note, à 90 BPM :
-# la 1re part en lançant le sort, puis chaque note réussie rejoue le riff et l'arc électrique rebondit sur l'ennemi
-# suivant (une note par cible, 5 cibles). Une fausse note arrête l'accordage et triple la recharge.
+# Accordage de cordes (touche 1) : arc électrique qui rebondit d'un coup sur 5 ennemis, avec le son de l'ancien Riff
+# électrique (sans mini-jeu depuis le 6 oct. 2026).
 const TUNING_COST := 12.0
 const TUNING_COOLDOWN := 10.0
-const TUNING_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis » : 5 notes
+const TUNING_MAX_TARGETS := 5 # « arc électrique qui touche jusqu'à 5 ennemis »
 const TUNING_FIRST_RANGE := 11.0
 const TUNING_JUMP_RANGE := 6.0
 const TUNING_FALLOFF := 0.12 # -12 % de dégâts à chaque rebond
-const TUNING_BPM := 90.0
-const TUNING_FAIL_COOLDOWN_MULT := 3.0
 const ZAP_VOLUME_DB := -8.0 # volume « moyen » demandé pour le son d'arc électrique
 
 ## Portail bleu de retour à la taverne (touche T) : durée d'incantation (s).

@@ -45,7 +45,7 @@ static func play(level: Node, caster: Node3D, kind: String, data: Dictionary, re
 			var pts: PackedVector3Array = data.get("points", PackedVector3Array())
 			for i in pts.size() - 1:
 				ArcBolt.spawn(level, pts[i], pts[i + 1])
-			var note := int(data.get("stack", 1)) # n° de la note du mini-jeu (1 à 6)
+			var note := int(data.get("stack", 1))
 			# Volume réduit de 70 % (×0,3 ≈ -10,5 dB) : le riff couvrait tout le reste.
 			_sound(level, "riff", -13.5 + note * 0.2, _first(pts), remote, 0.0)
 		"riff":

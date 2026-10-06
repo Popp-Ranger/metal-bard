@@ -26,8 +26,7 @@ var _regen_tick := 0.0
 var facing := Vector3(0, 0, 1)
 var aim_point := Vector3.ZERO
 var cooldowns := {"attack": 0.0, "dash": 0.0, "tuning": 0.0, "riff": 0.0, "wave": 0.0, "solo": 0.0, "potion": 0.0}
-## Accordage de cordes en cours (mini-jeu) et ennemis déjà frappés, dans l'ordre.
-var casting_tuning := false
+## Ennemis touchés par le dernier Accordage de cordes, dans l'ordre des rebonds.
 var _tuning_chain: Array[Enemy] = []
 var radius := 0.35
 ## Peut-on jouer ici ? Non dans la taverne hors du sous-sol : ni sorts ni coups de guitare,
@@ -81,7 +80,6 @@ func _ready() -> void:
 	halo.shadow_enabled = false # ombres courtes : seule la lumière du dessus en projette
 	add_child(halo)
 	Events.solo_finished.connect(_on_solo_finished)
-	Events.solo_note_hit.connect(_on_solo_note_hit)
 	_update_zone()
 
 
@@ -413,7 +411,7 @@ func _cooldown(skill: String, base: float) -> void:
 
 
 func _ready_skill(skill: String) -> bool:
-	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not casting_tuning and not leaping and not captive and not resting \
+	return float(cooldowns.get(skill, 0.0)) <= 0.0 and not casting_solo and not leaping and not captive and not resting \
 		and not planted and not dashing and not talents_caster.blocks_actions()
 
 
@@ -474,11 +472,10 @@ func melee() -> void:
 	Sfx.play("thud" if hit_any else "swoosh", -4.0 if hit_any else -10.0)
 
 
-## Accordage de cordes (touche 1) : mini-jeu (celui de l'ancien Riff électrique, avec son son). La 1re note part en
-## lançant le sort : un arc électrique frappe l'ennemi visé ; puis la même note revient à 90 BPM : chaque note réussie
-## rejoue le riff et l'arc rebondit sur l'ennemi suivant (jusqu'à 5 cibles, 6 avec Distorsion ; s'il ne reste personne
-## d'autre, il refrappe le même), -12 % de dégâts à chaque rebond. Les notes touchent toujours.
-## Une seule fausse note (ou un appui à contretemps) arrête l'accordage et triple la recharge.
+## Accordage de cordes (touche 1) : un arc électrique frappe l'ennemi visé (11 m) et rebondit d'un coup sur les suivants
+## (6 m d'un ennemi à l'autre), jusqu'à 5 cibles (6 avec Distorsion), -12 % de dégâts à chaque rebond, avec le son
+## riff electrique.wav (celui de l'ancien Riff électrique). Sans mini-jeu (retiré le 6 oct. 2026) : chaque cible est
+## touchée 8 fois sur 10, comme les autres sorts.
 func cast_tuning() -> void:
 	if not _ready_skill("tuning") or not can_cast():
 		return
@@ -489,78 +486,36 @@ func cast_tuning() -> void:
 	if not GameState.spend_mana(Balance.TUNING_COST):
 		_no_mana()
 		return
-	casting_tuning = true
+	_cooldown("tuning", Balance.TUNING_COOLDOWN)
 	_tuning_chain.clear()
-	_tuning_strike(target, 1)
-	Events.solo_requested.emit("tuning", tuning_notes())
+	while target != null and _tuning_chain.size() < tuning_targets():
+		_tuning_chain.append(target)
+		target = _tuning_next()
+	var points := PackedVector3Array([global_position + Vector3(0, 1.1, 0) + facing * 0.4])
+	for e in _tuning_chain:
+		points.append(e.global_position + Vector3(0, 0.9, 0))
+	SpellFx.cast(self, "tuning", {"points": points}) # arcs et son du riff, vus et entendus par tous
+	var bonus := 1.15 if GameState.has_talent("distorsion") else 1.0
+	for i in _tuning_chain.size():
+		var e := _tuning_chain[i]
+		var dmg := roundi(Dice.roll(2, 6, GameState.mod("CHA")) * (1.0 - Balance.TUNING_FALLOFF * i) * bonus)
+		if hit_enemy(e, dmg, 0.8, "shock") and GameState.has_talent("tempo_hypnotique") and e.is_alive():
+			e.slow(0.6, 2.0)
 
 
-## Nombre de notes de l'Accordage, la 1re comprise : une par cible (5, 6 avec Distorsion).
-func tuning_notes() -> int:
+## Nombre de cibles de l'Accordage : 5, 6 avec Distorsion.
+func tuning_targets() -> int:
 	return Balance.TUNING_MAX_TARGETS + (1 if GameState.has_talent("distorsion") else 0)
 
 
-## Fin du mini-jeu de l'Accordage : recharge normale si toutes les notes sont passées, triplée à la moindre fausse note.
-func _tuning_finished(hits: int, total: int) -> void:
-	casting_tuning = false
-	var notes := hits + 1 # la 1re note est partie avec le sort
-	if hits >= total:
-		_cooldown("tuning", Balance.TUNING_COOLDOWN)
-		Events.notify("ACCORDAGE PARFAIT ! %d notes" % notes, Events.COLOR_GOLD)
-		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.4, 0), "EN RYTHME ×%d !" % notes, Color(0.6, 0.85, 1.0))
-	else:
-		_cooldown("tuning", Balance.TUNING_COOLDOWN * Balance.TUNING_FAIL_COOLDOWN_MULT)
-		Events.notify("Fausse note ! Accordage interrompu (%d note%s) : recharge triplée." % [notes, "s" if notes > 1 else ""], Events.COLOR_BAD)
-
-
-## Note réussie du mini-jeu : l'arc rebondit sur l'ennemi suivant.
-func _on_solo_note_hit(mode: String, hits: int) -> void:
-	if mode != "tuning" or not casting_tuning:
-		return
-	var next := _tuning_next()
-	if next != null:
-		_tuning_strike(next, hits + 1)
-	else:
-		Sfx.play("riff", -13.5) # plus personne à portée : le riff résonne quand même
-
-
-## Arc de l'Accordage sur `target` (note n° `note`), depuis la guitare ou depuis l'ennemi précédent, avec le son
-## riff electrique.wav : vus et entendus par tous les joueurs.
-func _tuning_strike(target: Enemy, note: int) -> void:
-	var last: Enemy = _tuning_chain[-1] if not _tuning_chain.is_empty() else null
-	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
-	if last != null and is_instance_valid(last) and last != target:
-		from = last.global_position + Vector3(0, 0.9, 0)
-	_tuning_chain.append(target)
-	SpellFx.cast(self, "tuning", {"points": PackedVector3Array([from, target.global_position + Vector3(0, 0.9, 0)]), "stack": note})
-	var bonus := 1.15 if GameState.has_talent("distorsion") else 1.0
-	var falloff := maxf(0.4, 1.0 - Balance.TUNING_FALLOFF * (note - 1))
-	var dmg := roundi(Dice.roll(2, 6, GameState.mod("CHA")) * falloff * bonus)
-	hit_enemy(target, dmg, 0.8, "shock", global_position, true)
-	if GameState.has_talent("tempo_hypnotique") and target.is_alive():
-		target.slow(0.6, 2.0)
-
-
-## Ennemi suivant de l'Accordage : le plus proche du précédent (à 6 m au plus) qui n'a pas encore été touché, sinon le
-## précédent lui-même (ou, s'il est tombé, l'ennemi le plus proche).
+## Rebond suivant de l'Accordage : l'ennemi le plus proche du précédent (à 6 m au plus) pas encore touché, sinon null.
 func _tuning_next() -> Enemy:
-	var last: Enemy = _tuning_chain[-1] if not _tuning_chain.is_empty() else null
-	var origin := last.global_position if last != null and is_instance_valid(last) else global_position
+	var last: Enemy = _tuning_chain[-1]
 	var best: Enemy = null
 	var best_d := Balance.TUNING_JUMP_RANGE
 	for e in enemies():
-		var d := _flat_dist(e.global_position, origin)
+		var d := _flat_dist(e.global_position, last.global_position)
 		if d < best_d and not _tuning_chain.has(e):
-			best_d = d
-			best = e
-	if best != null:
-		return best
-	if last != null and is_instance_valid(last) and last.is_alive():
-		return last
-	best_d = Balance.TUNING_FIRST_RANGE
-	for e in enemies():
-		var d := _flat_dist(e.global_position, origin)
-		if d < best_d:
 			best_d = d
 			best = e
 	return best
@@ -666,9 +621,6 @@ func cast_solo() -> void:
 
 
 func _on_solo_finished(mode: String, hits: int, total: int) -> void:
-	if mode == "tuning" and casting_tuning:
-		_tuning_finished(hits, total)
-		return
 	if mode != "foudre" or not casting_solo:
 		return
 	casting_solo = false

@@ -28,7 +28,7 @@ signal toast(text: String, color: Color)
 signal interaction_prompt(text: String)
 signal dialogue_requested(npc_id: String)
 signal dialogue_closed
-signal solo_requested(mode: String, notes: int) # mode : "foudre", "endiable", "ballade", "tuning", "epreuve" ou "duel"
+signal solo_requested(mode: String, notes: int) # mode : "foudre", "endiable", "ballade", "epreuve" ou "duel"
 signal solo_finished(mode: String, hits: int, total: int)
 signal solo_note_hit(mode: String, hits: int)
 signal talents_changed

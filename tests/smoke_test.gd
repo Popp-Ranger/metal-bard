@@ -268,7 +268,7 @@ func _test_quest_flow() -> void:
 			hp_after += maxi(e.hp, 0)
 		if hp_after < hp_before:
 			break
-	_check(hp_after < hp_before and not hero.casting_tuning and not (dungeon as Level).hud.solo._active,
+	_check(hp_after < hp_before and not (dungeon as Level).hud.solo._active,
 		"Riff électrique : un éclair sur l'ennemi visé, sans mini-jeu")
 	# Sans recharge : deux clics de suite, deux éclairs (seuls les dB le limitent).
 	GameState.mana = GameState.max_mana()
@@ -329,47 +329,34 @@ func _test_quest_flow() -> void:
 			sure_hits += 1
 	_check(is_equal_approx(GameState.spell_hit_chance(), 0.8) and spell_hits > 210 and spell_hits < 270 and sure_hits == 300,
 		"sorts : 80 %% de chances de toucher (%d / 300), mini-jeux toujours (%d / 300)" % [spell_hits, sure_hits])
-	# Accordage de cordes (touche 1) : le mini-jeu de l'ancien Riff électrique, la même note à 90 BPM ; l'arc rebondit
-	# d'un ennemi au suivant (une note par cible).
+	# Accordage de cordes (touche 1) : sans mini-jeu, l'arc rebondit d'un coup d'un ennemi au suivant (5 au plus).
 	var solo_game := (dungeon as Level).hud.solo
 	for i in targets.size():
 		targets[i].hp = 9999
 		targets[i].global_position = hero.global_position + Vector3(2.0 + i * 1.5, 0, 0)
 		targets[i].exit_trance()
 	hero.aim_point = targets[0].global_position
-	GameState.mana = GameState.max_mana()
 	GameState.hp = GameState.max_hp() # les squelettes réveillés ne doivent pas tuer le héros pendant le test
-	hero.cooldowns["tuning"] = 0.0
-	hero.cast_tuning()
-	await _frames(1)
-	var beat := 60.0 / Balance.TUNING_BPM
-	var regular := solo_game._notes.size() == Balance.TUNING_MAX_TARGETS - 1
-	for i in solo_game._notes.size():
-		regular = regular and absf(float(solo_game._notes[i]["time"]) - beat * (i + 1)) < 0.001 and int(solo_game._notes[i]["lane"]) == 0
-	_check(hero.casting_tuning and solo_game._active and solo_game.mode == "tuning" and solo_game._lanes == 1 and regular,
-		"Accordage de cordes : mini-jeu d'une seule note, 5 notes à 90 BPM (la 1re part avec le sort)")
-	for i in solo_game._notes.size():
-		var wait := float(solo_game._notes[i]["time"]) - solo_game._t
-		if wait > 0.0:
-			await get_tree().create_timer(wait).timeout
-		GameState.hp = GameState.max_hp()
-		solo_game._press(0)
-	await _frames(2)
+	var tuned := 0
+	for attempt in 5:
+		for e in targets:
+			e.hp = 9999
+		hero.cooldowns["tuning"] = 0.0
+		GameState.mana = GameState.max_mana()
+		hero.cast_tuning()
+		tuned = 0
+		for e in targets:
+			if e.hp < 9999:
+				tuned += 1
+		if tuned >= 2:
+			break
 	var chained := {}
 	for e: Enemy in hero._tuning_chain:
 		chained[e] = true
-	_check(not hero.casting_tuning and not solo_game._active and hero._tuning_chain.size() == Balance.TUNING_MAX_TARGETS and chained.size() >= 3,
-		"accordage parfait : 5 notes, l'arc rebondit sur les ennemis suivants (%d touchés ; chaîne %d, notes %d / %d, t %.3f, en cours %s)" % [chained.size(), hero._tuning_chain.size(), solo_game._hits, solo_game._notes.size(), solo_game._t, hero.casting_tuning])
+	_check(not solo_game._active and chained.size() == hero._tuning_chain.size() and chained.size() >= targets.size() and tuned >= 2,
+		"Accordage de cordes : sans mini-jeu, l'arc rebondit d'un coup sur les ennemis suivants (%d dans la chaîne, %d touchés)" % [chained.size(), tuned])
 	_check(is_equal_approx(Balance.TUNING_COOLDOWN, 10.0) and absf(float(hero.cooldowns["tuning"]) - Balance.TUNING_COOLDOWN * GameState.cooldown_multiplier()) < 0.05,
 		"Accordage de cordes : recharge de 10 s")
-	hero.cooldowns["tuning"] = 0.0
-	GameState.mana = GameState.max_mana()
-	hero.cast_tuning()
-	await _frames(1)
-	solo_game._press(0) # à contretemps : la 2e note n'arrive qu'au bout de 0,667 s
-	await _frames(1)
-	_check(not hero.casting_tuning and absf(float(hero.cooldowns["tuning"]) - 3.0 * Balance.TUNING_COOLDOWN * GameState.cooldown_multiplier()) < 0.05,
-		"accordage : une fausse note l'arrête et triple la recharge")
 	# Coup de guitare : il touche à chaque fois (même contre une CA de 99), 1d6 + FOR.
 	var victim := targets[0]
 	victim.armor_class = 99
@@ -1829,7 +1816,7 @@ func _test_chapter_two() -> void:
 	# le morceau est joué en entier : le mini-jeu dure jusqu'à sa fin, la dernière note tombe avant
 	synced = synced and absf(solo._end_t - (SoloMinigame.LEAD_TIME + song.get_length() + 0.5)) < 0.1
 	synced = synced and float(solo._notes[-1]["time"]) < solo._end_t
-	_check(solo._active and solo.mode == "epreuve" and solo._lanes == 4 and lanes_used.size() == 4 and synced
+	_check(solo._active and solo.mode == "epreuve" and SoloMinigame.LANES == 4 and lanes_used.size() == 4 and synced
 		and solo._clip_source == "res://audio/riffs/chant_de_fer.mp3" and hero.planted,
 		"épreuve de Back Jlack : le Chant de fer en entier, %d notes calées sur le morceau, touches 1 2 3 4" % solo._notes.size())
 	solo._active = false
