@@ -293,6 +293,15 @@ func _test_quest_flow() -> void:
 		and not hero._riff_held, "clic droit maintenu : le sort repart toutes les 0,30 s, et s'arrête au relâchement")
 	_check(is_equal_approx(Balance.RIFF_RANGE, 6.0) and is_equal_approx(Balance.RIFF_DAMAGE, 0.67) and hero._riff_target() == targets[0]
 		and Balance.RIFF_RANGE < Balance.TUNING_FIRST_RANGE, "sorts du clic droit : portée 6 m (divisée par 2), dégâts réduits de 33 %")
+	# Barre de sorts : fond noir derrière les cases, et rien de l'interface ne passe par-dessus les fenêtres (pas de z_index).
+	var hud_ui := (dungeon as Level).hud
+	var raised: Array[String] = []
+	for n in hud_ui.find_children("*", "Control", true, false):
+		if (n as Control).z_index != 0 and n != hud_ui.inventory.tip:
+			raised.append(str(n.name))
+	var backing := hud_ui.skill_backing
+	_check(raised.is_empty() and backing != null and backing.color == Color.BLACK and backing.get_parent() == hud_ui.skill_bar,
+		"barre de sorts : fond noir derrière les cases ; elle ne passe plus par-dessus les fenêtres (%s)" % ", ".join(raised))
 	_check(Controls.key_label("spell_riff") == "Clic D" and Controls.key_label("spell_tuning") == "1",
 		"touches échangées : Riff électrique au clic droit, Accordage de cordes sur la touche 1")
 	var banging := 0

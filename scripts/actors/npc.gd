@@ -107,9 +107,9 @@ func _ready() -> void:
 	_labels = Node3D.new()
 	add_child(_labels)
 	var top := _top_height()
-	var name_label := Visuals.label(_labels, get_display_name(), Vector3(0, top + 0.25, 0), DialogueDB.npc_color(npc_id), NAME_SIZE)
+	var name_label := Visuals.label(_labels, get_display_name(), Vector3(0, top + 0.3, 0), DialogueDB.npc_color(npc_id), NAME_SIZE)
 	name_label.modulate.a = 0.85
-	name_label.set_meta("dy", 0.25)
+	name_label.set_meta("dy", 0.3) # au-dessus du titre, sans le chevaucher
 	var title := title_override
 	if title.is_empty():
 		title = str(DialogueDB.NPCS.get(npc_id, {}).get("title", ""))
@@ -191,7 +191,7 @@ func sit(value: bool, seat_height: float = 0.49) -> void:
 		for i in _labels.get_child_count():
 			var l := _labels.get_child(i) as Label3D
 			if l != null:
-				l.position.y = _top_height() + float(l.get_meta("dy", 0.25))
+				l.position.y = _top_height() + float(l.get_meta("dy", 0.3))
 
 
 ## Petite bulle de texte au-dessus de la tête (vie de la taverne).

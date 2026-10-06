@@ -46,6 +46,8 @@ var _boss_name: Label
 var cast_box: VBoxContainer
 ## Barre de sorts (dans son cadre) et ligne d'aide : masquées pendant les dialogues.
 var skill_bar: TextureRect
+## Fond noir derrière les cases de sorts.
+var skill_backing: ColorRect
 var _help: Label
 var _cast_bar: ProgressBar
 var _cast_label: Label
@@ -219,23 +221,25 @@ func _build_skills() -> void:
 	var width := SKILLS.size() * SLOT + (SKILLS.size() - 1) * 6.0
 	bar.position = BAR_WINDOW_CENTER - Vector2(width, SLOT) * 0.5
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Fond noir derrière les cases : le décor ne se voit plus entre elles.
+	skill_backing = ColorRect.new()
+	skill_backing.color = Color.BLACK
+	skill_backing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	skill_backing.position = bar.position - Vector2(8, 8)
+	skill_backing.size = Vector2(width, SLOT) + Vector2(16, 16)
+	frame.add_child(skill_backing)
 	frame.add_child(bar)
 	for s: Dictionary in SKILLS:
 		var panel := Panel.new()
 		panel.custom_minimum_size = Vector2(SLOT, SLOT)
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var c: Color = s["color"]
-		var bg := UiStyle.box(Color(0.06, 0.045, 0.045, 0.95), c.darkened(0.45), 1, 2)
+		var bg := UiStyle.box(Color(0.06, 0.045, 0.045, 1.0), c.darkened(0.45), 1, 2)
 		bg.shadow_size = 0
 		panel.add_theme_stylebox_override("panel", bg)
 		bar.add_child(panel)
-		var rim := TextureRect.new() # cadre de fer de la case, par-dessus
-		rim.texture = load("res://assets/ui/case.png")
-		rim.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		rim.size = Vector2(SLOT, SLOT)
-		rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		rim.z_index = 1
-		panel.add_child(rim)
+		# Empilement par l'ordre des enfants (pas de z_index : il ferait passer la barre par-dessus les fenêtres
+		# ouvertes, talents, dialogues...) : nom du sort, voile de recharge, cadre de fer, puis touche et coût.
 		var name_label := UiStyle.label(str(s["name"]), 11, c)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -243,24 +247,28 @@ func _build_skills() -> void:
 		name_label.offset_top = 12
 		name_label.offset_bottom = -12
 		panel.add_child(name_label)
-		var key := UiStyle.label(Controls.key_label(str(s["action"])), 12, UiStyle.BONE)
-		key.position = Vector2(8, 4)
-		key.z_index = 2
-		panel.add_child(key)
-		var extra := UiStyle.label("", 11, Color(0.8, 0.6, 1.0))
-		extra.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		extra.position = Vector2(8, SLOT - 21) # coût (ou nombre de potions) en bas à droite
-		extra.size = Vector2(SLOT - 16, 16)
-		extra.z_index = 2
-		var cost: float = s["cost"]
-		if cost > 0.0:
-			extra.text = "%d dB" % roundi(cost)
-		panel.add_child(extra)
 		var overlay := ColorRect.new()
 		overlay.color = Color(0, 0, 0, 0.65)
 		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		overlay.size = Vector2(SLOT, 0)
 		panel.add_child(overlay)
+		var rim := TextureRect.new() # cadre de fer de la case, par-dessus
+		rim.texture = load("res://assets/ui/case.png")
+		rim.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rim.size = Vector2(SLOT, SLOT)
+		rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(rim)
+		var key := UiStyle.label(Controls.key_label(str(s["action"])), 12, UiStyle.BONE)
+		key.position = Vector2(8, 4)
+		panel.add_child(key)
+		var extra := UiStyle.label("", 11, Color(0.8, 0.6, 1.0))
+		extra.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		extra.position = Vector2(8, SLOT - 21) # coût (ou nombre de potions) en bas à droite
+		extra.size = Vector2(SLOT - 16, 16)
+		var cost: float = s["cost"]
+		if cost > 0.0:
+			extra.text = "%d dB" % roundi(cost)
+		panel.add_child(extra)
 		_slots[s["id"]] = {"overlay": overlay, "panel": panel, "remaining": 0.0, "duration": 1.0, "extra": extra, "cost": cost, "name": name_label}
 	_on_potions(GameState.potions)
 	_refresh_talent_slots()
