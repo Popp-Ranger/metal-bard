@@ -43,8 +43,10 @@ CHARS = {
         "hip.L": (0.08, -0.04, 0.92), "knee.L": (0.12, -0.04, 0.53), "ankle.L": (0.15, 0.03, 0.12),
         "hip.R": (-0.10, -0.04, 0.92), "knee.R": (-0.19, -0.04, 0.53), "ankle.R": (-0.22, 0.03, 0.12)}},
     # Riffald's Twin, héros jouable : RiffaldV1.glb fourni par Ulysse (Humain/Masculin, 5 oct. 2026).
+    # Twin, Back Jlack, troll, Minotaure, gobelin, Gloubah et Plumeau : poids repeints à la main par Ulysse (6 oct. 2026) ;
+    # « retouche » protège son travail (« rig » refuse sans « force »).
     "twin": {"src": r"C:\Users\Ody\OneDrive\Bureau\GODOT\Jeux\Metal Bards\Imagerie\Personnages\3D\Humain\Masculin",
-             "file": "RiffaldV1.glb", "out": "twin", "name": "Twin", "height": 1.84, "tris": 40000, "cape": True, "joints": {
+             "file": "RiffaldV1.glb", "out": "twin", "name": "Twin", "height": 1.84, "tris": 40000, "cape": True, "retouche": True, "joints": {
         "hips": (0.0, 0.0, 0.95), "spine": (0.0, 0.0, 1.06), "chest": (0.0, 0.01, 1.19),
         "neck": (0.0, 0.01, 1.41), "head": (0.0, 0.01, 1.47), "head_top": (0.0, 0.01, 1.84),
         "shoulder.L": (0.27, 0.04, 1.31), "elbow.L": (0.37, 0.04, 1.07), "wrist.L": (0.42, -0.03, 0.92),
@@ -52,7 +54,7 @@ CHARS = {
         "hip.L": (0.11, 0.0, 0.91), "knee.L": (0.15, 0.0, 0.53), "ankle.L": (0.19, 0.04, 0.15),
         "hip.R": (-0.11, 0.0, 0.91), "knee.R": (-0.15, 0.0, 0.53), "ankle.R": (-0.19, 0.04, 0.15)}},
     # Back Jlack, le sage du rock (Temple du Dragon, cinématique de la légende) : PNJ/Sage (5 oct. 2026).
-    "sage": {"dir": "Sage", "file": "Back Jlack.glb", "name": "Sage", "height": 1.65, "joints": {
+    "sage": {"dir": "Sage", "file": "Back Jlack.glb", "name": "Sage", "height": 1.65, "retouche": True, "joints": {
         "hips": (0.0, 0.04, 0.72), "spine": (0.0, 0.04, 0.88), "chest": (0.0, 0.05, 1.07),
         "neck": (0.0, 0.04, 1.22), "head": (0.0, 0.0, 1.27), "head_top": (0.0, 0.0, 1.65),
         "shoulder.L": (0.32, 0.10, 1.12), "elbow.L": (0.44, 0.06, 0.93), "wrist.L": (0.47, 0.03, 0.75),
@@ -61,7 +63,7 @@ CHARS = {
         "hip.R": (-0.18, 0.04, 0.64), "knee.R": (-0.19, 0.04, 0.42), "ankle.R": (-0.22, 0.06, 0.14)}},
     # Troll des cavernes (boss des grottes, chapitre 3) : Ennemis/Troll (6 oct. 2026). Préparé à 2,2 m ; le jeu
     # l'agrandit à 3,2 m (CharacterSkin.SCALES).
-    "troll": {"dir": os.path.join("Ennemis", "Troll"), "file": "troll3D.glb", "name": "Troll", "height": 2.2, "joints": {
+    "troll": {"dir": os.path.join("Ennemis", "Troll"), "file": "troll3D.glb", "name": "Troll", "height": 2.2, "retouche": True, "joints": {
         "hips": (0.0, 0.05, 1.05), "spine": (0.0, 0.07, 1.29), "chest": (0.0, 0.05, 1.50),
         "neck": (0.0, -0.13, 1.65), "head": (0.0, -0.22, 1.69), "head_top": (0.0, -0.2, 2.2),
         "shoulder.L": (0.48, 0.19, 1.61), "elbow.L": (0.70, 0.13, 1.18), "wrist.L": (0.69, 0.05, 0.91),
@@ -70,7 +72,7 @@ CHARS = {
         "hip.R": (-0.24, 0.05, 0.97), "knee.R": (-0.27, 0.05, 0.54), "ankle.R": (-0.30, 0.13, 0.19)}},
     # Le Minotaure (gardien du Labyrinthe du Destin, chapitre 3) : Ennemis/Minotaure (6 oct. 2026). Préparé à 2,4 m ;
     # le jeu l'agrandit à 3,3 m (CharacterSkin.SCALES).
-    "minotaure": {"dir": os.path.join("Ennemis", "Minotaure"), "file": "minotaure.glb", "name": "Minotaure", "height": 2.4, "joints": {
+    "minotaure": {"dir": os.path.join("Ennemis", "Minotaure"), "file": "minotaure.glb", "name": "Minotaure", "height": 2.4, "retouche": True, "joints": {
         "hips": (0.0, 0.03, 1.08), "spine": (0.0, 0.04, 1.30), "chest": (0.0, 0.03, 1.52),
         "neck": (0.0, -0.06, 1.72), "head": (0.0, -0.14, 1.82), "head_top": (0.0, -0.14, 2.4),
         "shoulder.L": (0.46, 0.13, 1.66), "elbow.L": (0.65, 0.10, 1.26), "wrist.L": (0.67, 0.0, 0.88),
@@ -78,7 +80,7 @@ CHARS = {
         "hip.L": (0.20, 0.03, 1.03), "knee.L": (0.29, 0.03, 0.60), "ankle.L": (0.30, 0.07, 0.17),
         "hip.R": (-0.20, 0.03, 1.03), "knee.R": (-0.29, 0.03, 0.60), "ankle.R": (-0.30, 0.07, 0.17)}},
     # Gobelin des montagnes (chapitre 3) : Ennemis/Gobelin (5 oct. 2026).
-    "gobelin": {"dir": os.path.join("Ennemis", "Gobelin"), "file": "gobelin3D.glb", "name": "Gobelin", "height": 1.15, "joints": {
+    "gobelin": {"dir": os.path.join("Ennemis", "Gobelin"), "file": "gobelin3D.glb", "name": "Gobelin", "height": 1.15, "retouche": True, "joints": {
         "hips": (0.0, 0.03, 0.505), "spine": (0.0, 0.04, 0.60), "chest": (0.0, 0.04, 0.70),
         "neck": (0.0, -0.01, 0.835), "head": (0.0, -0.03, 0.856), "head_top": (0.0, -0.02, 1.15),
         "shoulder.L": (0.17, 0.07, 0.78), "elbow.L": (0.27, 0.08, 0.63), "wrist.L": (0.32, 0.04, 0.52),
@@ -87,7 +89,7 @@ CHARS = {
         "hip.R": (-0.10, 0.03, 0.45), "knee.R": (-0.11, -0.01, 0.28), "ankle.R": (-0.13, 0.03, 0.10)}},
     # Gloubah, le Roi Grenouille (boss des Catacombes) : crapaud debout couronné (Ennemis/Gloubah, 5 oct. 2026).
     # Préparé à la taille d'un héros ; le jeu l'agrandit de 50 % (CharacterSkin.SCALES).
-    "gloubah": {"dir": os.path.join("Ennemis", "Gloubah"), "name": "Gloubah", "height": 1.84, "joints": {
+    "gloubah": {"dir": os.path.join("Ennemis", "Gloubah"), "name": "Gloubah", "height": 1.84, "retouche": True, "joints": {
         "hips": (0.0, 0.08, 0.68), "spine": (0.0, 0.08, 0.85), "chest": (0.0, 0.10, 1.05),
         "neck": (0.0, 0.08, 1.30), "head": (0.0, 0.05, 1.36), "head_top": (0.0, 0.03, 1.84),
         "shoulder.L": (0.36, 0.11, 1.19), "elbow.L": (0.50, 0.07, 0.88), "wrist.L": (0.53, 0.02, 0.67),
@@ -95,7 +97,7 @@ CHARS = {
         "hip.L": (0.16, 0.10, 0.63), "knee.L": (0.23, 0.15, 0.40), "ankle.L": (0.18, 0.11, 0.13),
         "hip.R": (-0.16, 0.10, 0.63), "knee.R": (-0.23, 0.15, 0.40), "ankle.R": (-0.18, 0.11, 0.13)}},
     # Plumeau, le bébé hibours de Gérald (Ours Hiboux, 5 oct. 2026).
-    "hibours": {"dir": "Ours Hiboux", "name": "Hibours", "height": 1.2, "joints": {
+    "hibours": {"dir": "Ours Hiboux", "name": "Hibours", "height": 1.2, "retouche": True, "joints": {
         "hips": (0.0, 0.03, 0.40), "spine": (0.0, 0.03, 0.55), "chest": (0.0, 0.04, 0.72),
         "neck": (0.0, 0.05, 0.88), "head": (0.0, 0.04, 0.92), "head_top": (0.0, 0.04, 1.20),
         "shoulder.L": (0.15, 0.08, 0.86), "elbow.L": (0.29, 0.03, 0.84), "wrist.L": (0.37, -0.02, 0.84),
