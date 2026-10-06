@@ -1058,8 +1058,10 @@ func _test_characters() -> void:
 		and not creation._name_edit.editable and int(creation.appearance["hair_color"]) == 5 and int(creation.appearance["beard"]) == 3,
 		"création : Riffald prédéfini proposé par défaut (roux flamboyant, rasé, nom verrouillé)")
 	var rig: HeroModel = creation._model
-	_check(rig._skin != null and rig._skin.skeleton != null and rig._skin.skeleton.get_bone_count() == 17,
-		"Riffald : modèle Blender à squelette (17 os)")
+	_check(rig._skin != null and rig._skin.skeleton != null and rig._skin.skeleton.get_bone_count() == 17 + 12,
+		"Riffald : modèle Blender à squelette (17 os, + 12 de cape)")
+	_check(rig._skin.cape != null and rig._skin.cape.setting_count == 3 and rig._skin.cape.get_child_count() >= 7,
+		"Riffald : cape en tissu (3 chaînes d'os simulées, collisions sur le bassin, le dos et les jambes)")
 	_check(rig._neck_scale < 1.0 and rig._strings_mat != null and rig._guitar.find_children("*", "MeshInstance3D", true, false).size() >= 1,
 		"guitare des héros importée de Blender (cordes lumineuses)")
 	var sk := rig._skin.skeleton

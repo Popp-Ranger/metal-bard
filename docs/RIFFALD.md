@@ -88,3 +88,13 @@ cheveux « Roux flamboyant ».
   `art/riffald/textures/riffald_v3_couleur.png` ; les matériaux gardent leurs noms `MB_*` et lisent l'atlas
   en couleur de base (JPEG dans le glb, ~6 Mo). Les ombres étant peintes, un rendu mat ou toon suffit dans Godot.
 - Aperçu : `compare.py`, `shading("TEXTURE", "FLAT")` montre l'atlas seul.
+
+## Cape en tissu (6 oct. 2026)
+
+- `art/pnj/cape_bones.py -- riffald` ajoute au squelette 12 os de cape (3 chaînes de 4 : `cape_R_*`, `cape_C_*`,
+  `cape_L_*`, enfants du buste) et lie à ces os les vertex de la cape (matériau `MB_cape`) et des sangles cousues dessus
+  dans le dos. Les niveaux des os sont déduits de la forme de la cape.
+- Dans le jeu, `RiggedSkin` les fait simuler comme du tissu (`SpringBoneSimulator3D`, collisions sur le bassin, le dos
+  et les jambes) ; les animations Mixamo n'animent que les 17 os d'origine.
+- **Après une reconstruction par `build_riffald.py`, relancer `cape_bones.py -- riffald`** (le modèle reconstruit n'a
+  pas les os de cape), puis l'export.
