@@ -53,6 +53,7 @@ const TOWN_PORTAL_CAST := 3.0
 # Riff électrique (clic droit) : un éclair sur l'ennemi visé, sans mini-jeu ni recharge : seuls les dB le limitent (FIREBALL
 # avec la Xplode, Riff black metal avec la Batguitare).
 const RIFF_COST := 6.0
+const RIFF_REPEAT := 0.3 # clic droit maintenu : un tir toutes les 0,30 s
 const RIFF_RANGE := 12.0 # portée
 
 const WAVE_COST := 20.0

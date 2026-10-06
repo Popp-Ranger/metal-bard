@@ -37,6 +37,9 @@ var spells_allowed := true
 ## en main dès qu'il frappe ou joue un sort.
 const SLING_AFTER := 4.0
 var travel_slung := false
+## Clic droit maintenu : temps avant le prochain Riff électrique (voir _update_riff_hold).
+var _riff_held := false
+var _riff_hold := 0.0
 var _travel_time := 0.0
 var _blocked_notice := 0.0
 
@@ -177,10 +180,24 @@ func _physics_process(delta: float) -> void:
 	_update_travel(delta, move.length() > 0.1 and not dashing)
 	model.tired = GameState.hp <= GameState.max_hp() * 0.3 # posture épuisée (modèle animé)
 
+	_update_riff_hold(delta)
 	# Maj + clic : frapper sur place (sans bouger), comme dans Diablo.
 	if Input.is_action_pressed("attack") and Input.is_key_pressed(KEY_SHIFT) and not (DialogueBox.active or InventoryWindow.active):
 		melee()
 	_update_interaction()
+
+
+## Clic droit maintenu : le Riff électrique (FIREBALL, Riff black metal) repart toutes les 0,30 s.
+func _update_riff_hold(delta: float) -> void:
+	if not _riff_held:
+		return
+	if not Input.is_action_pressed("spell_riff") or dead or captive or DialogueBox.active or InventoryWindow.active:
+		_riff_held = false
+		return
+	_riff_hold -= delta
+	if _riff_hold <= 0.0:
+		_riff_hold += Balance.RIFF_REPEAT
+		cast_riff(true)
 
 
 ## Marche continue : au-delà de SLING_AFTER secondes, la guitare passe dans le dos (le compteur repart à chaque arrêt).
@@ -357,6 +374,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		cast_tuning()
 	elif event.is_action_pressed("spell_riff"):
 		cast_riff()
+		_riff_held = true # maintenu : il repart toutes les 0,30 s (_update_riff_hold)
+		_riff_hold = Balance.RIFF_REPEAT
 	elif event.is_action_pressed("spell_wave"):
 		cast_wave()
 	elif event.is_action_pressed("spell_solo"):
@@ -552,18 +571,23 @@ func _tuning_target() -> Enemy:
 	return _aimed_enemy(Balance.TUNING_FIRST_RANGE)
 
 
-## Riff électrique (clic droit) : un éclair sur l'ennemi visé, sans recharge : autant de clics que de dB (plus de mini-jeu : il est passé à
-## l'Accordage de cordes, qui a pris le son du riff ; l'éclair a pris le grésillement de l'Accordage). Selon la guitare
+## Riff électrique (clic droit) : un éclair sur l'ennemi visé, sans recharge : un éclair par clic, et clic droit maintenu,
+## un éclair toutes les 0,30 s (Balance.RIFF_REPEAT) ; seuls les dB le limitent. Plus de mini-jeu : il est passé à
+## l'Accordage de cordes, qui a pris le son du riff ; l'éclair a pris le grésillement de l'Accordage. Selon la guitare
 ## équipée : Riff black metal (Batguitare, trait brumeux violet) ou FIREBALL (Xplode, boule de feu).
-func cast_riff() -> void:
+## `held` : tir répété du clic maintenu (pas de message à chaque tir s'il n'y a plus de cible ou de dB).
+func cast_riff(held: bool = false) -> void:
 	if not _ready_skill("riff") or not can_cast():
 		return
 	var target := _riff_target()
 	if target == null:
+		if held:
+			return
 		Events.notify("Aucune cible à portée pour le %s" % riff_name(), Events.COLOR_BAD)
 		return
 	if not GameState.spend_mana(Balance.RIFF_COST):
-		_no_mana()
+		if not held:
+			_no_mana()
 		return
 	var from := global_position + Vector3(0, 1.1, 0) + facing * 0.4
 	var to := target.global_position + Vector3(0, 0.9, 0)

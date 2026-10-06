@@ -280,7 +280,7 @@
 ## ✅ v0.1.50 — Minotaure, correctifs du 6 octobre
 - [x] Le Minotaure : modèle 3D d'Ulysse (Ennemis/Minotaure), riggé et animé, hache à double tranchant, guitare et headbang pendant le duel
 - [x] Coopération : seul le joueur qui lance le dialogue joue le mini-jeu de l'histoire (épreuve de Back Jlack, duel du Minotaure : celui qui l'a fait tomber à 5 %) ; les autres le regardent en direct (notes, touches jouées, morceau) ; le résultat vaut pour tout le groupe
-- [x] Accordage de cordes : il prend le mini-jeu et le son du Riff électrique, et passe sur la touche 1 ; le Riff électrique (FIREBALL, Riff black metal) passe au clic droit, sans mini-jeu ni recharge
+- [x] Accordage de cordes : il prend le mini-jeu et le son du Riff électrique, et passe sur la touche 1 ; le Riff électrique (FIREBALL, Riff black metal) passe au clic droit, sans mini-jeu ni recharge (maintenu : un tir toutes les 0,30 s)
 - [x] Réserve de dB réduite de 25 %
 - [x] Xplode : effet lumineux orange sur les cordes
 - [x] Inventaire : le héros au centre de l'écran, de la tête aux pieds avec sa guitare équipée ; cliquer-glisser le fait pivoter

@@ -276,6 +276,21 @@ func _test_quest_flow() -> void:
 	hero.cast_riff()
 	_check(is_zero_approx(float(hero.cooldowns["riff"])) and is_equal_approx(GameState.mana, GameState.max_mana() - 2.0 * Balance.RIFF_COST),
 		"Riff électrique (FIREBALL, Riff black metal) : sans recharge, un éclair par clic")
+	# Clic droit maintenu : un tir toutes les 0,30 s.
+	GameState.mana = GameState.max_mana()
+	Input.action_press("spell_riff")
+	hero._riff_held = true
+	hero._riff_hold = Balance.RIFF_REPEAT
+	hero._update_riff_hold(0.2)
+	var early_mana := GameState.mana
+	hero._update_riff_hold(0.15) # 0,35 s : un tir
+	hero._update_riff_hold(0.3) # 0,65 s : un deuxième
+	var held_mana := GameState.mana
+	Input.action_release("spell_riff")
+	hero._update_riff_hold(1.0)
+	_check(is_equal_approx(Balance.RIFF_REPEAT, 0.3) and is_equal_approx(early_mana, GameState.max_mana())
+		and is_equal_approx(held_mana, GameState.max_mana() - 2.0 * Balance.RIFF_COST) and is_equal_approx(GameState.mana, held_mana)
+		and not hero._riff_held, "clic droit maintenu : le sort repart toutes les 0,30 s, et s'arrête au relâchement")
 	_check(Controls.key_label("spell_riff") == "Clic D" and Controls.key_label("spell_tuning") == "1",
 		"touches échangées : Riff électrique au clic droit, Accordage de cordes sur la touche 1")
 	var banging := 0
