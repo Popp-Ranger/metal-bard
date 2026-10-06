@@ -276,7 +276,7 @@ func _build_skills() -> void:
 	_on_potions(GameState.potions)
 	_refresh_talent_slots()
 	_refresh_riff_slot()
-	var help := UiStyle.label("ZQSD / clic : se déplacer  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : inventaire  •  %s : talents  •  %s : portail  •  Échap : pause" % [
+	var help := UiStyle.label("Clic : se déplacer (maintenu : suivre la souris)  •  Clic sur un ennemi : frapper  •  Maj + clic : frapper sur place  •  Espace : glissade  •  %s / clic : parler  •  %s : fiche  •  %s : inventaire  •  %s : talents  •  %s : portail  •  Échap : pause" % [
 		Controls.key_label("interact"), Controls.key_label("character_sheet"), Controls.key_label("inventory"), Controls.key_label("talents"), Controls.key_label("town_portal")], 13, UiStyle.DIM)
 	help.anchor_left = 0.5
 	help.anchor_right = 0.5

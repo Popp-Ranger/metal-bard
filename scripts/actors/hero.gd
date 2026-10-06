@@ -1,7 +1,7 @@
 class_name Hero
 extends CharacterBody3D
-## Le barde métal (personnage créé par le joueur). Déplacement ZQSD/WASD relatif à la
-## caméra iso, visée à la souris, coup de guitare + 4 sorts de base + talents (touches 4-7)
+## Le barde métal (personnage créé par le joueur). Déplacement à la souris uniquement (clic au sol ; maintenu : il suit la
+## souris), visée à la souris, coup de guitare + 4 sorts de base + talents (touches 4-7)
 ## + potion + interaction.
 
 var camera: IsoCamera
@@ -124,27 +124,21 @@ func _physics_process(delta: float) -> void:
 			if GameState.hp < GameState.max_hp():
 				GameState.heal_hero(1) # Régénération trollesque
 
-	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	# Déplacement à la souris uniquement (plus de touches ZQSD / flèches depuis le 6 oct. 2026).
 	if DialogueBox.active or InventoryWindow.active:
 		# En pleine conversation (le jeu continue) : le héros écoute, sans bouger ni agir.
-		input = Vector2.ZERO
 		_click_mode = ClickMode.NONE
 	if sitting:
-		velocity = Vector3.ZERO
-		if input.length() > 0.1:
-			stand_up()
-		else:
-			_update_interaction()
-			return
-	if resting:
-		_rest_tick(delta, input)
+		velocity = Vector3.ZERO # un clic le relève (voir _unhandled_input)
+		_update_interaction()
 		return
-	var move := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
+	if resting:
+		_rest_tick(delta)
+		return
+	var move := Vector3.ZERO
 	if camera != null:
 		aim_point = camera.mouse_ground_point()
-	if input.length() > 0.1:
-		_click_mode = ClickMode.NONE # le clavier reprend la main
-	elif not (casting_solo or leaping or captive or planted or dashing):
+	if not (casting_solo or leaping or captive or planted or dashing):
 		move = _click_move(delta)
 	if casting_solo or leaping or captive or planted or dashing:
 		move = Vector3.ZERO # planté sur place en plein solo (ou en plein vol, ou en cage)
@@ -686,9 +680,12 @@ func _no_mana() -> void:
 func dash() -> void:
 	if not _ready_skill("dash"):
 		return
-	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var dir := IsoCamera.SCREEN_RIGHT * input.x + IsoCamera.SCREEN_UP * -input.y
+	# Dans le sens de la marche (clic), sinon vers la souris, sinon droit devant.
+	var dir := Vector3(velocity.x, 0.0, velocity.z)
 	if dir.length() < 0.1:
+		dir = aim_point - global_position
+		dir.y = 0.0
+	if dir.length() < 0.3:
 		dir = facing
 	dir.y = 0.0
 	dir = dir.normalized()
@@ -851,7 +848,7 @@ func get_up() -> void:
 
 
 ## 10 s pour passer de 1 PV à la vie pleine (les dB remontent au même rythme).
-func _rest_tick(delta: float, input: Vector2) -> void:
+func _rest_tick(delta: float) -> void:
 	velocity = Vector3.ZERO
 	var max_hp := GameState.max_hp()
 	_rest_heal += max_hp / Balance.BED_FULL_HEAL_TIME * delta
@@ -864,7 +861,4 @@ func _rest_tick(delta: float, input: Vector2) -> void:
 	if GameState.hp >= max_hp and GameState.mana >= GameState.max_mana():
 		GameState.flags.erase("room_paid") # une nuit par location
 		Events.notify("Vous vous levez frais comme un roadie après un concert. PV et dB au maximum !", Events.COLOR_GOOD)
-		get_up()
-	elif input.length() > 0.1:
-		Events.notify("Vous vous levez avant d'être complètement reposé.", Events.COLOR_DEFAULT)
 		get_up()

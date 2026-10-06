@@ -1,17 +1,13 @@
 extends Node
 ## Déclare les actions d'entrée au démarrage, en touches PHYSIQUES :
-## ZQSD (AZERTY) et WASD (QWERTY) fonctionnent sans aucune configuration.
+## Pas de touches de déplacement : on se déplace à la souris uniquement (clic au sol).
 ## Les touches affichées à l'écran utilisent la disposition réelle du clavier.
 
 const KEY_ACTIONS := {
-	"move_up": [KEY_W, KEY_UP],
-	"move_down": [KEY_S, KEY_DOWN],
-	"move_left": [KEY_A, KEY_LEFT],
-	"move_right": [KEY_D, KEY_RIGHT],
 	"attack": [], # clic gauche (ajouté plus bas)
 	"dash": [KEY_SPACE], # Glissade sur les genoux
 	"spell_riff": [], # clic droit (ajouté plus bas) : Riff électrique (FIREBALL, Riff black metal)
-	"spell_tuning": [KEY_1, KEY_KP_1], # Accordage de cordes (mini-jeu)
+	"spell_tuning": [KEY_1, KEY_KP_1], # Accordage de cordes
 	"spell_wave": [KEY_2, KEY_KP_2],
 	"spell_solo": [KEY_3, KEY_KP_3],
 	"potion": [KEY_R],
@@ -51,7 +47,7 @@ func _ready() -> void:
 
 
 ## Libellé de la première touche clavier associée à une action,
-## traduit selon la disposition du clavier (ex. « Z » sur AZERTY pour move_up).
+## traduit selon la disposition du clavier (ex. « E » pour interact).
 func key_label(action: String) -> String:
 	if not InputMap.has_action(action):
 		return "?"

@@ -1487,7 +1487,11 @@ func _test_click_move() -> void:
 	hero._click_hold = false
 	hero.move_target = dest
 	var marker := MoveMarker.spawn(d, dest)
-	_check(marker != null and marker.is_inside_tree(), "zone lumineuse au sol à l'endroit cliqué")
+	var no_ring := marker.find_children("*", "MeshInstance3D", true, false).size() == 1 and marker.find_children("*", "OmniLight3D", true, false).size() == 1
+	_check(marker != null and marker.is_inside_tree() and no_ring, "zone lumineuse au sol à l'endroit cliqué (sans l'anneau jaune)")
+	var no_keys := not InputMap.has_action("move_up") and not InputMap.has_action("move_left") and not InputMap.has_action("move_down")
+	no_keys = no_keys and not InputMap.has_action("move_right")
+	_check(no_keys, "déplacement à la souris uniquement : plus de touches ZQSD ni de flèches")
 	await get_tree().create_timer(1.2).timeout
 	_check(hero.global_position.distance_to(dest) < 0.35 and hero._click_mode == Hero.ClickMode.NONE,
 		"clic sur le sol : le héros marche jusqu'au point cliqué")

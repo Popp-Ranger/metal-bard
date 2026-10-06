@@ -85,7 +85,7 @@ Le royaume de **Dissonance**, fantasy classique D&D où la musique est une force
 
 | Action | Clavier / souris | Manette (prévu) |
 |---|---|---|
-| Se déplacer | ZQSD (AZERTY) / WASD (QWERTY) / flèches | Stick gauche |
+| Se déplacer | Clic gauche sur le sol (maintenu : suivre la souris) — souris uniquement, plus de touches ZQSD ni de flèches | Stick gauche |
 | Viser | Souris | Stick droit |
 | Coup de guitare | Espace / clic gauche (maintenir = enchaîner) | X |
 | Riff électrique (FIREBALL, Riff black metal) | Clic droit | RB |

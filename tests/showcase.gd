@@ -39,11 +39,12 @@ func _ready() -> void:
 	_hero.camera = null # la visée ne suit plus la souris : le héros regarde la caméra
 	_hero.aim_point = _hero.global_position + Vector3(3, 0, 3)
 	await _frames(25) # immobile, de face
-	Input.action_press("move_down")
-	for i in 30: # démarche de Réprouvé, vers la caméra
-		_hero.aim_point = _hero.global_position
+	# Démarche de Réprouvé, vers la caméra (déplacement à la souris : un « clic » au sol devant lui).
+	_hero._click_mode = Hero.ClickMode.GROUND
+	_hero.move_target = _hero.global_position + IsoCamera.SCREEN_UP * -5.0
+	for i in 30:
 		await get_tree().process_frame
-	Input.action_release("move_down")
+	_hero._click_mode = Hero.ClickMode.NONE
 	_hero.aim_point = _hero.global_position + Vector3(3, 0, 3)
 	await _frames(10)
 	_hero.model.swing()

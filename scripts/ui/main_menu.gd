@@ -76,8 +76,6 @@ func _ready() -> void:
 	var help := UiStyle.label("\n".join(PackedStringArray([
 		"CONTRÔLES",
 		"",
-		"%s %s %s %s / flèches : se déplacer" % [Controls.key_label("move_up"), Controls.key_label("move_left"),
-			Controls.key_label("move_down"), Controls.key_label("move_right")],
 		"Souris : viser   •   Molette : zoom",
 		"Clic gauche : aller là (maintenu : suivre la souris), frapper un ennemi, parler / interagir",
 		"Maj + clic gauche : frapper sur place",

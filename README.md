@@ -111,7 +111,7 @@ Tous les objets du jeu (reliques, potion, chambre, médiators, clé de la cage) 
 
 | Action | Touche |
 |---|---|
-| Se déplacer | **Clic gauche** sur le sol (maintenu : le héros suit la souris), ou **ZQSD** (AZERTY) / **WASD** (QWERTY) / flèches |
+| Se déplacer | **Clic gauche** sur le sol (maintenu : le héros suit la souris) ; à la souris uniquement (plus de touches de déplacement) |
 | Viser | Souris |
 | Frapper (le héros va au contact) / parler / interagir | **Clic gauche** sur l'ennemi, le personnage ou l'objet |
 | Frapper sur place | **Maj + clic gauche** |
