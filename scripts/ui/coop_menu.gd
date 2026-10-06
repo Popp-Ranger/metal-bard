@@ -171,7 +171,7 @@ func _join() -> void:
 	if _code_edit == null:
 		return
 	if not GameState.load_game():
-		_status.text = "Impossible de charger votre personnage."
+		_status.text = "Aucun héros à emmener : créez-en un (« Nouvelle partie ») ou choisissez-le dans « Mes héros »."
 		return
 	var err := Net.join(_code_edit.text)
 	if not err.is_empty():

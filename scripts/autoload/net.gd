@@ -102,7 +102,8 @@ func player_count() -> int:
 
 
 func my_profile() -> Dictionary:
-	return {"name": GameState.hero_name, "appearance": GameState.appearance.duplicate(), "level": GameState.stats.level}
+	return {"name": GameState.hero_name, "appearance": GameState.appearance.duplicate(), "level": GameState.stats.level,
+		"guitar": str(GameState.equipment.get("guitare", ""))}
 
 
 # --- Code d'invitation -------------------------------------------------------------------
@@ -722,3 +723,22 @@ func send_story(event: String, data: Dictionary) -> void:
 func _story(scene: String, event: String, data: Dictionary) -> void:
 	if scene == _current_scene():
 		story_received.emit(event, data, multiplayer.get_remote_sender_id())
+
+
+# --- Guitare équipée, vue par les autres joueurs ----------------------------------------------
+
+## La guitare équipée a changé (Flying V, Batguitare, Xplode... ou aucune) : les autres joueurs la voient.
+func send_gear() -> void:
+	if is_online():
+		_gear.rpc(str(GameState.equipment.get("guitare", "")))
+
+
+@rpc("any_peer", "reliable")
+func _gear(guitar: String) -> void:
+	var id := multiplayer.get_remote_sender_id()
+	if players.has(id):
+		(players[id] as Dictionary)["guitar"] = guitar
+	var existing: Variant = _remotes.get(id)
+	var remote: RemoteHero = existing as RemoteHero if existing != null and is_instance_valid(existing) else null
+	if remote != null:
+		remote.set_guitar(guitar)

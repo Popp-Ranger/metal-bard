@@ -33,6 +33,7 @@ func _ready() -> void:
 			look[key] = RaceDB.DEFAULT_APPEARANCE[key]
 	model.appearance = look
 	add_child(model)
+	set_guitar(str(profile.get("guitar", ItemDB.STARTER_GUITAR)))
 	radius = 0.35 * model.scale.x
 	_target_pos = position
 	var top := model.height() + 0.35
@@ -95,3 +96,9 @@ func receive_heal(amount: int) -> void:
 	if not dead:
 		Net.heal_player(peer_id, amount)
 		DamageNumber.spawn(get_parent(), global_position + Vector3(0, 2.3, 0), "+%d" % amount, Events.COLOR_GOOD)
+
+
+## Sa guitare équipée (Net.send_gear) : son modèle dans les mains de ce joueur, ou aucune.
+func set_guitar(guitar: String) -> void:
+	if model != null:
+		model.set_guitar_model(ItemDB.guitar_model(guitar))

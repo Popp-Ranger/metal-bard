@@ -2,10 +2,17 @@ extends Node
 ## État persistant de la partie : fiche du héros, ressources, quêtes, inventaire, sauvegarde.
 ## Tout ce qui doit survivre à un changement de scène vit ici.
 
-const SAVE_PATH := "user://metal_bard_save.json"
+## Dossier des sauvegardes (les tests utilisent un sous-dossier à part : ils ne touchent pas aux héros du joueur).
+var save_root := "user://"
+const SAVE_FILE := "metal_bard_save.json"
+## « Mes héros » : un fichier par héros (sa sauvegarde automatique), et le héros actuel (le dernier joué ou choisi).
+const HEROES_DIR := "heroes/"
+const CURRENT_HERO_FILE := "heroes/current.txt"
 const DEFAULT_NAME := "Riffald"
 const HERO_TITLE := "Barde du Tonnerre"
 
+## Identifiant du héros (son fichier dans HEROES_DIR), donné à sa création.
+var hero_id := ""
 var stats := CharacterStats.new()
 var hp := 1
 var mana := 0.0
@@ -86,6 +93,7 @@ func eat_cheese() -> void:
 
 func new_game() -> void:
 	stats = CharacterStats.new()
+	hero_id = new_hero_id()
 	gold = ItemDB.starting_money()
 	potions = ItemDB.starting_potions()
 	inventory.clear()
@@ -599,9 +607,9 @@ func run_dialogue_action(action: String) -> void:
 # --- Sauvegarde ------------------------------------------------------------
 
 ## Emplacements de sauvegarde manuelle (1 à SLOT_COUNT) ; l'emplacement 0 est la
-## sauvegarde automatique (SAVE_PATH), faite à chaque étape importante.
+## sauvegarde automatique (SAVE_FILE), faite à chaque étape importante.
 const SAVE_SLOTS := 5
-const SAVE_DIR := "user://saves/"
+const SAVE_DIR := "saves/"
 
 ## Où reprendre la partie au chargement : {"scene": chemin, "pos": [x, z]} (voir Level).
 var location := {}
@@ -609,9 +617,10 @@ var location := {}
 var pending_spawn := Vector3.INF
 
 
-## Une sauvegarde existe (automatique ou manuelle) : de quoi « Continuer ».
+## Un héros existe dans « Mes héros » : de quoi « Continuer ».
 func has_save() -> bool:
-	return latest_slot() >= 0
+	import_legacy_save()
+	return not heroes().is_empty()
 
 
 ## Emplacement de la sauvegarde la plus récente, automatique (0) ou manuelle (1 à SAVE_SLOTS) ;
@@ -630,21 +639,23 @@ func latest_slot() -> int:
 
 
 func slot_path(slot: int) -> String:
-	return SAVE_PATH if slot <= 0 else SAVE_DIR + "slot_%d.json" % slot
+	return save_root + SAVE_FILE if slot <= 0 else save_root + SAVE_DIR + "slot_%d.json" % slot
 
 
 func has_slot(slot: int) -> bool:
 	return FileAccess.file_exists(slot_path(slot))
 
 
-## Sauvegarde automatique (emplacement 0).
+## Sauvegarde automatique (emplacement 0), et celle du héros dans « Mes héros » (un fichier par héros).
 func save_game() -> void:
 	save_to_slot(0)
+	_save_hero()
 
 
 func _snapshot() -> Dictionary:
 	return {
 		"version": 2,
+		"hero_id": hero_id,
 		"saved_at": Time.get_datetime_string_from_system(false, true),
 		"stats": stats.to_dict(),
 		"hero_name": hero_name,
@@ -673,8 +684,7 @@ func _snapshot() -> Dictionary:
 
 
 func save_to_slot(slot: int) -> bool:
-	if slot > 0:
-		DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	DirAccess.make_dir_recursive_absolute(save_root + (SAVE_DIR if slot > 0 else ""))
 	var file := FileAccess.open(slot_path(slot), FileAccess.WRITE)
 	if file == null:
 		push_warning("Sauvegarde impossible : %s" % error_string(FileAccess.get_open_error()))
@@ -718,9 +728,12 @@ static func location_label(scene: String) -> String:
 	return "La Chèvre Fringante"
 
 
-## Reprend la sauvegarde la plus récente (bouton « Continuer », hébergement coop).
+## Reprend le héros actuel (le dernier joué, ou celui choisi dans « Mes héros ») : bouton « Continuer », hébergement et
+## coop.
 func load_game() -> bool:
-	return load_slot(latest_slot())
+	import_legacy_save()
+	var id := current_hero_id()
+	return not id.is_empty() and load_hero(id)
 
 
 func load_slot(slot: int) -> bool:
@@ -763,6 +776,11 @@ func apply_save(data: Dictionary) -> void:
 	for id: String in saved_quests:
 		quests[id] = int(saved_quests[id])
 	flags = data.get("flags", {})
+	# Héros : son identifiant (sauvegardes d'avant « Mes héros » : un identifiant tiré de son nom et de son apparence,
+	# le même pour toutes ses anciennes sauvegardes).
+	hero_id = str(data.get("hero_id", ""))
+	if hero_id.is_empty():
+		hero_id = "ancien_%d" % absi(hash(str(data.get("hero_name", DEFAULT_NAME)) + JSON.stringify(data.get("appearance", {}))))
 	# Sauvegarde d'avant la guitare-objet (6 oct. 2026) : la Flying V est donnée, équipée si la main est libre.
 	if not flags.has("starter_guitar"):
 		flags["starter_guitar"] = true
@@ -822,3 +840,106 @@ func run_add(key: String, amount: int) -> void:
 
 func run_seconds() -> int:
 	return floori((Time.get_ticks_msec() - int(run.get("start", 0))) / 1000.0)
+
+
+# --- Mes héros ----------------------------------------------------------------------------
+
+static func new_hero_id() -> String:
+	return "%d_%04d" % [int(Time.get_unix_time_from_system()), randi() % 10000]
+
+
+func hero_path(id: String) -> String:
+	return save_root + HEROES_DIR + id + ".json"
+
+
+## Enregistre le héros en cours dans « Mes héros » et en fait le héros actuel.
+func _save_hero() -> void:
+	if hero_id.is_empty():
+		return
+	DirAccess.make_dir_recursive_absolute(save_root + HEROES_DIR)
+	var file := FileAccess.open(hero_path(hero_id), FileAccess.WRITE)
+	if file == null:
+		push_warning("Sauvegarde du héros impossible : %s" % error_string(FileAccess.get_open_error()))
+		return
+	file.store_string(JSON.stringify(_snapshot(), "\t"))
+	file.close()
+	_set_current_hero(hero_id)
+
+
+func _set_current_hero(id: String) -> void:
+	DirAccess.make_dir_recursive_absolute(save_root + HEROES_DIR)
+	var f := FileAccess.open(save_root + CURRENT_HERO_FILE, FileAccess.WRITE)
+	if f != null:
+		f.store_string(id)
+
+
+## Héros enregistrés, le plus récemment joué en premier : [{id, name, summary, data}].
+func heroes() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not DirAccess.dir_exists_absolute(save_root + HEROES_DIR):
+		return out
+	for f in DirAccess.get_files_at(save_root + HEROES_DIR):
+		if f.get_extension() != "json":
+			continue
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(save_root + HEROES_DIR + f))
+		if not parsed is Dictionary:
+			continue
+		var data: Dictionary = parsed
+		out.append({"id": f.get_basename(), "name": str(data.get("hero_name", DEFAULT_NAME)), "summary": _summary(data),
+			"time": FileAccess.get_modified_time(save_root + HEROES_DIR + f), "data": data})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["time"]) > int(b["time"]))
+	return out
+
+
+## Le héros actuel : le dernier joué ou choisi dans « Mes héros » (sinon le plus récent) ; "" s'il n'y en a aucun.
+func current_hero_id() -> String:
+	if FileAccess.file_exists(save_root + CURRENT_HERO_FILE):
+		var id := FileAccess.get_file_as_string(save_root + CURRENT_HERO_FILE).strip_edges()
+		if not id.is_empty() and FileAccess.file_exists(hero_path(id)):
+			return id
+	var all := heroes()
+	return str(all[0]["id"]) if not all.is_empty() else ""
+
+
+## Reprend un héros de « Mes héros » (il devient le héros actuel).
+func load_hero(id: String) -> bool:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(hero_path(id))) if FileAccess.file_exists(hero_path(id)) else null
+	if not parsed is Dictionary:
+		return false
+	apply_save(parsed)
+	hero_id = id
+	_set_current_hero(id)
+	return true
+
+
+## Supprime définitivement un héros de « Mes héros » (sur demande du joueur, après confirmation).
+func delete_hero(id: String) -> void:
+	if FileAccess.file_exists(hero_path(id)):
+		DirAccess.remove_absolute(hero_path(id))
+	if FileAccess.file_exists(save_root + CURRENT_HERO_FILE) and FileAccess.get_file_as_string(save_root + CURRENT_HERO_FILE).strip_edges() == id:
+		DirAccess.remove_absolute(save_root + CURRENT_HERO_FILE)
+
+
+## Première fois avec « Mes héros » : la sauvegarde automatique d'avant devient le premier héros de la liste.
+func import_legacy_save() -> void:
+	var marker := save_root + HEROES_DIR + "import_fait.txt" # une seule fois (un héros supprimé ne revient pas)
+	if FileAccess.file_exists(marker):
+		return
+	DirAccess.make_dir_recursive_absolute(save_root + HEROES_DIR)
+	var data := _read_slot(0)
+	if heroes().is_empty() and not data.is_empty():
+		apply_save(data)
+		_save_hero()
+	var f := FileAccess.open(marker, FileAccess.WRITE)
+	if f != null:
+		f.store_string("Sauvegarde d'avant « Mes héros » importée.")
+
+
+## Résumé d'une sauvegarde : nom, race, niveau, lieu, date.
+static func _summary(data: Dictionary) -> String:
+	var look: Dictionary = data.get("appearance", {})
+	var st: Dictionary = data.get("stats", {})
+	var loc: Dictionary = data.get("location", {})
+	return "%s — %s niv. %d — %s — %s" % [
+		str(data.get("hero_name", DEFAULT_NAME)), RaceDB.title(look), int(st.get("level", 1)),
+		location_label(str(loc.get("scene", ""))), str(data.get("saved_at", "?")).replace("T", " ").left(16)]

@@ -36,6 +36,8 @@ var spells_allowed := true
 ## en main dès qu'il frappe ou joue un sort.
 const SLING_AFTER := 4.0
 var travel_slung := false
+## Dernière guitare annoncée aux autres joueurs (Net.send_gear).
+var _sent_guitar := ""
 ## Clic droit maintenu : temps avant le prochain Riff électrique (voir _update_riff_hold).
 var _riff_held := false
 var _riff_hold := 0.0
@@ -81,13 +83,18 @@ func _ready() -> void:
 	halo.omni_attenuation = 1.2
 	halo.shadow_enabled = false # ombres courtes : seule la lumière du dessus en projette
 	add_child(halo)
+	_sent_guitar = str(GameState.equipment.get("guitare", ""))
 	Events.solo_finished.connect(_on_solo_finished)
 	_update_zone()
 
 
-## Équipement changé : la guitare équipée passe dans les mains du héros.
+## Équipement changé : la guitare équipée passe dans les mains du héros (et les autres joueurs la voient).
 func _on_gear_changed() -> void:
 	model.set_guitar_model(GameState.guitar_model())
+	var guitar := str(GameState.equipment.get("guitare", ""))
+	if guitar != _sent_guitar:
+		_sent_guitar = guitar
+		Net.send_gear()
 
 
 ## Zone où l'on ne joue pas : guitare dans le dos (mise à jour à chaque image, escaliers compris).

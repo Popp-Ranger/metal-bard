@@ -1,11 +1,15 @@
 extends Control
-## Écran titre : Nouvelle partie / Continuer / Charger / Rejoindre une partie (coop) /
+## Écran titre : Nouvelle partie / Continuer (le héros actuel) / Mes héros / Charger / Héberger / Rejoindre (coop) /
 ## Contrôles / Options / Quitter.
 
 var _flash: ColorRect
 var _controls_panel: PanelContainer
 var _options: OptionsMenu
 var _saves: SaveMenu
+## « Mes héros » ; « Continuer » et « Héberger » portent le nom du héros actuel.
+var _roster: HeroRoster
+var _cont: Button
+var _host_button: Button
 var _coop: CoopMenu
 
 
@@ -45,23 +49,23 @@ func _ready() -> void:
 
 	var new_game := _button("Nouvelle partie", _on_new_game)
 	vb.add_child(new_game)
-	var cont := _button("Continuer", _on_continue)
-	cont.disabled = not GameState.has_save()
-	vb.add_child(cont)
+	_cont = _button("Continuer", _on_continue)
+	vb.add_child(_cont)
+	vb.add_child(_button("Mes héros", func() -> void: _roster.open()))
 	var load_button := _button("Charger", func() -> void: _saves.open("load"))
 	var any_save := false
 	for slot in range(0, GameState.SAVE_SLOTS + 1):
 		any_save = any_save or GameState.has_slot(slot)
 	load_button.disabled = not any_save
 	vb.add_child(load_button)
-	var host_button := _button("Héberger une partie (coop, 6 joueurs)", _on_host)
-	host_button.disabled = not GameState.has_save()
-	vb.add_child(host_button)
+	_host_button = _button("Héberger une partie (coop, 6 joueurs)", _on_host)
+	vb.add_child(_host_button)
 	vb.add_child(_button("Rejoindre une partie (coop)", func() -> void: _coop.open_join()))
 	vb.add_child(_button("Contrôles", func() -> void: _controls_panel.visible = not _controls_panel.visible))
 	vb.add_child(_button("Options", func() -> void: _options.open()))
 	vb.add_child(_button("Quitter", func() -> void: get_tree().quit()))
-	(cont if not cont.disabled else new_game).grab_focus()
+	_refresh_hero()
+	(_cont if not _cont.disabled else new_game).grab_focus()
 
 	_controls_panel = PanelContainer.new()
 	_controls_panel.anchor_left = 1.0
@@ -95,7 +99,7 @@ func _ready() -> void:
 	_controls_panel.add_child(help)
 	_controls_panel.visible = false
 
-	var credits := UiStyle.label("Prototype v%s — Godot 4.7" % ProjectSettings.get_setting("application/config/version", "?"), 13, UiStyle.DIM)
+	var credits := UiStyle.label("Alpha v%s — Godot 4.7" % ProjectSettings.get_setting("application/config/version", "?"), 13, UiStyle.DIM)
 	credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	credits.offset_left = 16
 	credits.offset_top = -30
@@ -104,6 +108,9 @@ func _ready() -> void:
 	add_child(_options)
 	_saves = SaveMenu.new()
 	add_child(_saves)
+	_roster = HeroRoster.new()
+	add_child(_roster)
+	_roster.changed.connect(_refresh_hero)
 	_coop = CoopMenu.new()
 	add_child(_coop)
 	Sfx.play_storm_music() # orage (lightning_menu.mp3) : les éclairs tombent sur ses coups de tonnerre
@@ -147,3 +154,16 @@ func _on_host() -> void:
 func _on_continue() -> void:
 	if GameState.load_game():
 		Router.go_to(GameState.resume_scene())
+
+
+## Le héros actuel (Continuer, Héberger, Rejoindre) : son nom sur les boutons.
+func _refresh_hero() -> void:
+	var has := GameState.has_save()
+	var current := GameState.current_hero_id()
+	var hero_name := ""
+	for h: Dictionary in GameState.heroes():
+		if str(h["id"]) == current:
+			hero_name = str(h["name"])
+	_cont.text = "Continuer — %s" % hero_name if has and not hero_name.is_empty() else "Continuer"
+	_cont.disabled = not has
+	_host_button.disabled = not has

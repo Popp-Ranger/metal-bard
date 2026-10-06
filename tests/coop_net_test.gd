@@ -18,6 +18,8 @@ var _done := false
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	role = str(args[0]) if args.size() > 0 else "host"
+	# Sauvegardes du test à part : les héros du joueur ne sont pas touchés.
+	GameState.save_root = "user://tests/coop_%s/" % role
 	# Ce nœud doit survivre aux changements de scène (le client suit l'hôte dans le donjon).
 	var dummy := Node.new()
 	get_tree().root.add_child.call_deferred(dummy)
@@ -66,6 +68,18 @@ func _run_host() -> void:
 	# Réponse attendue : le client lance ses propres sorts.
 	while not (received.has("wave") and received.has("speaker")):
 		await get_tree().create_timer(0.2).timeout
+	# Le client a équipé la Batguitare : on la voit dans les mains de son personnage.
+	var remote_c: RemoteHero = null
+	for n in get_tree().get_nodes_in_group("heroes"):
+		if n is RemoteHero:
+			remote_c = n
+	var gear_wait := 0.0
+	while gear_wait < 5.0 and not (remote_c != null and remote_c.model.guitar_model.ends_with("batguitare.glb")):
+		await get_tree().create_timer(0.2).timeout
+		gear_wait += 0.2
+	if remote_c == null or not remote_c.model.guitar_model.ends_with("batguitare.glb"):
+		_finish(false, "la guitare équipée du client n'est pas visible chez l'hôte")
+		return
 	# Mini-jeu de l'histoire (épreuve de Back Jlack) : l'hôte le joue, le client le regarde en direct.
 	var solo := (get_tree().current_scene as Level).hud.solo
 	Events.solo_requested.emit("epreuve", 0)
@@ -113,6 +127,9 @@ func _run_client() -> void:
 	hero.cooldowns["wave"] = 0.0
 	hero.cast_wave()
 	SpellFx.cast(hero, "speaker", {"pos": hero.global_position + Vector3(2, 0, 0), "yaw": 0.0})
+	# On équipe la Batguitare : l'hôte doit la voir dans nos mains.
+	GameState.add_item("batguitare")
+	GameState.equip("batguitare")
 	# L'hôte joue l'épreuve : on la regarde en direct (panneau, notes jouées), sans la jouer.
 	var solo := level.hud.solo
 	var watched := false

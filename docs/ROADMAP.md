@@ -296,6 +296,12 @@
 - [x] Hella : cape en tissu (os de cape simulés par SpringBoneSimulator3D : elle flotte derrière quand on court, se balance et retombe)
 - [x] Riffald : cape en tissu aussi
 - [x] La Flying V de départ devient un objet (équiper / retirer) ; sans guitare équipée, pas d'attaque
+
+## ✅ v0.2.0 — Alpha
+- [x] « Mes héros » : un fichier de sauvegarde par héros (créer un héros n'efface plus les autres), choisir / jouer / supprimer ; l'ancienne sauvegarde est importée
+- [x] Coop : la guitare équipée de chacun est visible chez les autres joueurs
+- [x] Les tests sauvegardent à part (user://tests/) : ils ne touchent plus aux héros du joueur
+- [x] Version autonome Windows (MetalBard.exe, un seul fichier)
 - [x] Déplacement à la souris uniquement (plus de ZQSD ni de flèches) ; clic au sol : zone lumineuse sans l'anneau jaune
 
 ## v0.2 — « Ça ressemble à un vrai jeu »

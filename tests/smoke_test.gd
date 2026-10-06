@@ -7,6 +7,9 @@ var _failures := 0
 
 
 func _ready() -> void:
+	# Sauvegardes du test à part (user://tests/, vidé à chaque passage) : les héros du joueur ne sont pas touchés.
+	GameState.save_root = "user://tests/"
+	_wipe_dir(GameState.save_root)
 	# Cadence de référence (60 images/s) quels que soient les réglages d'affichage du joueur (fichier non modifié) :
 	# certains tests comptent des images de physique.
 	Display.fps = 60
@@ -24,6 +27,7 @@ func _ready() -> void:
 	await _test_chapter_two()
 	await _test_chapter_three()
 	await _test_fixes_october()
+	await _test_hero_roster()
 	await _test_level_editor()
 	await _test_quest_flow()
 	await _test_new_features()
@@ -2279,4 +2283,67 @@ func _test_fixes_october() -> void:
 		"clients de la taverne : seulement leur nom (plus « Client » dessous), police réduite de 2 crans")
 	arena.queue_free()
 	await _frames(2)
+	GameState.new_game()
+
+
+## Vide un dossier de user:// (récursif) : les sauvegardes d'un passage précédent du test.
+func _wipe_dir(path: String) -> void:
+	if not DirAccess.dir_exists_absolute(path):
+		return
+	for d in DirAccess.get_directories_at(path):
+		_wipe_dir(path.path_join(d))
+		DirAccess.remove_absolute(path.path_join(d))
+	for f in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(f))
+
+
+## « Mes héros » : un fichier par héros ; un nouveau héros n'efface pas les autres ; l'ancienne sauvegarde est importée
+## une fois ; on choisit, reprend ou supprime un héros.
+func _test_hero_roster() -> void:
+	print("[Mes héros]")
+	_wipe_dir(GameState.save_root)
+	# Ancienne sauvegarde (d'avant « Mes héros ») : importée comme premier héros.
+	GameState.new_game()
+	GameState.hero_name = "Ancien"
+	GameState.save_to_slot(0)
+	var imported := GameState.has_save() and GameState.heroes().size() == 1 and str(GameState.heroes()[0]["name"]) == "Ancien"
+	# Deux nouveaux héros : chacun son fichier.
+	GameState.new_game()
+	GameState.hero_name = "Lemmy"
+	GameState.stats.level = 3
+	GameState.save_game()
+	var lemmy := GameState.hero_id
+	GameState.new_game()
+	GameState.hero_name = "Dio"
+	GameState.save_game()
+	var dio := GameState.hero_id
+	var three := GameState.heroes().size() == 3 and GameState.current_hero_id() == dio and lemmy != dio
+	# Choisir Lemmy : il devient le héros actuel ; « Continuer » le reprend tel quel.
+	GameState.load_hero(lemmy)
+	GameState.new_game()
+	var resumed := GameState.load_game() and GameState.hero_name == "Lemmy" and GameState.stats.level == 3 and GameState.hero_id == lemmy
+	# Supprimer Dio ; l'ancienne sauvegarde ne revient pas, même si tous les héros sont supprimés.
+	GameState.delete_hero(dio)
+	var two := GameState.heroes().size() == 2
+	for h: Dictionary in GameState.heroes():
+		GameState.delete_hero(str(h["id"]))
+	var none := not GameState.has_save() and GameState.heroes().is_empty() and not GameState.load_game()
+	_check(imported and three and resumed and two and none,
+		"Mes héros : un fichier par héros, l'ancienne sauvegarde importée une fois, choisir / reprendre / supprimer (%s %s %s %s %s)" % [imported, three, resumed, two, none])
+	# L'écran titre : bouton « Mes héros », « Continuer » au nom du héros actuel.
+	GameState.new_game()
+	GameState.hero_name = "Ronnie"
+	GameState.save_game()
+	var menu: Control = load("res://scenes/main_menu.tscn").instantiate()
+	add_child(menu)
+	await _frames(2)
+	var cont: Button = menu.get("_cont")
+	var roster: HeroRoster = menu.get("_roster")
+	roster.open()
+	await _frames(1)
+	_check(cont.text.contains("Ronnie") and not cont.disabled and roster.visible and roster._list.get_child_count() == 1,
+		"écran titre : « Continuer — Ronnie », et « Mes héros » liste les héros")
+	menu.queue_free()
+	await _frames(2)
+	_wipe_dir(GameState.save_root)
 	GameState.new_game()
