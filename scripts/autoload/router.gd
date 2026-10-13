@@ -8,6 +8,8 @@ const TAVERN := "res://scenes/tavern.tscn"
 const DUNGEON := "res://scenes/dungeon.tscn"
 ## Cryptes de la Cathédrale (portail à XP du sous-sol de la taverne), régénérées à chaque passage.
 const CRYPT := "res://scenes/crypt.tscn"
+## Nécropole : niveau test régénéré à chaque passage (portail vert à côté d'Ozz).
+const NECROPOLIS := "res://scenes/necropolis.tscn"
 ## Temple du Dragon : l'autre univers de Back Jlack (marches interminables, parvis, épreuve).
 const TEMPLE := "res://scenes/temple.tscn"
 ## Chapitre 3 : l'expédition vers le Labyrinthe du Destin (prairie, montagne, grottes, col, labyrinthe).

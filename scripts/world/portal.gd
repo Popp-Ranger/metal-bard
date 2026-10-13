@@ -8,6 +8,8 @@ var prompt := "Traverser le portail"
 var on_enter: Callable
 ## Portail de retour en ville (touche T) : bleu au lieu de violet.
 var blue := false
+## Portail de la Nécropole (niveau test) : vert.
+var green := false
 
 var _ring: Node3D
 
@@ -34,6 +36,12 @@ func _ready() -> void:
 		ring_col = Color(0.2, 0.55, 1.0)
 		rune_col = Color(0.15, 0.45, 1.0)
 		light_col = Color(0.3, 0.6, 1.0)
+	elif green:
+		disc_mat.set_shader_parameter("color_a", Color(0.05, 0.6, 0.2))
+		disc_mat.set_shader_parameter("color_b", Color(0.6, 1.0, 0.45))
+		ring_col = Color(0.3, 1.0, 0.4)
+		rune_col = Color(0.2, 0.85, 0.3)
+		light_col = Color(0.35, 1.0, 0.45)
 	disc_mi.material_override = disc_mat
 	disc_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ring.add_child(disc_mi)
@@ -54,7 +62,12 @@ func _ready() -> void:
 	var spark_mesh := SphereMesh.new()
 	spark_mesh.radius = 0.03
 	spark_mesh.height = 0.06
-	spark_mesh.material = Visuals.glow_mat(Color(0.6, 0.85, 1.0) if blue else Color(0.8, 0.6, 1.0), 2.0)
+	var spark_col := Color(0.8, 0.6, 1.0)
+	if blue:
+		spark_col = Color(0.6, 0.85, 1.0)
+	elif green:
+		spark_col = Color(0.6, 1.0, 0.6)
+	spark_mesh.material = Visuals.glow_mat(spark_col, 2.0)
 	sparks.mesh = spark_mesh
 	add_child(sparks)
 	scale = Vector3.ONE * 0.01

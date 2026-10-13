@@ -36,6 +36,8 @@ const DAMAGE_BUFF_DURATION := 1200.0
 var quest_items: Array[String] = []
 ## Cryptes de la Cathédrale (portail à XP) : graine du passage en cours, régénérées à chaque entrée.
 var crypt_seed := 0
+## Nécropole (niveau test, portail vert de la taverne) : graine du passage en cours, régénérée à chaque entrée.
+var necropolis_seed := 0
 const BUYBACK_MAX := 10
 var quests := {} # quest_id -> QuestDB.State
 var flags := {}
@@ -103,6 +105,7 @@ func new_game() -> void:
 	damage_buff_time = 0.0
 	quest_items.clear()
 	crypt_seed = 0
+	necropolis_seed = 0
 	flags = {}
 	quests = {}
 	for id: String in QuestDB.QUESTS:

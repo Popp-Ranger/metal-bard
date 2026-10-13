@@ -24,6 +24,7 @@ func _ready() -> void:
 	await _test_skeleton_body()
 	await _test_loot_and_gear()
 	await _test_crypt()
+	await _test_necropolis()
 	await _test_chapter_two()
 	await _test_chapter_three()
 	await _test_fixes_october()
@@ -910,8 +911,9 @@ func _test_new_features() -> void:
 	get_tree().paused = false
 
 
+## Portails ouverts (sans le portail vert de la Nécropole, toujours là dans la taverne).
 func _count_portals(root: Node) -> int:
-	var count := 1 if root is Portal else 0
+	var count := 1 if root is Portal and not (root as Portal).green else 0
 	for child in root.get_children():
 		count += _count_portals(child)
 	return count
@@ -1684,6 +1686,97 @@ func _test_loot_and_gear() -> void:
 	_check(is_equal_approx(Balance.MELEE_COOLDOWN, 0.54) and is_equal_approx(float(HeroAnimator.ONE_SHOTS["smash"]), 0.5)
 		and Balance.MELEE_DICE == 6, "coup de guitare : 1d6, 20 % plus rapide (0,54 s)")
 	GameState.new_game()
+
+
+## La Nécropole (niveau test) : plan régénéré à chaque passage, construit avec les kits Kenney, squelettes KayKit,
+## Roi des Os ; portail vert à côté d'Ozz.
+func _test_necropolis() -> void:
+	print("[Nécropole : niveau test (kits Kenney, squelettes KayKit)]")
+	# Plan : même graine = même plan, autre graine = autre plan, tout est accessible.
+	var a := NecropolisLayout.new()
+	a.generate(1234)
+	var b := NecropolisLayout.new()
+	b.generate(1234)
+	var c := NecropolisLayout.new()
+	c.generate(98765)
+	var boss_ok := a.rooms[a.boss_room].size == Vector2i(NecropolisLayout.BOSS_SIZE, NecropolisLayout.BOSS_SIZE)
+	_check(a.cells == b.cells and a.cells != c.cells and a.all_reachable() and c.all_reachable() and a.rooms.size() == 8
+		and boss_ok and a.start_room != a.boss_room,
+		"plan de la Nécropole : déterministe par graine, différent d'une graine à l'autre, 8 salles toutes accessibles")
+	var reach := true
+	for s in 20:
+		var l := NecropolisLayout.new()
+		l.generate(s * 7919 + 3)
+		reach = reach and l.all_reachable() and l.rooms.size() >= 6
+	_check(reach, "20 plans tirés au hasard : toujours au moins 6 salles, toutes accessibles")
+	# Le niveau : kits, ennemis au niveau du héros, boss.
+	GameState.new_game()
+	GameState.stats.level = 3
+	GameState.necropolis_seed = 4242
+	var necro: Node = load("res://scenes/necropolis.tscn").instantiate()
+	add_child(necro)
+	await _frames(20)
+	var kinds := {}
+	var levels_ok := true
+	for n in necro.get_children():
+		if n is KayKitSkeleton and not (n is SkeletonKing):
+			kinds[n.kind] = int(kinds.get(n.kind, 0)) + 1
+			levels_ok = levels_ok and (n as Enemy).level == 3
+	var king: SkeletonKing = necro.get("king")
+	_check(str(necro.get("theme")) == "necropole" and not bool(necro.get("persistent")) and GameState.necropolis_seed == 4242
+		and int(necro.call("kit_count", "template-floor")) > 50 and int(necro.call("kit_count", "template-wall")) > 30
+		and int(necro.call("kit_count", "template-corner")) > 4 and int(necro.call("kit_count", "template-detail")) > 4
+		and int(necro.call("kit_count", "gate")) > 0 and (necro.get("props") as Array).size() > 30,
+		"Nécropole construite avec le Modular Dungeon Kit (sol, murs, coins, piliers, arches) et le Graveyard Kit (%d éléments de décor)" % (necro.get("props") as Array).size())
+	_check(int(kinds.get("minion", 0)) >= 5 and kinds.size() >= 3 and levels_ok and king != null and king.is_boss
+		and king.kskin != null and king.kskin.player.has_animation("Spawn_Ground"),
+		"squelettes KayKit au niveau du héros (%s) et le Roi des Os, animé avec les clips du pack" % kinds)
+	# Un squelette frappe, encaisse et meurt (animations du pack, pas de T-pose).
+	var hero := necro.get("hero") as Hero
+	var bones: KayKitSkeleton = necro.call("spawn_bones", "minion", hero.global_position + Vector3(3.5, 0, 3.5)) # (hors de portée de détection)
+	await _frames(5)
+	var idle := bones.kskin.player.current_animation
+	bones.call("_attack_anim", 0.45)
+	var swing := bones.kskin.player.current_animation
+	bones.take_damage(9999, hero.global_position)
+	await _frames(2)
+	_check(idle in ["Idle_A", "Walking_A", "Running_A"] and swing == "Throw" and bones.kskin.player.current_animation == "Death_A" and not bones.is_alive(),
+		"squelette KayKit : %s, coup (%s), mort (%s)" % [idle, swing, bones.kskin.player.current_animation])
+	# Le Roi des Os lève les morts à 66 %, puis tombe : portail vert vers la taverne.
+	var before := necro.get_children().filter(func(n: Node) -> bool: return n is KayKitSkeleton).size()
+	king.hp = int(king.max_hp * 0.6)
+	king.state = Enemy.State.CHASE
+	king.call("_update_special", 0.1, 5.0)
+	await _frames(3)
+	var after := necro.get_children().filter(func(n: Node) -> bool: return n is KayKitSkeleton).size()
+	king.take_damage(99999, hero.global_position)
+	await get_tree().create_timer(1.8).timeout
+	var exit: Portal = necro.get("exit_portal")
+	_check(after == before + 3 and not king.is_alive() and exit != null and exit.green
+		and exit.get_prompt().contains("Chèvre Fringante"), "le Roi des Os lève 3 squelettes, puis sa mort ouvre un portail vert vers la taverne")
+	var dest := str(necro.call("_exit_scene"))
+	_check(dest == Router.TAVERN and bool(GameState.flags.get("from_necropolis", false)) and GameState.necropolis_seed == 0,
+		"sortie de la Nécropole : retour au portail vert, nouvelle Nécropole au prochain passage")
+	necro.queue_free()
+	await _frames(3)
+	# La taverne : portail vert toujours ouvert à côté d'Ozz ; on en ressort juste devant.
+	GameState.flags["intro_done"] = true
+	var tv: Node = load("res://scenes/tavern.tscn").instantiate()
+	add_child(tv)
+	await _frames(3)
+	var green: Portal = tv.get("green_portal")
+	var ozz: Npc = null
+	for n in tv.get_children():
+		if n is Npc and (n as Npc).npc_id == "zarathos":
+			ozz = n
+	var thero := tv.get("hero") as Hero
+	_check(green != null and green.green and ozz != null and green.global_position.distance_to(ozz.global_position) < 4.0
+		and green.get_prompt().contains("Nécropole") and thero.global_position.distance_to(green.global_position) < 2.0
+		and not GameState.flags.has("from_necropolis"),
+		"taverne : portail vert vers la Nécropole à côté d'Ozz (%.1f m) ; retour juste devant" % (green.global_position.distance_to(ozz.global_position) if green != null and ozz != null else -1.0))
+	tv.queue_free()
+	await _frames(3)
+	GameState.necropolis_seed = 0
 
 
 func _test_crypt() -> void:

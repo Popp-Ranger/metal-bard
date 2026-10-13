@@ -304,6 +304,13 @@
 - [x] Version autonome Windows (MetalBard.exe, un seul fichier)
 - [x] Déplacement à la souris uniquement (plus de ZQSD ni de flèches) ; clic au sol : zone lumineuse sans l'anneau jaune
 
+## ✅ v0.2.1 — Niveau test : la Nécropole
+- [x] Portail vert toujours ouvert à côté d'Ozz : la Nécropole, régénérée à chaque passage (graine commune en coop)
+- [x] Construite avec les kits CC0 de `assets/models/kits/` : Modular Dungeon Kit (sol, murs, coins arrondis, piliers, arches), Graveyard Kit (tombes, cercueils, caveaux, autels, braseros, bougies)
+- [x] Murs côté caméra abaissés en murets, découpe des murs autour du héros
+- [x] Squelettes du pack KayKit Skeletons, animés avec ses clips (squelette, guerrier, arbalétrier, mage), réduits de moitié (0,87 m)
+- [x] Boss : le Roi des Os (fracas d'os, lève les morts à 66 % et 33 %) ; vaincu, un portail vert ramène à la taverne
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

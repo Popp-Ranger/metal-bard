@@ -448,6 +448,8 @@ func on_scene_change(path: String) -> void:
 
 ## Graine du donjon de la scène : celle des Cryptes (tirée à chaque passage) ou celle du donjon de quête.
 func _seed_for(path: String) -> int:
+	if path == Router.NECROPOLIS:
+		return GameState.necropolis_seed
 	return GameState.crypt_seed if path == Router.CRYPT else GameState.dungeon_seed
 
 
@@ -455,6 +457,8 @@ func _seed_for(path: String) -> int:
 func _goto(path: String, seed_value: int, quest: String) -> void:
 	if path == Router.CRYPT:
 		GameState.crypt_seed = seed_value
+	elif path == Router.NECROPOLIS:
+		GameState.necropolis_seed = seed_value
 	else:
 		GameState.dungeon_seed = seed_value
 	if path == Router.DUNGEON:

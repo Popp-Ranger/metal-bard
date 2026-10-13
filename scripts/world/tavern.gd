@@ -35,6 +35,11 @@ var _inconnue: Npc
 var _inconnue_called := false
 var _blue_portal_pos := Vector3.ZERO
 var _training_zones: Array[TavernMarker] = []
+## Portail vert vers la Nécropole (niveau test), à côté d'Ozz.
+var green_portal: Portal
+var _ozz_home := Vector3.INF
+## Décalage du portail vert par rapport à la place d'Ozz (un peu au sud-ouest, côté salle).
+const GREEN_PORTAL_OFFSET := Vector3(-2.4, 0.0, 2.2)
 var _cut_stone: ShaderMaterial
 var _door_hinges: Array[Node3D] = []
 var _door_block: StaticBody3D
@@ -55,6 +60,7 @@ func _ready() -> void:
 	_load_map()
 	_bake_navigation()
 	_spawn_npcs()
+	_open_green_portal()
 	var spawn := _marker_pos(TavernMarker.Kind.APPARITION, Vector3(0.0, 0.0, 9.5))
 	var from_dungeon: bool = GameState.flags.get("in_dungeon", false)
 	if from_dungeon:
@@ -71,6 +77,9 @@ func _ready() -> void:
 		spawn = demon_portal.global_transform * Vector3(0.0, 0.0, 2.6) # sortie du portail démoniaque
 		spawn.y = 0.0
 	GameState.flags.erase("from_crypt")
+	if GameState.flags.get("from_necropolis", false) and green_portal != null:
+		spawn = green_portal.position + Vector3(0.0, 0.0, 1.6) # sortie du portail vert
+	GameState.flags.erase("from_necropolis")
 	spawn_hero(spawn)
 	if GameState.flags.get("retour_epoque", false):
 		GameState.flags.erase("retour_epoque")
@@ -323,6 +332,7 @@ func _spawn_npcs() -> void:
 			"zarathos":
 				n.wander_radius = 2.5 # quelques pas près de son cercle de runes
 				n.walk_speed = 0.9
+				_ozz_home = m.global_position
 			"inconnue":
 				_inconnue = n
 			"gerald":
@@ -409,6 +419,25 @@ func _portal_prompt() -> String:
 	if _quest_scene() == Router.EXPEDITION:
 		return "Portail d'Ozz : %s" % Expedition.stage_name(Expedition.current_stage())
 	return "Entrer dans les Catacombes Suintantes"
+
+
+## Portail vert, toujours ouvert à côté d'Ozz : la Nécropole, niveau test régénéré à chaque passage.
+func _open_green_portal() -> void:
+	if _ozz_home == Vector3.INF:
+		return
+	green_portal = Portal.new()
+	green_portal.green = true
+	green_portal.position = Vector3(_ozz_home.x, 0.0, _ozz_home.z) + GREEN_PORTAL_OFFSET
+	green_portal.prompt = "Portail vert : la Nécropole (niveau test, différente à chaque passage)"
+	green_portal.on_enter = enter_necropolis
+	add_child(green_portal)
+
+
+## Nouvelle Nécropole, tirée au hasard (même graine pour toute la coop).
+func enter_necropolis() -> void:
+	GameState.necropolis_seed = randi_range(1, 999999)
+	GameState.save_game()
+	Router.go_to(Router.NECROPOLIS)
 
 
 ## Portail à XP : de nouvelles Cryptes, tirées au hasard (même graine pour toute la coop).
