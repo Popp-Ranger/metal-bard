@@ -311,6 +311,12 @@
 - [x] Squelettes du pack KayKit Skeletons, animés avec ses clips (squelette, guerrier, arbalétrier, mage), réduits de moitié (0,87 m)
 - [x] Boss : le Roi des Os (fracas d'os, lève les morts à 66 % et 33 %) ; vaincu, un portail vert ramène à la taverne
 
+## ✅ v0.2.2 — Le Cimetière maudit (refonte du niveau test)
+- [x] Tous les nouveaux kits 3D passés en revue : KayKit Halloween Bits, KayKit Dungeon Pack, Modular Cave Kit, Fantasy Town Kit, Food Kit (en plus du Modular Dungeon Kit, du Graveyard Kit et des KayKit Skeletons)
+- [x] Le cimetière à l'air libre, la nuit : allées, carrés de tombes, fosses ouvertes, caveaux, bosquets, chapelles et offrandes, fontaine asséchée, grand mausolée
+- [x] Les morts sortent de terre à l'approche du héros
+- [x] Catacombes sous le mausolée (donjon ou grotte) et crypte du Roi des Os en KayKit Dungeon
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

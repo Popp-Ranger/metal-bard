@@ -792,7 +792,7 @@ func _spawn_flee_portal(pos: Vector3) -> void:
 	var portal := Portal.new()
 	portal.position = pos
 	portal.prompt = {"temple": "Ressortir sur le parvis du temple", "crypte": "Fuir vers la Chèvre Fringante (les cryptes se régénéreront)",
-		"necropole": "Fuir vers la Chèvre Fringante (la Nécropole se régénérera)"}.get(theme, "Fuir vers la taverne (la quête reste en cours)")
+		"necropole": "Fuir vers la Chèvre Fringante (le cimetière se régénérera)"}.get(theme, "Fuir vers la taverne (la quête reste en cours)")
 	portal.on_enter = _end_dungeon.bind("Retraite stratégique", false)
 	add_child(portal)
 
@@ -1247,7 +1247,7 @@ func _open_town_portal_now() -> void:
 		exit.blue = true
 		var spot := hero.global_position + hero.facing * 1.8
 		exit.position = Vector3(spot.x, 0.0, spot.z) if is_walkable(spot) else hero.global_position
-		exit.prompt = "Portail bleu : retour à la taverne (%s)" % ("la Nécropole se régénérera" if theme == "necropole" else "les cryptes se régénéreront")
+		exit.prompt = "Portail bleu : retour à la taverne (%s)" % ("le cimetière se régénérera" if theme == "necropole" else "les cryptes se régénéreront")
 		exit.on_enter = _end_dungeon.bind("Retour par le portail bleu", false)
 		add_child(exit)
 		return

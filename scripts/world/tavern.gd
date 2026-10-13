@@ -35,7 +35,7 @@ var _inconnue: Npc
 var _inconnue_called := false
 var _blue_portal_pos := Vector3.ZERO
 var _training_zones: Array[TavernMarker] = []
-## Portail vert vers la Nécropole (niveau test), à côté d'Ozz.
+## Portail vert vers le Cimetière maudit (niveau test), à côté d'Ozz.
 var green_portal: Portal
 var _ozz_home := Vector3.INF
 ## Décalage du portail vert par rapport à la place d'Ozz (un peu au sud-ouest, côté salle).
@@ -421,19 +421,19 @@ func _portal_prompt() -> String:
 	return "Entrer dans les Catacombes Suintantes"
 
 
-## Portail vert, toujours ouvert à côté d'Ozz : la Nécropole, niveau test régénéré à chaque passage.
+## Portail vert, toujours ouvert à côté d'Ozz : le Cimetière maudit, niveau test régénéré à chaque passage.
 func _open_green_portal() -> void:
 	if _ozz_home == Vector3.INF:
 		return
 	green_portal = Portal.new()
 	green_portal.green = true
 	green_portal.position = Vector3(_ozz_home.x, 0.0, _ozz_home.z) + GREEN_PORTAL_OFFSET
-	green_portal.prompt = "Portail vert : la Nécropole (niveau test, différente à chaque passage)"
+	green_portal.prompt = "Portail vert : le Cimetière maudit (niveau test, différent à chaque passage)"
 	green_portal.on_enter = enter_necropolis
 	add_child(green_portal)
 
 
-## Nouvelle Nécropole, tirée au hasard (même graine pour toute la coop).
+## Nouveau cimetière, tiré au hasard (même graine pour toute la coop).
 func enter_necropolis() -> void:
 	GameState.necropolis_seed = randi_range(1, 999999)
 	GameState.save_game()

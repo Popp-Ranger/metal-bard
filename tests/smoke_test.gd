@@ -1688,28 +1688,29 @@ func _test_loot_and_gear() -> void:
 	GameState.new_game()
 
 
-## La Nécropole (niveau test) : plan régénéré à chaque passage, construit avec les kits Kenney, squelettes KayKit,
-## Roi des Os ; portail vert à côté d'Ozz.
+## Le Cimetière maudit (niveau test) : plan régénéré à chaque passage, construit avec tous les kits 3D de
+## assets/models/kits/, squelettes KayKit qui sortent de terre, catacombes, Roi des Os ; portail vert à côté d'Ozz.
 func _test_necropolis() -> void:
-	print("[Nécropole : niveau test (kits Kenney, squelettes KayKit)]")
+	print("[Cimetière maudit : niveau test (kits Kenney et KayKit)]")
 	# Plan : même graine = même plan, autre graine = autre plan, tout est accessible.
-	var a := NecropolisLayout.new()
+	var a := CemeteryLayout.new()
 	a.generate(1234)
-	var b := NecropolisLayout.new()
+	var b := CemeteryLayout.new()
 	b.generate(1234)
-	var c := NecropolisLayout.new()
+	var c := CemeteryLayout.new()
 	c.generate(98765)
-	var boss_ok := a.rooms[a.boss_room].size == Vector2i(NecropolisLayout.BOSS_SIZE, NecropolisLayout.BOSS_SIZE)
-	_check(a.cells == b.cells and a.cells != c.cells and a.all_reachable() and c.all_reachable() and a.rooms.size() == 8
-		and boss_ok and a.start_room != a.boss_room,
-		"plan de la Nécropole : déterministe par graine, différent d'une graine à l'autre, 8 salles toutes accessibles")
+	var kinds_a: Array = a.plots.map(func(p: Dictionary) -> String: return str(p["kind"]))
+	_check(a.cells == b.cells and a.alley == b.alley and kinds_a == b.plots.map(func(p: Dictionary) -> String: return str(p["kind"]))
+		and (a.alley != c.alley or a.cells != c.cells) and a.all_reachable() and c.all_reachable()
+		and a.cata_rooms.size() == 6 and a.boss_rect.size == Vector2i(6, 6) and kinds_a.has("chapelle") and kinds_a.has("fosses"),
+		"plan du cimetière : déterministe par graine, différent d'une graine à l'autre, allées et catacombes accessibles (%s)" % [kinds_a])
 	var reach := true
 	for s in 20:
-		var l := NecropolisLayout.new()
+		var l := CemeteryLayout.new()
 		l.generate(s * 7919 + 3)
-		reach = reach and l.all_reachable() and l.rooms.size() >= 6
-	_check(reach, "20 plans tirés au hasard : toujours au moins 6 salles, toutes accessibles")
-	# Le niveau : kits, ennemis au niveau du héros, boss.
+		reach = reach and l.all_reachable() and l.plots.size() >= 3 and l.cata_rooms.size() >= 5
+	_check(reach, "20 cimetières tirés au hasard : au moins 3 carrés, catacombes de 5 salles ou plus, tout est accessible")
+	# Le niveau : tous les kits, ennemis au niveau du héros, morts enterrés, boss.
 	GameState.new_game()
 	GameState.stats.level = 3
 	GameState.necropolis_seed = 4242
@@ -1718,21 +1719,51 @@ func _test_necropolis() -> void:
 	await _frames(20)
 	var kinds := {}
 	var levels_ok := true
+	var kits := {}
 	for n in necro.get_children():
 		if n is KayKitSkeleton and not (n is SkeletonKing):
 			kinds[n.kind] = int(kinds.get(n.kind, 0)) + 1
 			levels_ok = levels_ok and (n as Enemy).level == 3
+		var path := str(n.scene_file_path)
+		if path.begins_with("res://assets/models/kits/"):
+			var kit := path.get_slice("/", 5) # res://assets/models/kits/<kit>/...
+			kits[kit] = int(kits.get(kit, 0)) + 1
+	for kit: String in ["halloween", "donjon_modulaire", "grotte", "donjon_kaykit", "ville"]:
+		kits[kit] = int(kits.get(kit, 0)) + int(necro.call("kit_count", kit))
 	var king: SkeletonKing = necro.get("king")
+	var buried: Array = necro.get("buried")
+	var all_buried := not buried.is_empty()
+	for e: KayKitSkeleton in buried:
+		all_buried = all_buried and e.dormant and not e.visible
 	_check(str(necro.get("theme")) == "necropole" and not bool(necro.get("persistent")) and GameState.necropolis_seed == 4242
-		and int(necro.call("kit_count", "template-floor")) > 50 and int(necro.call("kit_count", "template-wall")) > 30
-		and int(necro.call("kit_count", "template-corner")) > 4 and int(necro.call("kit_count", "template-detail")) > 4
-		and int(necro.call("kit_count", "gate")) > 0 and (necro.get("props") as Array).size() > 30,
-		"Nécropole construite avec le Modular Dungeon Kit (sol, murs, coins, piliers, arches) et le Graveyard Kit (%d éléments de décor)" % (necro.get("props") as Array).size())
+		and int(necro.call("kit_count", "halloween/floor_dirt")) > 100 and int(necro.call("kit_count", "halloween/fence")) > 5
+		and int(necro.call("kit_count", "ville/hedge")) > 5 and int(necro.call("kit_count", "halloween/crypt")) == 1
+		and int(necro.call("kit_count", "donjon_kaykit/wall")) > 5 and int(necro.call("kit_count", "donjon_kaykit/floor_tile_large")) > 20
+		and int(necro.call("kit_count", "donjon_modulaire/template-wall")) + int(necro.call("kit_count", "grotte/template-wall")) > 10
+		and kits.size() >= 7 and int(kits.get("nourriture", 0)) > 0 and int(kits.get("cimetiere", 0)) > 0
+		and (necro.get("props") as Array).size() > 150,
+		"cimetière, catacombes et crypte royale construits avec les kits %s (%d éléments de décor)" % [kits, (necro.get("props") as Array).size()])
 	_check(int(kinds.get("minion", 0)) >= 5 and kinds.size() >= 3 and levels_ok and king != null and king.is_boss
-		and king.kskin != null and king.kskin.player.has_animation("Spawn_Ground"),
-		"squelettes KayKit au niveau du héros (%s) et le Roi des Os, animé avec les clips du pack" % kinds)
-	# Un squelette frappe, encaisse et meurt (animations du pack, pas de T-pose).
+		and king.kskin != null and king.kskin.player.has_animation("Spawn_Ground") and buried.size() >= 8 and all_buried,
+		"squelettes KayKit au niveau du héros (%s), %d morts endormis sous les tombes, et le Roi des Os" % [kinds, buried.size()])
+	# Les morts sortent de terre quand on approche.
 	var hero := necro.get("hero") as Hero
+	var sleeper: KayKitSkeleton = buried[0]
+	var others := buried.size()
+	hero.global_position = sleeper.global_position + Vector3(0, 0, 3.0)
+	await get_tree().create_timer(0.5).timeout
+	_check(not sleeper.dormant and sleeper.visible and sleeper.kskin.player.current_animation == "Spawn_Ground"
+		and (necro.get("buried") as Array).size() < others, "un mort sort de terre quand le héros approche (%s)" % sleeper.kskin.player.current_animation)
+	# Le mausolée descend aux catacombes ; l'escalier remonte au cimetière.
+	var layout: CemeteryLayout = necro.get("layout")
+	(necro.get("crypt_door") as Interactable).interact(hero)
+	await get_tree().create_timer(1.0).timeout
+	var down := layout.zone_at(floori(hero.global_position.x / 4.0), floori(hero.global_position.z / 4.0))
+	(necro.get("catacomb_stairs") as Interactable).interact(hero)
+	await get_tree().create_timer(1.0).timeout
+	var up := layout.zone_at(floori(hero.global_position.x / 4.0), floori(hero.global_position.z / 4.0))
+	_check(down == 2 and up == 1, "porte du mausolée : vers les catacombes (zone %d), escalier : retour au cimetière (zone %d)" % [down, up])
+	# Un squelette frappe, encaisse et meurt (animations du pack, pas de T-pose).
 	var bones: KayKitSkeleton = necro.call("spawn_bones", "minion", hero.global_position + Vector3(3.5, 0, 3.5)) # (hors de portée de détection)
 	await _frames(5)
 	var idle := bones.kskin.player.current_animation
@@ -1756,7 +1787,7 @@ func _test_necropolis() -> void:
 		and exit.get_prompt().contains("Chèvre Fringante"), "le Roi des Os lève 3 squelettes, puis sa mort ouvre un portail vert vers la taverne")
 	var dest := str(necro.call("_exit_scene"))
 	_check(dest == Router.TAVERN and bool(GameState.flags.get("from_necropolis", false)) and GameState.necropolis_seed == 0,
-		"sortie de la Nécropole : retour au portail vert, nouvelle Nécropole au prochain passage")
+		"sortie du cimetière : retour au portail vert, nouveau cimetière au prochain passage")
 	necro.queue_free()
 	await _frames(3)
 	# La taverne : portail vert toujours ouvert à côté d'Ozz ; on en ressort juste devant.
@@ -1771,9 +1802,9 @@ func _test_necropolis() -> void:
 			ozz = n
 	var thero := tv.get("hero") as Hero
 	_check(green != null and green.green and ozz != null and green.global_position.distance_to(ozz.global_position) < 4.0
-		and green.get_prompt().contains("Nécropole") and thero.global_position.distance_to(green.global_position) < 2.0
+		and green.get_prompt().contains("Cimetière") and thero.global_position.distance_to(green.global_position) < 2.0
 		and not GameState.flags.has("from_necropolis"),
-		"taverne : portail vert vers la Nécropole à côté d'Ozz (%.1f m) ; retour juste devant" % (green.global_position.distance_to(ozz.global_position) if green != null and ozz != null else -1.0))
+		"taverne : portail vert vers le Cimetière maudit à côté d'Ozz (%.1f m) ; retour juste devant" % (green.global_position.distance_to(ozz.global_position) if green != null and ozz != null else -1.0))
 	tv.queue_free()
 	await _frames(3)
 	GameState.necropolis_seed = 0
