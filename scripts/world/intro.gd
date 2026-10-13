@@ -15,6 +15,10 @@ const ROAD_HALF_WIDTH := 1.7
 const ROAM_HALF_WIDTH := 13.0 # on peut s'écarter un peu dans les champs, pas plus
 const START_S := 3.0
 const TAVERN_S := ROAD_LENGTH + 6.0
+## Kits d'assets (KitProps, chemins relatifs à assets/models/kits/).
+const HW := "halloween/"
+const GY := "cimetiere/"
+const TOWN := "ville/"
 
 var _rng := RandomNumberGenerator.new()
 var _moon_light: DirectionalLight3D
@@ -192,6 +196,8 @@ func _build_ground() -> void:
 		var p := road_point(s) + road_right(s) * side
 		if dist_to_road(p) < ROAD_HALF_WIDTH + 0.3:
 			p.y = -5.0 # dans un virage, la touffe tomberait sur la chaussée : on l'enterre
+		if in_cemetery(p):
+			p.y = -5.0 # le cimetière est en terre battue
 		var sc := _rng.randf_range(0.6, 1.5)
 		mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3(sc, sc * _rng.randf_range(0.8, 1.6), sc)), p + Vector3(0, 0.15 * sc, 0)))
 		var v := _rng.randf_range(0.7, 1.2)
@@ -206,43 +212,35 @@ func _build_ground() -> void:
 	add_child(mmi)
 
 
-## Route pavée de pierres grises irrégulières (MultiMesh), bordée de terre battue.
+## Route pavée : les pavés du KayKit Halloween Bits (deux de front, tous les 1,9 m, tournés au hasard), comme les
+## allées du Cimetière maudit, sur des bas-côtés de terre battue.
 func _build_road() -> void:
-	var stone := BoxMesh.new()
-	stone.size = Vector3(0.39, 0.08, 0.39)
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.mesh = stone
-	var transforms: Array[Transform3D] = []
-	var colors: Array[Color] = []
+	var tiles: Array[String] = [HW + "path_A.gltf", HW + "path_B.gltf", HW + "path_C.gltf", HW + "path_D.gltf"]
+	var batches := {}
+	for t in tiles:
+		batches[t] = []
 	var s := -8.0
-	var row := 0
 	while s < TAVERN_S + 2.0:
 		var dir := road_dir(s)
 		var right := road_right(s)
 		var yaw := atan2(dir.x, dir.z)
-		var w := -ROAD_HALF_WIDTH + (0.2 if row % 2 == 0 else 0.0)
-		while w < ROAD_HALF_WIDTH - 0.1:
-			var p := road_point(s) + right * (w + _rng.randf_range(-0.03, 0.03)) + Vector3(0, 0.02 + _rng.randf_range(-0.015, 0.015), 0)
-			var sc := _rng.randf_range(0.85, 1.05)
-			transforms.append(Transform3D(Basis(Vector3.UP, yaw + _rng.randf_range(-0.12, 0.12)).scaled(Vector3(sc, 1.0, sc)), p))
-			var g := _rng.randf_range(0.13, 0.24)
-			colors.append(Color(g, g, g * 1.05))
-			w += 0.4
-		s += 0.4
-		row += 1
-	mm.instance_count = transforms.size()
-	for i in transforms.size():
-		mm.set_instance_transform(i, transforms[i])
-		mm.set_instance_color(i, colors[i])
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	var m := StandardMaterial3D.new()
-	m.vertex_color_use_as_albedo = true
-	m.roughness = 0.85
-	mmi.material_override = m
-	add_child(mmi)
+		for side: float in [-0.92, 0.92]:
+			var t: String = tiles[_rng.randi_range(0, tiles.size() - 1)]
+			var basis := Basis(Vector3.UP, yaw + PI * 0.5 * _rng.randi_range(0, 3))
+			(batches[t] as Array).append(Transform3D(basis, road_point(s) + right * side + Vector3(0, 0.03, 0)) * (KitProps.piece(t)[1] as Transform3D))
+		s += 1.85
+	for t: String in batches:
+		var xforms: Array = batches[t]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = KitProps.piece(t)[0]
+		mm.instance_count = xforms.size()
+		for i in xforms.size():
+			mm.set_instance_transform(i, xforms[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "Route_" + t.get_file().get_basename()
+		mmi.multimesh = mm
+		add_child(mmi)
 	# Bas-côtés de terre battue.
 	var dirt := Visuals.textured("terre", 3.0, Color(0.32, 0.27, 0.22), 1.0)
 	var k := -8.0
@@ -283,21 +281,18 @@ func _build_fields() -> void:
 				var ridge := Visuals.box(field, Vector3(0.55, 0.4, 13.5), Vector3(-4.0 + r * 1.0, 0.2, 0), wheat)
 				ridge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		s += _rng.randf_range(18.0, 26.0)
-	# Clôtures de bois le long de la route.
-	var wood := Visuals.mat(Color(0.18, 0.12, 0.07), 0.9)
+	# Clôtures de bois le long de la route (Fantasy Town Kit, tronçons de 4 m).
 	s = 16.0
 	while s < ROAD_LENGTH:
 		for side: float in [-1.0, 1.0]:
 			if _rng.randf() < 0.25:
 				continue
-			var p := road_point(s) + road_right(s) * side * (ROAD_HALF_WIDTH + 1.4)
-			Visuals.box(self, Vector3(0.12, 1.0, 0.12), p + Vector3(0, 0.5, 0), wood, Vector3(_rng.randf_range(-8, 8), 0, _rng.randf_range(-8, 8)))
-			var next := road_point(s + 3.0) + road_right(s + 3.0) * side * (ROAD_HALF_WIDTH + 1.4)
-			var mid := (p + next) * 0.5
-			var rail := Visuals.box(self, Vector3(0.06, 0.08, p.distance_to(next)), mid + Vector3(0, 0.75, 0), wood)
-			rail.rotation.y = atan2(next.x - p.x, next.z - p.z)
-		s += 3.0
-	# Arbres morts.
+			var mid_s := s + 2.0
+			var p := road_point(mid_s) + road_right(mid_s) * side * (ROAD_HALF_WIDTH + 1.4)
+			var d := road_dir(mid_s)
+			_kit(TOWN + ("fence-broken.glb" if _rng.randf() < 0.2 else "fence.glb"), p, atan2(d.x, d.z) + _rng.randf_range(-0.05, 0.05), 4.0, false, true)
+		s += 4.0
+	# Arbres morts et pins d'automne (KayKit Halloween Bits).
 	for k in 26:
 		var ts := _rng.randf_range(0.0, ROAD_LENGTH)
 		var p := road_point(ts) + road_right(ts) * (_rng.randf_range(6.0, 30.0) * (1.0 if _rng.randf() < 0.5 else -1.0))
@@ -305,121 +300,210 @@ func _build_fields() -> void:
 			_dead_tree(p)
 
 
+## Arbre mort (ou, plus rarement, pin d'automne) du KayKit Halloween Bits, avec une collision au tronc.
 func _dead_tree(p: Vector3) -> void:
-	var bark := Visuals.mat(Color(0.09, 0.07, 0.06), 0.95)
-	var h := _rng.randf_range(3.0, 5.5)
-	Visuals.cylinder(self, 0.12, 0.3, h, p + Vector3(0, h * 0.5, 0), bark, Vector3(_rng.randf_range(-6, 6), 0, _rng.randf_range(-6, 6)), 7)
-	for b in 4:
-		var y := h * _rng.randf_range(0.5, 0.95)
-		var yaw := _rng.randf() * 360.0
-		var branch := Visuals.cylinder(self, 0.02, 0.09, 1.8, p + Vector3(0, y, 0), bark, Vector3(0, yaw, _rng.randf_range(40, 70)), 5)
-		branch.position += branch.basis.y * 0.9
-	Visuals.solid_cylinder(self, 0.3, 2.0, p + Vector3(0, 1.0, 0))
+	var trees := [HW + "tree_dead_large.gltf", HW + "tree_dead_medium.gltf", HW + "tree_dead_small.gltf",
+		HW + "tree_dead_large_decorated.gltf", HW + "tree_pine_orange_medium.gltf", HW + "tree_pine_yellow_small.gltf"]
+	_kit(trees[_rng.randi_range(0, trees.size() - 1)], p, _rng.randf() * TAU, _rng.randf_range(0.9, 1.2))
+	Visuals.solid_cylinder(self, 0.35, 2.0, p + Vector3(0, 1.0, 0))
 
 
 # =====================================================================================
 # Cimetière et chapelle
 # =====================================================================================
 
+## Repère du cimetière : origine sur la route (s = 2), u vers la droite, v vers le portail (l'avant de la route).
+## Il fait 28 × 28 m : u de -14 à 14, v de -18 (côté caméra) à 10 (le portail, d'où part la route).
+var _cem_o := Vector3.ZERO
+var _cem_f := Vector3.ZERO
+var _cem_r := Vector3.ZERO
+var _cem_yaw := 0.0
+
+
+func _cem(u: float, v: float) -> Vector3:
+	return _cem_o + _cem_r * u + _cem_f * v
+
+
+## Le point est-il dans l'enceinte du cimetière (avec une marge d'un mètre) ?
+func in_cemetery(p: Vector3) -> bool:
+	var o := road_point(2.0)
+	var d := Vector3(p.x - o.x, 0.0, p.z - o.z)
+	var u := d.dot(road_right(2.0))
+	var v := d.dot(road_dir(2.0))
+	return absf(u) < 15.0 and v > -19.0 and v < 11.0
+
+
+## Pièce d'un kit (KitProps) ; `solid` : une collision suit son emprise.
+func _kit(path: String, pos: Vector3, yaw: float, s: float = 1.0, solid: bool = false, centered: bool = false) -> Node3D:
+	var n := KitProps.place(self, path, pos, yaw, s, centered)
+	if path.contains("floor_dirt"):
+		_darken(n)
+	if solid:
+		var fp := KitProps.footprint(path, pos, yaw, s, centered)
+		var size: Vector3 = fp[1]
+		if size.y > 0.4:
+			var body := Visuals.solid(self, Vector3(size.x, 2.4, size.z), (fp[0] as Vector3) + Vector3(0, 1.2, 0))
+			body.rotation.y = yaw
+	return n
+
+
+## Terre du cimetière assombrie : sous la lune de sang, la terre claire du kit paraîtrait rose pâle.
+var _dark_mats := {}
+
+
+func _darken(n: Node) -> void:
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		for i in m.mesh.get_surface_count():
+			var src := m.mesh.surface_get_material(i) as StandardMaterial3D
+			if src == null:
+				continue
+			if not _dark_mats.has(src):
+				var d := src.duplicate() as StandardMaterial3D
+				d.albedo_color = Color(0.42, 0.37, 0.34)
+				_dark_mats[src] = d
+			m.set_surface_override_material(i, _dark_mats[src])
+
+
+## Mur de collision (invisible) le long d'un côté du cimetière, de (u0, v0) à (u1, v1).
+func _cem_wall(u0: float, v0: float, u1: float, v1: float) -> void:
+	var a := _cem(u0, v0)
+	var b := _cem(u1, v1)
+	var body := Visuals.solid(self, Vector3(0.6, 3.0, a.distance_to(b)), (a + b) * 0.5 + Vector3(0, 1.5, 0))
+	body.rotation.y = atan2(b.x - a.x, b.z - a.z)
+
+
+## Le cimetière de Morneval, dans le style du Cimetière maudit (KayKit Halloween Bits, Graveyard Kit) : sol de terre,
+## allée pavée jusqu'au portail, clôture de fer, arche d'entrée à la grille arrachée, tombes déterrées et vides à
+## droite de l'allée, la chapelle de la messe noire (le mausolée) à gauche, bougies, lanternes, cadavres.
 func _build_cemetery() -> void:
-	var stone := Visuals.textured("dalles_usees", 1.5, Color(0.9, 0.88, 0.92))
-	var dark_stone := Visuals.textured("dalles_usees", 1.5, Color(0.55, 0.54, 0.57))
-	var dirt := Visuals.textured("terre", 2.0, Color(0.3, 0.24, 0.2), 1.0)
-	var hole := Visuals.mat(Color(0.01, 0.008, 0.006), 1.0)
-	var wood := Visuals.mat(Color(0.2, 0.12, 0.06), 0.85)
-	var origin := road_point(2.0)
-	var fwd := road_dir(2.0)
-	var right := road_right(2.0)
-	var yaw := atan2(fwd.x, fwd.z)
-	# Muret du cimetière (carré de 26 m) avec un portail ouvert sur la route.
-	var half := 13.0
-	var gate := origin + fwd * 10.0
-	for side: float in [-1.0, 1.0]:
-		_wall_segment(origin + fwd * 10.0 + right * side * 7.6, Vector3(11.0, 1.1, 0.5), yaw, dark_stone) # façade (portail au milieu)
-		_wall_segment(origin + right * side * half, Vector3(0.5, 1.1, 26.0), yaw, dark_stone) # côtés
-	_wall_segment(origin - fwd * 16.0, Vector3(26.0, 1.1, 0.5), yaw, dark_stone) # fond
-	for side: float in [-1.0, 1.0]:
-		Visuals.box(self, Vector3(0.6, 2.4, 0.6), gate + right * side * 2.0 + Vector3(0, 1.2, 0), stone, Vector3(0, rad_to_deg(yaw), 0))
-		Visuals.sphere(self, 0.28, gate + right * side * 2.0 + Vector3(0, 2.6, 0), stone)
-		# Grille arrachée, couchée au sol.
-		var grid := Visuals.box(self, Vector3(1.8, 0.05, 1.6), gate + right * side * 1.3 + fwd * 1.5 + Vector3(0, 0.05, 0), Visuals.mat(Color(0.1, 0.1, 0.1), 0.4, 0.8))
-		grid.rotation.y = yaw + side * 0.4
-	Visuals.label(self, "Cimetière de Morneval", gate + Vector3(0, 3.1, 0), Color(0.75, 0.7, 0.65), 34)
-	# Chapelle à gauche du cimetière.
-	_build_chapel(origin - right * 7.5 - fwd * 6.0, yaw)
-	# Rangées de tombes : la plupart déterrées et vides.
-	for row in 4:
-		for col in 5:
-			var p := origin - fwd * (11.0 - row * 4.2) + right * (1.0 + col * 2.4)
-			var dug := _rng.randf() < 0.7
-			var headstone := Visuals.box(self, Vector3(0.7, 1.0, 0.18), p - fwd * 1.1 + Vector3(0, 0.5, 0), stone,
-				Vector3(_rng.randf_range(-12, 12), rad_to_deg(yaw), _rng.randf_range(-10, 10)))
-			headstone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-			if _rng.randf() < 0.3:
-				Visuals.box(self, Vector3(0.12, 1.3, 0.12), p - fwd * 1.1 + Vector3(0, 0.65, 0), wood) # croix
-				Visuals.box(self, Vector3(0.6, 0.12, 0.12), p - fwd * 1.1 + Vector3(0, 0.95, 0), wood, Vector3(0, rad_to_deg(yaw) + 90, 0))
-			if dug:
-				var pit := Visuals.box(self, Vector3(0.9, 0.02, 1.8), p + Vector3(0, 0.01, 0), hole)
-				pit.rotation.y = yaw
-				Visuals.sphere(self, 0.7, p + right * 0.9 + Vector3(0, 0.0, 0), dirt, Vector3(0.9, 0.45, 1.4)) # tas de terre
-				var lid := Visuals.box(self, Vector3(0.7, 0.08, 1.7), p - right * 0.9 + Vector3(0, 0.15, 0), wood)
-				lid.rotation = Vector3(_rng.randf_range(-0.2, 0.2), yaw + _rng.randf_range(-0.6, 0.6), 0.35)
+	_cem_o = road_point(2.0)
+	_cem_f = road_dir(2.0)
+	_cem_r = road_right(2.0)
+	_cem_yaw = atan2(_cem_f.x, _cem_f.z)
+	var face_cam := _cem_yaw + PI # tourné vers la caméra (vers l'arrière du cimetière)
+	# Tombes : 12 dalles à droite de l'allée, la plupart déterrées (fosse ouverte).
+	var dug := {}
+	for u: int in [4, 8, 12]:
+		for v: int in [-12, -8, -4, 0]:
+			dug[Vector2i(u, v)] = _rng.randf() < 0.7
+	# Sol de terre (dalles de 4 m), fosses ouvertes sur les tombes déterrées.
+	for iu in range(-3, 4):
+		for iv in range(-4, 3):
+			var key := Vector2i(iu * 4, iv * 4)
+			var open := bool(dug.get(key, false))
+			var turn := 0.0 if open else PI * 0.5 * _rng.randi_range(0, 3)
+			var tile := _kit(HW + ("floor_dirt_grave.gltf" if open else "floor_dirt.gltf"), _cem(key.x, key.y), face_cam + turn)
+			tile.scale = Vector3(1.03, 1.0, 1.03) # pas de joints entre les dalles
+	# Tombes : stèle brisée et cercueil éventré pour les fosses, tombe intacte pour les autres.
+	for key: Vector2i in dug:
+		var c := _cem(key.x, key.y)
+		if dug[key]:
+			_kit(HW + "grave_A_destroyed.gltf", _cem(key.x, key.y + 1.7), face_cam + _rng.randf_range(-0.2, 0.2), 0.9, true)
+			_kit(HW + ("coffin.gltf" if _rng.randf() < 0.5 else "coffin_decorated.gltf"), _cem(key.x + 1.3, key.y - 0.3),
+				_cem_yaw + PI * 0.5 + _rng.randf_range(-0.5, 0.5), 0.45)
+			if _rng.randf() < 0.5:
+				_kit(GY + "shovel-dirt.glb", _cem(key.x - 1.4, key.y - 1.2), _rng.randf() * TAU, 2.0)
 			else:
-				Visuals.sphere(self, 0.6, p, dirt, Vector3(0.8, 0.25, 1.5))
-			Visuals.solid(self, Vector3(0.8, 2.0, 0.3), p - fwd * 1.1 + Vector3(0, 1.0, 0))
-	# Bougies de deuil renversées sur quelques tombes : seules lueurs du cimetière.
+				var bone: String = ["bone_A.gltf", "bone_B.gltf", "bone_C.gltf"][_rng.randi_range(0, 2)]
+				_kit(HW + bone, c + Vector3(0, 0.05, 0) - _cem_r * 1.2, _rng.randf() * TAU)
+		else:
+			_kit(HW + ("grave_A.gltf" if _rng.randf() < 0.5 else "grave_B.gltf"), _cem(key.x, key.y + 0.6), face_cam + _rng.randf_range(-0.1, 0.1), 0.95, true)
+	# À gauche, devant la chapelle : petites tombes et croix (Graveyard Kit).
+	var small := ["gravestone-round", "gravestone-cross", "gravestone-decorative", "gravestone-broken", "cross-column", "cross-wood"]
+	for v: float in [3.0, 6.5]:
+		for u: float in [-12.0, -9.5, -7.0, -4.5]:
+			if _rng.randf() < 0.25:
+				continue
+			_kit(GY + str(small[_rng.randi_range(0, small.size() - 1)]) + ".glb", _cem(u + _rng.randf_range(-0.3, 0.3), v), face_cam + _rng.randf_range(-0.3, 0.3), 2.0, true)
+	# Allée pavée au fond du cimetière (au-delà, c'est la route elle-même, pavée jusqu'au portail et après).
+	var v := -16.0
+	while v < -10.5:
+		for side: float in [-0.92, 0.92]:
+			var t: String = ["path_A.gltf", "path_B.gltf", "path_C.gltf", "path_D.gltf"][_rng.randi_range(0, 3)]
+			_kit(HW + t, _cem(side, v) + Vector3(0, 0.03, 0), _cem_yaw + PI * 0.5 * _rng.randi_range(0, 3))
+		v += 1.85
+	_cemetery_fence()
+	_build_chapel()
+	# Lanternes : de part et d'autre du portail, et une près de l'allée.
+	for side: float in [-1.0, 1.0]:
+		_kit(HW + "post_lantern.gltf", _cem(2.9 * side, 8.4), _cem_yaw + PI * 0.5 * side)
+		var l := Visuals.flicker_light(self, _cem(1.8 * side, 8.4) + Vector3(0, 2.6, 0), Color(1.0, 0.6, 0.3), 2.0, 9.0)
+		l.flicker_amount = 0.5
+	_kit(HW + "lantern_standing.gltf", _cem(-2.2, -5.0), 0.0)
+	var alley_light := Visuals.flicker_light(self, _cem(-2.2, -5.0) + Vector3(0, 1.0, 0), Color(1.0, 0.62, 0.3), 1.4, 6.0)
+	alley_light.flicker_amount = 0.4
+	# Bougies de deuil sur quelques tombes.
 	for k in 5:
-		var cp := origin - fwd * _rng.randf_range(-2.0, 11.0) + right * _rng.randf_range(1.0, 11.0)
-		Visuals.cylinder(self, 0.05, 0.05, 0.2, cp + Vector3(0, 0.1, 0), Visuals.mat(Color(0.9, 0.85, 0.7)))
-		Visuals.sphere(self, 0.04, cp + Vector3(0, 0.24, 0), Visuals.glow_mat(Color(1.0, 0.7, 0.3), 8.0))
-		var candle := Visuals.flicker_light(self, cp + Vector3(0, 0.6, 0), Color(1.0, 0.6, 0.3), 1.4, 5.0)
+		var cp := _cem(_rng.randf_range(3.0, 12.0), _rng.randf_range(-9.0, 3.0))
+		var candle_piece: String = ["candle_melted.gltf", "candle_thin.gltf", "candle_triple.gltf"][_rng.randi_range(0, 2)]
+		_kit(HW + candle_piece, cp, _rng.randf() * TAU, 0.8)
+		var candle := Visuals.flicker_light(self, cp + Vector3(0, 0.9, 0), Color(1.0, 0.6, 0.3), 1.4, 5.0)
 		candle.flicker_amount = 0.5
+	# Un arbre mort dans le cimetière ; d'autres au dehors (côté caméra : seulement de petits arbres morts).
+	_kit(HW + "tree_dead_large_decorated.gltf", _cem(-11.5, -14.0), _rng.randf() * TAU)
+	Visuals.solid_cylinder(self, 0.35, 2.0, _cem(-11.5, -14.0) + Vector3(0, 1.0, 0))
+	for k in 14:
+		var side := 1.0 if k % 2 == 0 else -1.0
+		_dead_tree(_cem(side * _rng.randf_range(16.5, 24.0), _rng.randf_range(-22.0, 8.0)))
+	for k in 4:
+		var small_tree: String = ["tree_dead_small.gltf", "tree_dead_medium.gltf"][_rng.randi_range(0, 1)]
+		_kit(HW + small_tree, _cem(_rng.randf_range(-12.0, 12.0), -20.5 - _rng.randf() * 3.0), _rng.randf() * TAU)
 	# Cadavres dans le cimetière et devant son entrée.
 	for k in 6:
-		var p := origin + right * _rng.randf_range(-3.0, 11.0) - fwd * _rng.randf_range(-6.0, 12.0)
-		_corpse(p)
+		_corpse(_cem(_rng.randf_range(-3.0, 11.0), _rng.randf_range(-12.0, 6.0)))
 	for k in 5:
 		var s := _rng.randf_range(11.0, 22.0)
 		_corpse(road_point(s) + road_right(s) * _rng.randf_range(-6.0, 6.0))
-	# Lanterne vacillante au portail.
-	var l := Visuals.flicker_light(self, gate + right * 2.0 + Vector3(0, 2.2, 0), Color(1.0, 0.6, 0.3), 2.0, 9.0)
-	l.flicker_amount = 0.5
+	Visuals.label(self, "Cimetière de Morneval", _cem(0, 10.0) + Vector3(0, 5.2, 0), Color(0.75, 0.7, 0.65), 34)
 
 
-func _wall_segment(center: Vector3, size: Vector3, yaw: float, mat: Material) -> void:
-	var w := Visuals.box(self, size, center + Vector3(0, size.y * 0.5, 0), mat)
-	w.rotation.y = yaw
-	var body := Visuals.solid(self, Vector3(size.x, 3.0, size.z), center + Vector3(0, 1.5, 0))
-	body.rotation.y = yaw
+## Clôture de fer (KayKit Halloween Bits) : portail et côtés ; au fond, côté caméra, une grille basse et fine.
+## L'arche du portail a perdu sa grille, arrachée et couchée dans l'herbe.
+func _cemetery_fence() -> void:
+	for u: float in [-12.0, -8.0, -4.0, 4.0, 8.0, 12.0]:
+		_kit(HW + ("fence_broken.gltf" if _rng.randf() < 0.25 else "fence.gltf"), _cem(u, 10.0), _cem_yaw)
+	for v: float in [-16.0, -12.0, -8.0, -4.0, 0.0, 4.0, 8.0]:
+		for side: float in [-1.0, 1.0]:
+			_kit(HW + ("fence_broken.gltf" if _rng.randf() < 0.2 else "fence.gltf"), _cem(14.0 * side, v), _cem_yaw + PI * 0.5)
+	for u: float in [-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0]:
+		_kit(HW + ("fence_seperate_broken.gltf" if _rng.randf() < 0.3 else "fence_seperate.gltf"), _cem(u, -18.0), _cem_yaw)
+	for u: float in [-14.0, -10.0, -6.0, -2.0, 2.0, 6.0, 10.0, 14.0]:
+		_kit(HW + "fence_pillar.gltf", _cem(u, 10.0), _cem_yaw)
+	for v: float in [-18.0, -14.0, -10.0, -6.0, -2.0, 2.0, 6.0]:
+		for side: float in [-1.0, 1.0]:
+			_kit(HW + "fence_pillar.gltf", _cem(14.0 * side, v), _cem_yaw)
+	_kit(HW + "arch.gltf", _cem(0.0, 10.0), _cem_yaw)
+	var grid := _kit(HW + "fence_gate.gltf", _cem(-1.2, 12.2) + Vector3(0, 0.15, 0), _cem_yaw + 0.5, 0.9)
+	grid.rotation.x = -PI * 0.5 + 0.08 # grille arrachée, couchée dans l'herbe
+	# Collisions : on ne sort que par le portail.
+	_cem_wall(-14.0, -18.0, -14.0, 10.0)
+	_cem_wall(14.0, -18.0, 14.0, 10.0)
+	_cem_wall(-14.0, -18.0, 14.0, -18.0)
+	_cem_wall(-14.0, 10.0, -2.0, 10.0)
+	_cem_wall(2.0, 10.0, 14.0, 10.0)
 
 
-func _build_chapel(center: Vector3, yaw: float) -> void:
-	var chapel := Node3D.new()
-	chapel.position = center
-	chapel.rotation.y = yaw
-	add_child(chapel)
-	var stone := Visuals.textured("blocs_pierre", 2.5, Color(0.52, 0.5, 0.54))
-	var roof := Visuals.mat(Color(0.1, 0.08, 0.09), 0.8)
-	Visuals.box(chapel, Vector3(5.0, 4.0, 8.0), Vector3(0, 2.0, 0), stone)
-	for side: float in [-1.0, 1.0]:
-		var pan := Visuals.box(chapel, Vector3(3.3, 0.2, 8.4), Vector3(side * 1.3, 5.0, 0), roof)
-		pan.rotation.z = side * -0.72
-	Visuals.box(chapel, Vector3(1.8, 7.0, 1.8), Vector3(0, 3.5, 4.2), stone) # clocher
-	Visuals.cylinder(chapel, 0.0, 1.35, 2.6, Vector3(0, 8.3, 4.2), roof, Vector3.ZERO, 4)
-	Visuals.box(chapel, Vector3(0.1, 1.0, 0.1), Vector3(0, 10.0, 4.2), Visuals.mat(Color(0.5, 0.45, 0.3), 0.4, 0.8))
-	Visuals.box(chapel, Vector3(0.5, 0.1, 0.1), Vector3(0, 10.2, 4.2), Visuals.mat(Color(0.5, 0.45, 0.3), 0.4, 0.8))
-	# Vitrail qui luit d'un rouge malsain, porte entrouverte.
-	Visuals.box(chapel, Vector3(0.1, 1.6, 0.9), Vector3(2.52, 2.4, -1.0), Visuals.glow_mat(Color(0.8, 0.1, 0.2), 1.8))
-	Visuals.box(chapel, Vector3(0.1, 1.6, 0.9), Vector3(2.52, 2.4, 1.6), Visuals.glow_mat(Color(0.5, 0.15, 0.7), 1.5))
-	Visuals.box(chapel, Vector3(1.4, 2.4, 0.1), Vector3(0, 1.2, 5.12), Visuals.mat(Color(0.02, 0.01, 0.01)))
+## La chapelle de la messe noire : le mausolée du KayKit Halloween Bits, porte entrouverte sur une lueur rouge
+## malsaine ; un autel aux bougies et deux crânes-chandeliers devant.
+func _build_chapel() -> void:
+	# Porte tournée vers la caméra (vers le fond du cimetière) : on voit la lueur de la messe noire.
+	var c := _cem(-7.5, -6.5)
+	_kit(HW + "crypt.gltf", c, _cem_yaw + PI)
+	var body := Visuals.solid(self, Vector3(6.0, 4.0, 7.6), c + _cem_f * 0.2 + Vector3(0, 2.0, 0))
+	body.rotation.y = _cem_yaw
 	var inner := OmniLight3D.new()
-	inner.position = Vector3(3.2, 2.4, 0.3)
-	inner.light_color = Color(0.9, 0.2, 0.3)
-	inner.light_energy = 1.4
-	inner.omni_range = 6.0
-	chapel.add_child(inner)
-	var body := Visuals.solid(self, Vector3(5.2, 4.0, 10.0), center + Vector3(0, 2.0, 0))
-	body.rotation.y = yaw
+	inner.position = _cem(-7.5, -11.2) + Vector3(0, 1.8, 0)
+	inner.light_color = Color(0.9, 0.15, 0.25)
+	inner.light_energy = 2.4
+	inner.omni_range = 7.0
+	add_child(inner)
+	_kit(HW + "plaque_candles.gltf", _cem(-7.5, -13.0), _cem_yaw + PI, 0.9, true)
+	for side: float in [-1.0, 1.0]:
+		var at := _cem(-7.5 + 2.3 * side, -12.2)
+		_kit(HW + "skull_candle.gltf", at, _cem_yaw + PI, 0.8)
+		var l := Visuals.flicker_light(self, at + Vector3(0, 1.2, 0), Color(1.0, 0.45, 0.25), 1.2, 4.5)
+		l.flicker_amount = 0.5
 
 
 ## Cadavre ensanglanté d'une race amicale (humain, orc, troll, ogre, démon, squelette),
@@ -464,6 +548,14 @@ func _build_road_side() -> void:
 		Visuals.label(self, "La Chèvre Fringante →", p + Vector3(0, 2.5, 0), Color(0.85, 0.7, 0.5), 26)
 
 
+## L'auberge au bout de la route, bâtie avec le Fantasy Town Kit (cases d'1 unité, ×INN_CELL) : rez-de-chaussée en
+## pierre (porte cintrée grande ouverte, fenêtres), étage à colombages et volets, toit à deux pans et sa cheminée ;
+## pignons de bois. Lumière chaude derrière la porte et les fenêtres.
+const INN_CELL := 3.5
+const INN_W := 4
+const INN_D := 2
+
+
 func _build_tavern_exterior() -> void:
 	var s := TAVERN_S
 	var dir := road_dir(s)
@@ -471,41 +563,73 @@ func _build_tavern_exterior() -> void:
 	var yaw := atan2(dir.x, dir.z)
 	var inn := Node3D.new()
 	inn.position = center
-	inn.rotation.y = yaw + PI # la façade regarde la route
+	inn.rotation.y = yaw + PI # la façade (+Z local) regarde la route
 	add_child(inn)
-	var stone := Visuals.textured("blocs_pierre", 2.5, Color(0.6, 0.55, 0.52))
-	var timber := Visuals.mat(Color(0.18, 0.1, 0.05), 0.8)
-	var roof := Visuals.mat(Color(0.14, 0.07, 0.05), 0.85)
-	Visuals.box(inn, Vector3(14.0, 5.0, 9.0), Vector3(0, 2.5, 0), stone)
+	for f in 2:
+		for i in INN_W:
+			for j in INN_D:
+				var c := Vector3(i - (INN_W - 1) * 0.5, f, j - (INN_D - 1) * 0.5)
+				var stone := f == 0
+				if j == INN_D - 1: # façade
+					var p := "wall.glb" if stone else ("wall-wood-window-shutters.glb" if i % 3 != 0 else "wall-wood-window-small.glb")
+					if stone:
+						p = ["wall-window-stone.glb", "wall-doorway-round.glb", "wall-window-glass.glb", "wall-window-stone.glb"][i]
+					_inn_wall(inn, TOWN + p, c, Vector2(0, 1))
+				if j == 0:
+					_inn_wall(inn, TOWN + ("wall.glb" if stone else "wall-wood.glb"), c, Vector2(0, -1))
+				if i == 0:
+					_inn_wall(inn, TOWN + ("wall-window-small.glb" if stone and j == 1 else ("wall.glb" if stone else "wall-wood.glb")), c, Vector2(-1, 0))
+				if i == INN_W - 1:
+					_inn_wall(inn, TOWN + ("wall.glb" if stone else "wall-wood-window-small.glb"), c, Vector2(1, 0))
+	for i in INN_W:
+		for j in INN_D:
+			var c := Vector3(i - (INN_W - 1) * 0.5, 2, j - (INN_D - 1) * 0.5)
+			_inn_wall(inn, TOWN + ("roof-high-window.glb" if j == INN_D - 1 and i == 2 else "roof-high.glb"), c, Vector2(0, -1) if j == INN_D - 1 else Vector2(0, 1))
+	_inn_wall(inn, TOWN + "chimney.glb", Vector3(-(INN_W - 1) * 0.5, 2.0, -0.5), Vector2(0, -1))
+	_inn_wall(inn, TOWN + "chimney-top.glb", Vector3(-(INN_W - 1) * 0.5, 3.0, -0.5), Vector2(0, -1))
+	# Pignons de bois sous le toit, aux deux bouts.
+	var gable := Visuals.mat(Color(0.42, 0.26, 0.17), 0.85)
+	gable.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var half_d := INN_D * INN_CELL * 0.5
 	for side: float in [-1.0, 1.0]:
-		var pan := Visuals.box(inn, Vector3(5.8, 0.25, 9.6), Vector3(side * 3.6, 6.4, 0), roof)
-		pan.rotation.z = side * -0.6
-		pan.scale.x = 1.35
-	for x: float in [-6.8, -2.3, 2.3, 6.8]:
-		Visuals.box(inn, Vector3(0.25, 5.0, 0.25), Vector3(x, 2.5, 4.55), timber)
-	Visuals.box(inn, Vector3(14.2, 0.25, 0.25), Vector3(0, 2.6, 4.55), timber)
-	# Fenêtres chaudes et porte ouverte (lumière de l'intérieur).
-	for x: float in [-4.5, 4.5]:
-		Visuals.box(inn, Vector3(1.4, 1.2, 0.1), Vector3(x, 1.8, 4.52), Visuals.glow_mat(Color(1.0, 0.6, 0.25), 2.5))
-		Visuals.box(inn, Vector3(1.4, 1.0, 0.1), Vector3(x, 3.9, 4.52), Visuals.glow_mat(Color(1.0, 0.55, 0.2), 1.8))
-	Visuals.box(inn, Vector3(2.0, 2.8, 0.1), Vector3(0, 1.4, 4.53), Visuals.glow_mat(Color(1.0, 0.65, 0.3), 3.0))
+		var x := side * (INN_W * INN_CELL * 0.5 - 0.05)
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		st.set_normal(Vector3(side, 0, 0))
+		st.add_vertex(Vector3(x, 2.0 * INN_CELL, -half_d))
+		st.add_vertex(Vector3(x, 3.0 * INN_CELL, 0.0))
+		st.add_vertex(Vector3(x, 2.0 * INN_CELL, half_d))
+		var mi := MeshInstance3D.new()
+		mi.mesh = st.commit()
+		mi.material_override = gable
+		inn.add_child(mi)
+	# Lumière chaude de la grande salle : un fond lumineux derrière la porte et les fenêtres.
+	Visuals.box(inn, Vector3(INN_W * INN_CELL - 0.6, 2.0 * INN_CELL - 0.4, 0.1), Vector3(0, INN_CELL, half_d - 1.4), Visuals.glow_mat(Color(1.0, 0.6, 0.25), 2.2))
 	var warm := OmniLight3D.new()
-	warm.position = Vector3(0, 2.0, 6.0)
+	warm.position = Vector3(0, 2.0, half_d + 2.0)
 	warm.light_color = Color(1.0, 0.65, 0.3)
 	warm.light_energy = 3.0
 	warm.omni_range = 12.0
-	warm.shadow_enabled = false
 	inn.add_child(warm)
-	# Enseigne : un crâne qui hurle.
-	Visuals.box(inn, Vector3(0.1, 0.1, 1.6), Vector3(2.0, 3.6, 5.3), timber)
-	Visuals.sphere(inn, 0.4, Vector3(2.0, 3.0, 6.0), Visuals.mat(Color(0.85, 0.8, 0.65)), Vector3(1.0, 1.1, 1.0))
-	Visuals.box(inn, Vector3(0.25, 0.3, 0.1), Vector3(2.0, 2.8, 6.38), Visuals.mat(Color(0.05, 0.02, 0.02)))
-	Visuals.label(self, "LE CRÂNE HURLANT", center + Vector3(0, 7.8, 0), Color(1.0, 0.7, 0.35), 64)
-	var body := Visuals.solid(self, Vector3(14.0, 5.0, 9.0), center + Vector3(0, 2.5, 0))
+	# Bannière et lanternes de part et d'autre de la porte, enseigne au crâne qui hurle.
+	for sx: float in [-1.0, 1.0]:
+		KitProps.place(inn, TOWN + "lantern.glb", Vector3(sx * 3.1, 0, half_d + 0.9), 0.0, 1.6, true)
+	KitProps.place(inn, TOWN + "banner-red.glb", Vector3(0.5 * INN_CELL, INN_CELL * 1.05, half_d - 0.4 * INN_CELL), -PI * 0.5, INN_CELL)
+	var timber := Visuals.mat(Color(0.18, 0.1, 0.05), 0.8)
+	Visuals.box(inn, Vector3(0.1, 0.1, 1.6), Vector3(-2.3, 3.6, half_d + 0.8), timber)
+	Visuals.sphere(inn, 0.4, Vector3(-2.3, 3.0, half_d + 1.5), Visuals.mat(Color(0.85, 0.8, 0.65)), Vector3(1.0, 1.1, 1.0))
+	Visuals.box(inn, Vector3(0.25, 0.3, 0.1), Vector3(-2.3, 2.8, half_d + 1.88), Visuals.mat(Color(0.05, 0.02, 0.02)))
+	Visuals.label(self, "LE CRÂNE HURLANT", center + Vector3(0, 3.0 * INN_CELL + 1.0, 0), Color(1.0, 0.7, 0.35), 64)
+	var body := Visuals.solid(self, Vector3(INN_W * INN_CELL, 5.0, INN_D * INN_CELL), center + Vector3(0, 2.5, 0))
 	body.rotation.y = yaw + PI
 	var door := road_point(s) + dir * 1.2
 	Interactable.create(self, door, "Entrer à la Chèvre Fringante", _enter_tavern, 2.6)
 	Visuals.flicker_light(self, door + Vector3(0, 2.6, 0), Color(1.0, 0.6, 0.3), 2.0, 8.0)
+
+
+## Pièce du Fantasy Town Kit posée sur le bord de normale `n` (plan XZ) de la case `c` de l'auberge.
+func _inn_wall(inn: Node3D, path: String, c: Vector3, n: Vector2) -> void:
+	KitProps.place(inn, path, c * INN_CELL, atan2(-n.y, n.x), INN_CELL)
 
 
 # =====================================================================================

@@ -317,6 +317,12 @@
 - [x] Les morts sortent de terre à l'approche du héros
 - [x] Catacombes sous le mausolée (donjon ou grotte) et crypte du Roi des Os en KayKit Dungeon
 
+## ✅ v0.2.3 — L'intro dans le même style
+- [x] Cimetière de Morneval refait avec les kits : sol de terre, fosses ouvertes et cercueils éventrés, tombes, clôture de fer, arche à la grille arrachée, chapelle (mausolée) à la lueur rouge, bougies, lanternes
+- [x] Route pavée KayKit, clôtures de bois et arbres morts des kits
+- [x] L'auberge du bout de la route bâtie avec le Fantasy Town Kit (pierre, colombages, toit à deux pans, cheminée)
+- [x] KitProps : pose des pièces de kits partagée par le Cimetière maudit et l'intro
+
 ## v0.2 — « Ça ressemble à un vrai jeu »
 - [ ] Modèles 3D low-poly du héros (crinière, manteau, luth), des squelettes, de Gloubah, de Plumeau
 - [ ] Animations squelettiques (AnimationTree) : marche, frappe, sorts, mort

@@ -2,7 +2,7 @@
 
 Extraits des archives déposées dans `assets/models/` (les .zip ne sont pas versionnés) ; seuls les modèles 3D
 (.glb / .gltf + .bin) et leurs textures sont gardés. Licence de chaque kit : `License.txt` dans son dossier (CC0,
-crédit non obligatoire). Tous servent au Cimetière maudit (niveau test, `scripts/world/necropolis.gd`).
+crédit non obligatoire). Ils servent au Cimetière maudit (niveau test, `scripts/world/necropolis.gd`) et à l'intro (cimetière de Morneval, route, auberge : `scripts/world/intro.gd`) ; pose des pièces : `scripts/world/kit_props.gd`.
 
 | Dossier | Kit | Auteur | Usage dans le Cimetière maudit |
 |---|---|---|---|

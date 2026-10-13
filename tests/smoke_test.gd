@@ -886,6 +886,18 @@ func _test_new_features() -> void:
 		var dir: Vector3 = intro.call("road_dir", float(s))
 		max_turn = maxf(max_turn, dir.angle_to(IsoCamera.SCREEN_UP))
 	_check(i_level.hero.captive and bool(intro.get("_cinematic")), "intro : cinématique de la lune de sang, héros figé")
+	var intro_kits := {}
+	for n in intro.get_children():
+		var kp := str(n.scene_file_path)
+		if kp.begins_with("res://assets/models/kits/"):
+			intro_kits[kp.get_slice("/", 5)] = int(intro_kits.get(kp.get_slice("/", 5), 0)) + 1
+	var road_tiles := 0
+	for n in intro.get_children():
+		if n is MultiMeshInstance3D and str(n.name).begins_with("Route_"):
+			road_tiles += (n as MultiMeshInstance3D).multimesh.instance_count
+	_check(int(intro_kits.get("halloween", 0)) > 60 and int(intro_kits.get("cimetiere", 0)) > 3 and int(intro_kits.get("ville", 0)) > 10
+		and road_tiles > 100 and bool(intro.call("in_cemetery", intro.call("road_point", 0.0))),
+		"intro : cimetière de Morneval, route et auberge faits avec les kits %s (%d pavés)" % [intro_kits, road_tiles])
 	_check(Sfx.storm_playing() and Sfx._strikes.size() >= 5, "intro : musique d'orage lightning_menu.mp3 (%d coups de tonnerre repérés)" % Sfx._strikes.size())
 	_check(road_time > 17.0 and road_time < 23.0, "route pavée d'environ 20 s de marche (%.0f s)" % road_time)
 	_check(max_turn > 0.9, "route sinueuse : virages jusqu'à %.0f°" % rad_to_deg(max_turn))

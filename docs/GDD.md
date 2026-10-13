@@ -195,7 +195,7 @@ Trône au centre d'une mare croupie, garde Plumeau dans une cage.
 ## 10. Quêtes
 
 ### 10.1 Quête 1 — « Le Petit Plumeau » (implémentée)
-0. **Intro** : une nuit de Lune de Sang (encore un truc cliché de métalleux). Au sortir de la messe noire, le héros voit que les morts se sont ENCORE échappés du cimetière ; il fait mine de rien et file boire un thé glacé à la goyave à la Chèvre Fringante.
+0. **Intro** : une nuit de Lune de Sang (encore un truc cliché de métalleux). Au sortir de la messe noire, le héros voit que les morts se sont ENCORE échappés du cimetière ; il fait mine de rien et file boire un thé glacé à la goyave à la Chèvre Fringante. Décor dans le style du Cimetière maudit : le cimetière de Morneval (KayKit Halloween Bits et Graveyard Kit : tombes déterrées aux cercueils éventrés, clôture de fer, arche à la grille arrachée, chapelle de la messe noire à la lueur rouge), la route pavée et ses clôtures, arbres morts, et l'auberge du bout de la route (Fantasy Town Kit).
 1. **Taverne** : attablé devant son thé et un plateau de fromages, le héros voit arriver Gérald, le fromager du coin : son hibours Plumeau a été enlevé par des squelettes. Il promet 50 médiators et le portrait de son arrière-arrière-arrière-grand-mère. *[Accepter / Refuser]* — à chaque refus il revient (« Et maintenant, tu veux bien ? », « Et maintenant ? », « Et là ? », « Allééééé… », « Je te donnerai du fromage d'hibours ! ») ; le fromage, offert une fois, donne +20 % de PV max pendant 20 min.
 2. **Ozz** ouvre un portail sur le cercle de runes.
 3. **Catacombes Suintantes** (faites main dans l'éditeur) : squelettes, rats, capitaines ; le **chef des squelettes** porte la clé de la salle du boss.

@@ -57,8 +57,6 @@ var _batches := {}
 var _cut_materials := {}
 var _solids: StaticBody3D
 var _wake_check := 0.0
-static var _pieces := {}
-static var _aabbs := {}
 
 
 func _ready() -> void:
@@ -161,45 +159,14 @@ func cell_center(c: Vector2i) -> Vector3:
 	return Vector3((c.x + 0.5) * CELL4, 0.0, (c.y + 0.5) * CELL4)
 
 
-## Maillage d'une pièce (chemin relatif à kits/) et son repère dans le fichier : [Mesh, Transform3D].
+## Maillage d'une pièce (chemin relatif à kits/) et son repère dans le fichier : [Mesh, Transform3D] (KitProps).
 static func piece(path: String) -> Array:
-	if not _pieces.has(path):
-		var inst := (load(KITS + path) as PackedScene).instantiate() as Node3D
-		var mi: MeshInstance3D = null
-		for n in inst.find_children("*", "MeshInstance3D", true, false):
-			mi = n as MeshInstance3D
-			break
-		var xf := Transform3D.IDENTITY
-		var n: Node = mi
-		while n != null and n != inst:
-			if n is Node3D:
-				xf = (n as Node3D).transform * xf
-			n = n.get_parent()
-		_pieces[path] = [mi.mesh, xf]
-		inst.free()
-	return _pieces[path]
+	return KitProps.piece(path)
 
 
 ## Emprise d'une pièce (toutes ses parties, échelle 1).
 static func piece_aabb(path: String) -> AABB:
-	if not _aabbs.has(path):
-		var inst := (load(KITS + path) as PackedScene).instantiate() as Node3D
-		var acc: Array = [null]
-		_merge_aabb(inst, Transform3D.IDENTITY, acc)
-		_aabbs[path] = acc[0] if acc[0] != null else AABB()
-		inst.free()
-	return _aabbs[path]
-
-
-static func _merge_aabb(n: Node, xf: Transform3D, acc: Array) -> void:
-	var t := xf
-	if n is Node3D:
-		t = xf * (n as Node3D).transform
-	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
-		var a: AABB = t * (n as MeshInstance3D).mesh.get_aabb()
-		acc[0] = a if acc[0] == null else (acc[0] as AABB).merge(a)
-	for c in n.get_children():
-		_merge_aabb(c, t, acc)
+	return KitProps.aabb(path)
 
 
 ## Pièce d'architecture regroupée (une MultiMesh par pièce) ; `cut` : avec la découpe autour du héros.
